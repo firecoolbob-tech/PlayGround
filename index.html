@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0c0c0e">
+<title>Muse — AI Image Studio</title>
+<meta name="description" content="A keyless AI image generator and offline image studio. Generate, import, edit, and export in your browser.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3CradialGradient id='g' cx='35%25' cy='30%25'%3E%3Cstop stop-color='%23f8ffd2'/%3E%3Cstop offset='.38' stop-color='%23d9ff62'/%3E%3Cstop offset='1' stop-color='%23ff7a5c'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='32' cy='32' r='28' fill='url(%23g)'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0b0d;
+  --bg-elev:#111114;
+  --panel:#131316;
+  --panel-soft:#17171b;
+  --panel-hi:#1c1c21;
+  --line:rgba(255,255,255,.075);
+  --line-hi:rgba(255,255,255,.14);
+  --text:#f2efe8;
+  --muted:#8a8984;
+  --muted-2:#5f5e5a;
+  --acid:#d9ff62;
+  --acid-strong:#e5ff8a;
+  --coral:#ff7a5c;
+  --orange:#ffb37a;
+  --radius-lg:20px;
+  --radius-md:14px;
+  --radius-sm:10px;
+  --mono:'DM Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --serif:'Instrument Serif',Georgia,serif;
+  --shadow:0 30px 80px rgba(0,0,0,.48);
+}
+*{box-sizing:border-box}
+html{height:100%;background:var(--bg)}
+body{
+  margin:0;min-height:100%;
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  overflow:hidden;
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(900px 600px at 4% -5%,rgba(255,122,92,.09),transparent 62%),
+    radial-gradient(800px 720px at 96% 8%,rgba(217,255,98,.07),transparent 58%),
+    linear-gradient(180deg,rgba(255,255,255,.014),transparent 25%);
+}
+body::after{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:1000;opacity:.024;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+button,input,textarea,select{font:inherit;color:inherit}
+button{border:0;background:none;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,summary:focus-visible{
+  outline:2px solid var(--acid);outline-offset:2px;
+}
+::selection{background:var(--acid);color:#111}
+::-webkit-scrollbar{width:7px;height:7px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#35353b;border-radius:20px}
+::-webkit-scrollbar-thumb:hover{background:#4a4a50}
+
+.app{position:relative;z-index:1;height:100dvh;display:flex;flex-direction:column}
+.topbar{
+  height:72px;flex:0 0 72px;padding:0 22px;
+  display:flex;align-items:center;justify-content:space-between;gap:20px;
+  border-bottom:1px solid var(--line);
+  background:rgba(11,11,13,.72);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  position:relative;z-index:20;
+}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brand-mark{
+  width:37px;height:37px;border-radius:50%;position:relative;flex:0 0 auto;
+  background:conic-gradient(from 210deg,var(--coral),#ffc18e 30%,var(--acid) 62%,#5f812a 78%,var(--coral));
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.18),0 0 28px rgba(217,255,98,.12);
+  overflow:hidden;
+}
+.brand-mark::before{content:"";position:absolute;inset:9px;border-radius:50%;background:#0d0d0f;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+.brand-mark::after{content:"";position:absolute;width:8px;height:8px;border-radius:50%;background:var(--acid);top:6px;right:7px;filter:blur(.2px)}
+.brand-word{display:flex;flex-direction:column;line-height:1}
+.brand-word b{font-family:var(--serif);font-size:27px;font-weight:400;letter-spacing:-.6px}
+.brand-word b span{color:var(--acid);font-style:italic}
+.brand-word small{margin-top:4px;font-family:var(--mono);font-size:8px;letter-spacing:.22em;color:var(--muted);text-transform:uppercase}
+.top-center{
+  display:flex;align-items:center;gap:8px;
+  font-family:var(--mono);font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);
+  padding:8px 13px;border:1px solid var(--line);border-radius:100px;background:rgba(255,255,255,.018);
+}
+.top-center .pulse-dot{width:5px;height:5px;border-radius:50%;background:var(--acid);box-shadow:0 0 0 4px rgba(217,255,98,.09);animation:pulse 3s infinite}
+.top-actions{display:flex;align-items:center;gap:9px;flex:0 0 auto}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(.8)}}
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:9px;
+  height:39px;padding:0 16px;border-radius:100px;
+  font-size:11px;font-weight:700;letter-spacing:.02em;
+  border:1px solid var(--line);background:rgba(255,255,255,.035);color:var(--text);
+  transition:border-color .2s,background .2s,transform .2s,color .2s,box-shadow .2s;
+  white-space:nowrap;
+}
+.btn:hover{border-color:var(--line-hi);background:rgba(255,255,255,.07)}
+.btn:active{transform:translateY(1px)}
+.btn svg{width:14px;height:14px;flex:0 0 auto}
+.btn.primary{background:var(--acid);border-color:var(--acid);color:#15170c;box-shadow:0 8px 24px rgba(217,255,98,.13)}
+.btn.primary:hover{background:var(--acid-strong);border-color:var(--acid-strong);box-shadow:0 10px 32px rgba(217,255,98,.2)}
+.btn.ghost{background:transparent}
+.btn.icon{width:39px;padding:0}
+
+.workspace{
+  flex:1;min-height:0;display:grid;
+  grid-template-columns:326px minmax(360px,1fr) 306px;
+  gap:0;
+  padding:16px 18px 18px;
+  position:relative;
+}
+.panel{
+  min-height:0;background:rgba(19,19,22,.84);
+  border:1px solid var(--line);border-radius:var(--radius-lg);
+  box-shadow:0 20px 50px rgba(0,0,0,.16);
+  overflow:hidden;
+  display:flex;flex-direction:column;
+}
+.composer{margin-right:9px}
+.adjuster{margin-left:9px}
+.panel-scroll{overflow-y:auto;overscroll-behavior:contain;flex:1;min-height:0;padding:19px 18px 18px}
+.panel-head{
+  flex:0 0 auto;padding:17px 18px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;
+}
+.eyebrow{
+  font-family:var(--mono);font-size:9px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);
+  display:flex;align-items:center;gap:8px;
+}
+.eyebrow b{color:var(--text);font-weight:500}
+.eyebrow .num{color:var(--acid);font-size:8px}
+.beta-pill{
+  font-family:var(--mono);font-size:7px;letter-spacing:.12em;color:#b8cc75;text-transform:uppercase;
+  padding:4px 7px;border:1px solid rgba(217,255,98,.2);background:rgba(217,255,98,.06);border-radius:100px;
+}
+
+/* Composer */
+.composer .panel-scroll{padding-top:4px}
+.prompt-shell{
+  position:relative;border:1px solid var(--line);border-radius:14px;background:#0e0e10;
+  transition:border-color .2s,box-shadow .2s;
+}
+.prompt-shell:focus-within{border-color:rgba(217,255,98,.4);box-shadow:0 0 0 3px rgba(217,255,98,.045)}
+.prompt-shell.shake{animation:shake .38s}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(4px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
+.prompt-label{
+  position:absolute;top:12px;left:13px;font-family:var(--mono);font-size:7px;letter-spacing:.2em;
+  color:var(--muted-2);text-transform:uppercase;pointer-events:none;
+}
+#prompt{
+  width:100%;height:126px;resize:none;border:0;background:transparent;outline:none;
+  padding:30px 13px 29px;font-size:13px;line-height:1.62;font-weight:500;color:#e7e3da;
+  display:block;scrollbar-width:thin;
+}
+#prompt::placeholder{color:#5a5955}
+.prompt-foot{
+  position:absolute;bottom:0;left:0;right:0;height:28px;padding:0 11px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-top:1px solid rgba(255,255,255,.04);font-family:var(--mono);font-size:7px;color:var(--muted-2);letter-spacing:.08em;
+}
+.prompt-foot .kbd-hint{display:flex;align-items:center;gap:4px}
+.kbd{font-family:var(--mono);padding:2px 5px;border:1px solid rgba(255,255,255,.1);border-radius:4px;background:rgba(255,255,255,.03);font-size:7px;color:#888781}
+
+.control-label{
+  display:flex;align-items:center;justify-content:space-between;margin:18px 0 9px;
+  font-family:var(--mono);font-size:8px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);
+}
+.control-label .label-note{font-size:7px;letter-spacing:.02em;color:var(--muted-2);text-transform:none}
+.style-grid{display:flex;flex-wrap:wrap;gap:6px}
+.style-chip{
+  display:flex;align-items:center;gap:5px;height:28px;padding:0 9px;border-radius:100px;
+  border:1px solid var(--line);background:rgba(255,255,255,.022);
+  font-size:9px;font-weight:600;color:#a9a7a1;transition:.18s;white-space:nowrap;
+}
+.style-chip:hover{border-color:var(--line-hi);color:var(--text)}
+.style-chip .chip-check{width:9px;height:9px;opacity:0;transform:scale(.5);transition:.16s;flex:0 0 auto}
+.style-chip.active{border-color:rgba(217,255,98,.42);background:rgba(217,255,98,.09);color:var(--acid)}
+.style-chip.active .chip-check{opacity:1;transform:scale(1)}
+.style-hint{margin-top:8px;font-size:9px;line-height:1.45;color:var(--muted-2)}
+
+.seed-card{
+  display:flex;align-items:center;gap:8px;
+  border:1px solid var(--line);border-radius:11px;background:#0e0e10;padding:6px 6px 6px 11px;
+}
+.seed-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.seed-main span{font-family:var(--mono);font-size:7px;letter-spacing:.16em;color:var(--muted-2);text-transform:uppercase}
+.seed-main strong{font-family:var(--mono);font-size:12px;letter-spacing:.08em;font-weight:500;color:#d6d2c9;font-variant-numeric:tabular-nums}
+.seed-btn{
+  width:28px;height:28px;border-radius:7px;border:1px solid transparent;display:grid;place-items:center;color:#85847f;
+  transition:.18s;
+}
+.seed-btn:hover{background:rgba(255,255,255,.055);color:var(--text)}
+.seed-btn.locked{background:rgba(217,255,98,.1);border-color:rgba(217,255,98,.25);color:var(--acid)}
+.seed-btn svg{width:13px;height:13px}
+
+.remix-card{
+  margin-top:14px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.017);
+  overflow:hidden;
+}
+.remix-card[open]{background:rgba(255,255,255,.023);border-color:rgba(255,255,255,.11)}
+.remix-card summary{
+  list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:11px 12px;cursor:pointer;user-select:none;
+}
+.remix-card summary::-webkit-details-marker{display:none}
+.remix-title{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:700;color:#c9c6bf}
+.remix-title svg{width:13px;height:13px;color:var(--coral)}
+.optional{font-family:var(--mono);font-size:6px;letter-spacing:.11em;color:var(--muted-2);border:1px solid var(--line);padding:2px 5px;border-radius:100px;text-transform:uppercase}
+.chev{width:12px;height:12px;color:var(--muted);transition:transform .2s}
+.remix-card[open] .chev{transform:rotate(180deg)}
+.remix-body{padding:0 12px 12px}
+.remix-body p{margin:0 0 9px;font-size:9px;line-height:1.55;color:var(--muted)}
+.url-row{display:flex;gap:5px}
+.url-row input{
+  min-width:0;flex:1;height:32px;padding:0 9px;border-radius:7px;border:1px solid var(--line);
+  background:#0a0a0c;outline:none;font-size:9px;color:#d8d4cc;
+}
+.url-row input::placeholder{color:#51504c}
+.url-row input:focus{border-color:rgba(217,255,98,.32)}
+.url-clear{width:32px;height:32px;border-radius:7px;border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);background:rgba(255,255,255,.02)}
+.url-clear:hover{color:var(--text);border-color:var(--line-hi)}
+.url-clear svg{width:11px;height:11px}
+.remix-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:7px}
+.url-load{font-size:9px;font-weight:600;color:#b7b4ad;display:inline-flex;align-items:center;gap:5px;padding:3px 0}
+.url-load:hover{color:var(--acid)}
+.url-load svg{width:11px;height:11px}
+.remix-state{font-family:var(--mono);font-size:7px;letter-spacing:.04em;color:var(--muted-2);display:flex;align-items:center;gap:4px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.remix-state.active{color:var(--acid)}
+.remix-state .dot{width:4px;height:4px;border-radius:50%;background:currentColor}
+
+.generate-btn{
+  position:relative;width:100%;height:50px;margin-top:15px;border-radius:11px;
+  background:var(--acid);color:#15180a;font-size:12px;font-weight:800;letter-spacing:.01em;
+  display:flex;align-items:center;justify-content:center;gap:9px;overflow:hidden;
+  box-shadow:0 12px 34px rgba(217,255,98,.11);
+  transition:background .2s,transform .2s,box-shadow .2s;
+}
+.generate-btn:hover{background:var(--acid-strong);box-shadow:0 15px 38px rgba(217,255,98,.19)}
+.generate-btn:active{transform:translateY(1px)}
+.generate-btn svg{width:15px;height:15px}
+.generate-btn .gen-shine{position:absolute;top:0;bottom:0;width:70px;left:-90px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.42),transparent);transform:skewX(-20deg);animation:shine 4.8s ease-in-out infinite}
+@keyframes shine{0%,68%{left:-90px}86%,100%{left:115%}}
+.generate-btn:disabled{opacity:.55;cursor:not-allowed}
+.action-pair{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:7px}
+.action-pair .btn{width:100%;height:35px;font-size:9px;padding:0 8px;border-radius:9px;color:#b8b5ae}
+.action-pair .btn:hover{color:var(--text)}
+.privacy-note{margin-top:12px;display:flex;align-items:flex-start;gap:6px;font-size:8px;line-height:1.5;color:var(--muted-2)}
+.privacy-note svg{width:11px;height:11px;flex:0 0 auto;margin-top:.5px;color:#71706b}
+
+/* Stage */
+.stage{
+  min-width:0;min-height:0;display:flex;flex-direction:column;
+  border:1px solid var(--line);border-radius:var(--radius-lg);
+  background:linear-gradient(180deg,rgba(17,17,20,.72),rgba(13,13,15,.92));
+  overflow:hidden;position:relative;
+}
+.stage::before{
+  content:"";position:absolute;inset:0;pointer-events:none;opacity:.38;
+  background-image:linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);
+  background-size:34px 34px;
+  mask-image:linear-gradient(to bottom,rgba(0,0,0,.8),transparent 58%);
+}
+.stage-top{
+  flex:0 0 auto;height:49px;padding:0 17px;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  border-bottom:1px solid rgba(255,255,255,.055);position:relative;z-index:2;
+}
+.stage-title{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:8px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase}
+.stage-title b{color:#d8d4cc;font-weight:500}
+.stage-title .slash{color:#45444a}
+.type-badge{
+  display:inline-flex;align-items:center;gap:4px;padding:3px 6px;border-radius:4px;
+  border:1px solid rgba(255,255,255,.1);font-family:var(--mono);font-size:6px;letter-spacing:.13em;color:#aaa79f;
+}
+.type-badge.gen{border-color:rgba(217,255,98,.24);background:rgba(217,255,98,.07);color:#cfe875}
+.type-badge.import{border-color:rgba(255,122,92,.24);background:rgba(255,122,92,.07);color:#ff9b83}
+.canvas-meta{font-family:var(--mono);font-size:7px;color:#77766f;letter-spacing:.04em;display:flex;align-items:center;gap:6px}
+.canvas-meta .meta-dot{width:3px;height:3px;background:#4f4e49;border-radius:50%}
+
+.canvas-stage{
+  flex:1;min-height:0;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;padding:16px 22px 12px;
+}
+.canvas-frame{
+  position:relative;line-height:0;border-radius:4px;background:#09090a;
+  box-shadow:0 24px 65px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.08);
+  max-width:100%;max-height:100%;transition:width .18s,height .18s;
+}
+.canvas-frame::before{
+  content:"";position:absolute;inset:-7px;border:1px solid rgba(255,255,255,.045);border-radius:7px;pointer-events:none;
+}
+#studioCanvas{display:block;border-radius:4px;background:#0a0a0b;max-width:100%;max-height:100%}
+.canvas-frame.drag-ready::after{
+  content:"";position:absolute;inset:0;border-radius:4px;box-shadow:inset 0 0 0 2px var(--acid);pointer-events:none;
+}
+.stage-caption{
+  flex:0 0 auto;max-width:100%;display:flex;align-items:center;justify-content:center;gap:7px;
+  font-size:9px;color:#77756f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.stage-caption .live-dot{width:5px;height:5px;border-radius:50%;background:var(--acid);box-shadow:0 0 8px rgba(217,255,98,.4);flex:0 0 auto}
+.stage-caption b{color:#aaa7a0;font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.stage-caption .caption-sep{color:#39383c}
+.stage-caption .drag-hint{color:#55544f;font-size:8px}
+
+/* Canvas overlays */
+.loading-overlay{
+  position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:16px;padding:24px;border-radius:4px;text-align:center;
+  background:rgba(9,9,11,.8);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s;
+}
+.loading-overlay.show{opacity:1;visibility:visible}
+.loader-orbit{width:64px;height:64px;position:relative;display:grid;place-items:center}
+.loader-orbit::before,.loader-orbit::after{content:"";position:absolute;border-radius:50%}
+.loader-orbit::before{inset:0;border:1px solid rgba(255,255,255,.11);border-top-color:var(--acid);animation:spin 1.5s linear infinite}
+.loader-orbit::after{inset:9px;border:1px solid rgba(255,255,255,.06);border-bottom-color:var(--coral);animation:spin 2.2s linear infinite reverse}
+.loader-core{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 34% 30%,#f7ffd2,var(--acid) 36%,#6c8428);box-shadow:0 0 24px rgba(217,255,98,.35);animation:breathe 2s ease-in-out infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes breathe{0%,100%{transform:scale(.9);opacity:.8}50%{transform:scale(1.05);opacity:1}}
+.loading-copy{width:min(280px,100%)}
+.loading-copy .eyebrow{justify-content:center;margin-bottom:8px;font-size:7px;color:var(--acid)}
+.loading-copy h3{font-family:var(--serif);font-weight:400;font-size:25px;letter-spacing:-.3px;margin:0 0 3px;line-height:1.1}
+.loading-copy p{margin:0;font-size:9px;color:#8c8984;line-height:1.5;min-height:27px}
+.progress-track{height:2px;border-radius:4px;background:rgba(255,255,255,.09);overflow:hidden;margin-top:13px}
+.progress-track span{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--coral),var(--acid));transition:width .6s ease}
+.loading-meta{display:flex;align-items:center;justify-content:space-between;margin-top:8px;font-family:var(--mono);font-size:7px;letter-spacing:.08em;color:#66655f}
+.loading-meta button{font-family:var(--mono);font-size:7px;letter-spacing:.08em;color:#aaa79f;padding:3px 0;text-transform:uppercase}
+.loading-meta button:hover{color:var(--coral)}
+.drop-overlay{
+  position:absolute;inset:0;z-index:9;border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  background:rgba(11,12,8,.84);backdrop-filter:blur(8px);border:1px dashed rgba(217,255,98,.65);
+  opacity:0;visibility:hidden;transition:.18s;pointer-events:none;
+}
+.drop-overlay.show{opacity:1;visibility:visible}
+.drop-overlay svg{width:30px;height:30px;color:var(--acid)}
+.drop-overlay b{font-family:var(--serif);font-size:24px;font-weight:400}
+.drop-overlay span{font-family:var(--mono);font-size:7px;letter-spacing:.15em;color:var(--muted);text-transform:uppercase}
+
+/* Gallery */
+.gallery-section{
+  flex:0 0 auto;border-top:1px solid var(--line);background:rgba(10,10,12,.55);
+  padding:10px 13px 12px;position:relative;z-index:2;
+}
+.gallery-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:0 2px}
+.gallery-head .eyebrow{font-size:7px}
+.gallery-head .gallery-count{font-family:var(--mono);font-size:7px;letter-spacing:.06em;color:var(--muted-2)}
+.gallery{display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;padding:2px 2px 4px;min-height:76px;scroll-behavior:smooth}
+.gallery-empty{
+  width:100%;height:74px;display:flex;align-items:center;justify-content:center;gap:8px;
+  font-size:9px;color:var(--muted-2);border:1px dashed var(--line);border-radius:8px;
+}
+.gallery-item{
+  flex:0 0 88px;display:flex;flex-direction:column;gap:5px;text-align:left;
+  padding:0;position:relative;border-radius:8px;transition:.18s;min-width:0;
+}
+.gallery-thumb{
+  width:88px;height:62px;border-radius:7px;background-size:cover;background-position:center;
+  position:relative;border:1px solid rgba(255,255,255,.09);overflow:hidden;transition:.18s;
+}
+.gallery-thumb::after{content:"";position:absolute;inset:0;border-radius:6px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);background:linear-gradient(180deg,transparent 55%,rgba(0,0,0,.32))}
+.gallery-item:hover .gallery-thumb{border-color:rgba(255,255,255,.25);transform:translateY(-1px)}
+.gallery-item.active .gallery-thumb{border-color:var(--acid);box-shadow:0 0 0 2px rgba(217,255,98,.18)}
+.gallery-item.active .gallery-label{color:var(--acid)}
+.gallery-kind{
+  position:absolute;top:4px;left:4px;z-index:2;font-family:var(--mono);font-size:5px;letter-spacing:.1em;
+  color:rgba(255,255,255,.7);background:rgba(0,0,0,.52);border:1px solid rgba(255,255,255,.14);
+  border-radius:3px;padding:2px 3px;backdrop-filter:blur(3px);
+}
+.gallery-item.active .gallery-thumb::before{
+  content:"";position:absolute;right:5px;bottom:5px;width:13px;height:13px;border-radius:50%;
+  background:var(--acid) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9' viewBox='0 0 24 24' fill='none' stroke='%2315170c' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12 5 5L20 7'/%3E%3C/svg%3E") center/8px no-repeat;z-index:3;
+}
+.gallery-label{font-size:8px;font-weight:600;line-height:1.2;color:#8d8b85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 1px;transition:color .18s}
+.gallery-sub{font-family:var(--mono);font-size:6px;color:#565550;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 1px}
+
+/* Adjuster */
+.adjuster .panel-scroll{padding-top:1px}
+.adjuster-section{padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid rgba(255,255,255,.052)}
+.adjuster-section:last-of-type{border-bottom:0;margin-bottom:8px;padding-bottom:5px}
+.section-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.section-title .eyebrow{font-size:8px}
+.section-title .mini-value{font-family:var(--mono);font-size:7px;color:var(--muted-2)}
+.filter-list{display:flex;flex-direction:column;gap:10px}
+.filter-row{display:grid;grid-template-columns:62px 1fr 39px;align-items:center;gap:8px}
+.filter-row label{font-size:9px;color:#aaa7a0;font-weight:600;white-space:nowrap}
+.filter-row output{font-family:var(--mono);font-size:7px;color:#8a8882;text-align:right;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:16px;background:transparent;outline:none;margin:0;cursor:pointer;
+}
+input[type=range]::-webkit-slider-runnable-track{height:2px;border-radius:5px;background:linear-gradient(90deg,var(--acid) 0%,var(--acid) var(--pct,50%),rgba(255,255,255,.12) var(--pct,50%))}
+input[type=range]::-moz-range-track{height:2px;border-radius:5px;background:rgba(255,255,255,.12)}
+input[type=range]::-moz-range-progress{height:2px;border-radius:5px;background:var(--acid)}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:10px;height:10px;border-radius:50%;background:#f2f0e9;margin-top:-4px;
+  box-shadow:0 0 0 2px #141416,0 0 0 3px rgba(255,255,255,.2);transition:transform .15s,box-shadow .15s;
+}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.18);box-shadow:0 0 0 2px #141416,0 0 0 3px var(--acid)}
+input[type=range]::-moz-range-thumb{width:10px;height:10px;border:0;border-radius:50%;background:#f2f0e9;box-shadow:0 0 0 2px #141416,0 0 0 3px rgba(255,255,255,.2)}
+input[type=range].active::-webkit-slider-thumb{background:var(--acid);box-shadow:0 0 0 2px #141416,0 0 0 3px rgba(217,255,98,.5)}
+
+.ratio-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.ratio-btn{
+  border:1px solid var(--line);background:rgba(255,255,255,.018);border-radius:8px;padding:9px 4px 7px;
+  display:flex;flex-direction:column;align-items:center;gap:5px;color:#8d8b84;transition:.18s;
+}
+.ratio-btn:hover{border-color:var(--line-hi);color:var(--text)}
+.ratio-btn.active{border-color:rgba(217,255,98,.38);background:rgba(217,255,98,.07);color:var(--acid)}
+.ratio-icon{display:block;border:1.5px solid currentColor;border-radius:2px;opacity:.8}
+.ratio-btn[data-ratio="1:1"] .ratio-icon{width:15px;height:15px}
+.ratio-btn[data-ratio="16:9"] .ratio-icon{width:20px;height:11px}
+.ratio-btn[data-ratio="9:16"] .ratio-icon{width:11px;height:20px}
+.ratio-btn b{font-family:var(--mono);font-size:7px;font-weight:500;letter-spacing:.04em}
+.ratio-btn span{font-size:6px;color:#5f5e59;letter-spacing:.02em}
+.ratio-btn.active span{color:#a5b773}
+.segmented{display:grid;grid-template-columns:1fr 1fr;background:#0d0d0f;border:1px solid var(--line);padding:3px;border-radius:8px;gap:3px;margin-top:7px}
+.segmented button{height:25px;border-radius:5px;font-size:8px;font-weight:600;color:#77756f;transition:.18s}
+.segmented button:hover{color:#b8b5ae}
+.segmented button.active{background:rgba(255,255,255,.09);color:#e4e1da;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+
+.switch-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
+.switch-row>span{font-size:9px;font-weight:600;color:#aaa7a0}
+.switch{position:relative;display:inline-flex;width:30px;height:17px;flex:0 0 auto}
+.switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:2}
+.switch-track{width:100%;height:100%;border-radius:100px;background:#29292e;border:1px solid rgba(255,255,255,.09);transition:.2s;position:relative}
+.switch-track::after{content:"";position:absolute;width:11px;height:11px;border-radius:50%;background:#8b8983;top:2px;left:2px;transition:.2s}
+.switch input:checked + .switch-track{background:rgba(217,255,98,.18);border-color:rgba(217,255,98,.35)}
+.switch input:checked + .switch-track::after{transform:translateX(13px);background:var(--acid)}
+.text-fields{transition:opacity .2s}
+.text-fields.off{opacity:.32;pointer-events:none}
+.field-input{
+  width:100%;height:32px;border:1px solid var(--line);border-radius:7px;background:#0d0d0f;outline:none;
+  padding:0 9px;font-size:9px;color:#d6d2ca;transition:border-color .2s;
+}
+.field-input:focus{border-color:rgba(217,255,98,.35)}
+.field-input::placeholder{color:#504f4a}
+.text-style-row{display:grid;grid-template-columns:1fr 79px;gap:5px;margin-top:6px}
+.mini-select{
+  height:32px;border:1px solid var(--line);border-radius:7px;background:#0d0d0f;color:#b2afa8;
+  font-size:8px;padding:0 7px;outline:none;width:100%;appearance:none;
+}
+.text-pos{grid-template-columns:1fr 1fr;margin-top:6px;margin-bottom:0}
+.text-pos button{height:24px;font-size:7px}
+.size-row{display:grid;grid-template-columns:35px 1fr 32px;align-items:center;gap:7px;margin-top:8px}
+.size-row span{font-size:8px;color:#77756f}
+.size-row output{font-family:var(--mono);font-size:7px;color:#8a8882;text-align:right}
+
+.reset-btn{
+  width:100%;height:37px;border-radius:9px;border:1px solid var(--line);background:rgba(255,255,255,.02);
+  display:flex;align-items:center;justify-content:center;gap:7px;font-size:9px;font-weight:600;color:#8e8b85;
+  transition:.2s;margin-top:2px;
+}
+.reset-btn:hover{border-color:rgba(255,122,92,.3);background:rgba(255,122,92,.055);color:#ff9b83}
+.reset-btn svg{width:12px;height:12px}
+
+/* Toast */
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translate(-50%,18px);z-index:120;
+  min-width:180px;max-width:calc(100vw - 32px);display:flex;align-items:center;gap:9px;
+  background:#e8e5dd;color:#151514;border-radius:100px;padding:10px 15px 10px 12px;
+  box-shadow:0 14px 44px rgba(0,0,0,.42);font-size:10px;font-weight:700;
+  opacity:0;visibility:hidden;transition:.25s;pointer-events:none;
+}
+.toast.show{opacity:1;visibility:visible;transform:translate(-50%,0)}
+.toast .toast-icon{width:18px;height:18px;border-radius:50%;background:#151514;color:var(--acid);display:grid;place-items:center;flex:0 0 auto}
+.toast .toast-icon svg{width:10px;height:10px}
+.toast.error{background:#ffd8cb}
+.toast.error .toast-icon{background:#7b1f0c;color:#ffd8cb}
+.toast.success .toast-icon{background:#1e2a08;color:var(--acid)}
+
+.hidden{display:none!important}
+
+@media(max-width:1180px){
+  .workspace{grid-template-columns:298px minmax(300px,1fr) 282px;padding:13px 14px 15px}
+  .composer{margin-right:7px}.adjuster{margin-left:7px}
+  .panel-scroll{padding:16px 14px 15px}
+  .panel-head{padding:15px 15px 10px}
+  .filter-row{grid-template-columns:57px 1fr 36px;gap:6px}
+  #prompt{height:116px;font-size:12px}
+}
+@media(max-width:980px){
+  body{overflow-y:auto}
+  .app{height:auto;min-height:100dvh}
+  .topbar{position:sticky;top:0;height:62px;flex-basis:62px;padding:0 14px}
+  .top-center{display:none}
+  .workspace{display:flex;flex-direction:column;gap:12px;padding:12px;min-height:0}
+  .stage{order:1;height:calc(100dvh - 86px);min-height:560px}
+  .composer{order:2;margin:0;max-height:none}
+  .adjuster{order:3;margin:0;max-height:none}
+  .panel-scroll{overflow:visible}
+  .composer .panel-scroll{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+  .composer .panel-head{grid-column:1/-1}
+  .prompt-block{grid-column:1/-1}
+  .composer .style-group{grid-column:1/-1}
+  .composer .seed-card{margin-top:0}
+  .composer .remix-card{margin-top:0}
+  .composer .generate-btn{grid-column:1/-1}
+  .composer .action-pair{grid-column:1/-1}
+  .composer .privacy-note{grid-column:1/-1}
+  .adjuster .panel-scroll{display:block}
+  .brand-word small{display:none}
+  .canvas-stage{padding:15px 16px 9px}
+  .canvas-meta{display:none}
+}
+@media(max-width:650px){
+  .topbar{gap:8px}
+  .brand-word b{font-size:24px}
+  .brand-mark{width:33px;height:33px}
+  .btn .btn-label{display:none}
+  .top-actions .btn{width:37px;padding:0}
+  .top-actions .btn.primary{width:auto;padding:0 13px}
+  .workspace{padding:8px;gap:9px}
+  .stage{height:calc(100dvh - 72px);min-height:500px;border-radius:16px}
+  .stage-top{height:44px;padding:0 12px}
+  .stage-caption{font-size:8px;padding:0 5px}
+  .stage-caption .drag-hint,.stage-caption .caption-sep{display:none}
+  .canvas-stage{padding:13px 12px 8px;gap:8px}
+  .gallery-section{padding:8px 10px 10px}
+  .gallery-thumb{width:76px;height:54px}
+  .gallery-item{flex-basis:76px}
+  .gallery{min-height:67px}
+  .composer .panel-scroll{display:block}
+  .composer .prompt-block{display:block}
+  .composer .style-group{margin-top:14px}
+  .composer .seed-card{margin-top:13px}
+  .composer .remix-card{margin-top:10px}
+  .panel{border-radius:16px}
+  .panel-head{padding:14px 14px 9px}
+  .panel-scroll{padding:13px 14px 15px}
+  .toast{bottom:16px}
+}
+@media(max-height:710px) and (min-width:981px){
+  .topbar{height:62px;flex-basis:62px}
+  .workspace{padding:11px 14px 12px}
+  .panel-head{padding:13px 15px 8px}
+  .panel-scroll{padding:11px 14px 12px}
+  #prompt{height:98px}
+  .style-grid{gap:5px}.style-chip{height:25px;font-size:8px}
+  .control-label{margin:13px 0 7px}
+  .filter-list{gap:7px}
+  .generate-btn{height:45px;margin-top:11px}
+  .gallery-section{padding:8px 12px 9px}
+  .gallery-thumb{height:51px;width:78px}
+  .gallery-item{flex-basis:78px}
+  .gallery{min-height:66px}
+  .canvas-stage{padding:10px 20px 7px}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand" aria-label="Muse Image Studio">
+      <div class="brand-mark" aria-hidden="true"></div>
+      <div class="brand-word"><b>muse<span>.</span></b><small>AI Image Studio</small></div>
+    </div>
+    <div class="top-center"><span class="pulse-dot"></span>Keyless studio &nbsp;·&nbsp; Unlimited imagination</div>
+    <div class="top-actions">
+      <button class="btn ghost" id="importTop" type="button" title="Import a photo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M5 20h14"/></svg>
+        <span class="btn-label">Import</span>
+      </button>
+      <button class="btn primary" id="downloadTop" type="button" title="Download the finished PNG">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12"/><path d="m7 11 5 5 5-5"/><path d="M5 20h14"/></svg>
+        <span class="btn-label">Download PNG</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <aside class="panel composer" aria-label="Prompt and generation controls">
+      <div class="panel-head">
+        <span class="eyebrow"><span class="num">01</span> <b>Compose</b></span>
+        <span class="beta-pill">no login</span>
+      </div>
+      <div class="panel-scroll">
+        <div class="prompt-block">
+          <div class="prompt-shell" id="promptShell">
+            <label class="prompt-label" for="prompt">Describe your image</label>
+            <textarea id="prompt" maxlength="1000" spellcheck="false" placeholder="A sunlit courtyard of worn terracotta and olive trees, quiet morning light..."></textarea>
+            <div class="prompt-foot">
+              <span id="charCount">0 / 1000</span>
+              <span class="kbd-hint"><span class="kbd">⌘</span><span class="kbd">↵</span> generate</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="style-group">
+          <div class="control-label"><span>Style direction</span><span class="label-note">optional</span></div>
+          <div class="style-grid" id="styleGrid">
+            <button class="style-chip" type="button" data-style="Photorealistic">
+              <svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>Photorealistic
+            </button>
+            <button class="style-chip" type="button" data-style="3D Render">
+              <svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>3D Render
+            </button>
+            <button class="style-chip" type="button" data-style="Digital Art">
+              <svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>Digital Art
+            </button>
+            <button class="style-chip" type="button" data-style="Cyberpunk">
+              <svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>Cyberpunk
+            </button>
+            <button class="style-chip" type="button" data-style="Anime">
+              <svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>Anime
+            </button>
+            <button class="style-chip" type="button" data-style="Cinematic Lighting">
+              <svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>Cinematic Lighting
+            </button>
+            <button class="style-chip" type="button" data-style="4K Detailed">
+              <svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>4K Detailed
+            </button>
+          </div>
+          <div class="style-hint" id="styleHint">Pick a direction or write your own. Styles are added to your prompt.</div>
+        </div>
+
+        <div class="seed-card" aria-label="Generation seed">
+          <div class="seed-main"><span>Seed</span><strong id="seedValue">— — — — — —</strong></div>
+          <button class="seed-btn" id="seedShuffle" type="button" title="Shuffle seed" aria-label="Shuffle seed">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h3c4 0 5 10 9 10h6"/><path d="m18 14 3 3-3 3"/><path d="M3 17h3c1.6 0 2.8-1.6 4-3.5"/><path d="M14.5 7.4C15.2 7 16 7 17 7h4"/><path d="m18 4 3 3-3 3"/></svg>
+          </button>
+          <button class="seed-btn" id="seedLock" type="button" title="Lock seed" aria-label="Lock seed" aria-pressed="false">
+            <svg id="lockIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 7.5-2"/></svg>
+          </button>
+        </div>
+
+        <details class="remix-card" id="remixCard">
+          <summary>
+            <span class="remix-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>
+              Img2Img remix <span class="optional">optional</span>
+            </span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          </summary>
+          <div class="remix-body">
+            <p>Paste a public image URL to restyle it. We send it as a visual reference with your prompt.</p>
+            <div class="url-row">
+              <input id="imageUrl" type="url" inputmode="url" placeholder="https://image-host.com/photo.jpg" aria-label="Public image URL for Img2Img">
+              <button class="url-clear" id="urlClear" type="button" aria-label="Clear image URL" title="Clear URL">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div class="remix-foot">
+              <button class="url-load" id="loadUrlBtn" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+                Load into canvas
+              </button>
+              <span class="remix-state" id="remixState"><span class="dot"></span>URL not set</span>
+            </div>
+          </div>
+        </details>
+
+        <button class="generate-btn" id="generateBtn" type="button">
+          <span class="gen-shine" aria-hidden="true"></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.4L12 3Z"/><path d="m19 16 .8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16Z"/></svg>
+          <span id="generateLabel">Generate image</span>
+        </button>
+        <div class="action-pair">
+          <button class="btn" id="importBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M5 20h14"/></svg>Import photo
+          </button>
+          <button class="btn" id="resetBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>Reset edits
+          </button>
+        </div>
+        <div class="privacy-note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+          <span>Keyless &amp; private. Imported photos and edits never leave your device.</span>
+        </div>
+      </div>
+    </aside>
+
+    <section class="stage" aria-label="Canvas and session gallery">
+      <div class="stage-top">
+        <div class="stage-title">
+          <b>Canvas</b><span class="slash">/</span>
+          <span class="type-badge" id="typeBadge">STUDY</span>
+        </div>
+        <div class="canvas-meta">
+          <span id="canvasMeta">1024 × 1024</span><span class="meta-dot"></span><span id="seedMeta">SEED 000000</span>
+        </div>
+      </div>
+
+      <div class="canvas-stage" id="dropZone">
+        <div class="canvas-frame" id="canvasFrame">
+          <canvas id="studioCanvas" width="1024" height="1024" aria-label="Image studio canvas"></canvas>
+          <div class="loading-overlay" id="loadingOverlay" aria-hidden="true">
+            <div class="loader-orbit"><div class="loader-core"></div></div>
+            <div class="loading-copy">
+              <span class="eyebrow">Rendering</span>
+              <h3 id="loadingTitle">Reading the light</h3>
+              <p id="loadingSub">Finding the composition and building your image.</p>
+              <div class="progress-track"><span id="progressFill"></span></div>
+              <div class="loading-meta"><span id="loadTimer">00:00</span><button id="cancelBtn" type="button">Cancel</button></div>
+            </div>
+          </div>
+          <div class="drop-overlay" id="dropOverlay">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>
+            <b>Drop it here</b>
+            <span>Open photo in the studio</span>
+          </div>
+        </div>
+        <div class="stage-caption">
+          <span class="live-dot"></span>
+          <b id="currentCaption">Starter study · golden hour</b>
+          <span class="caption-sep">/</span>
+          <span class="drag-hint">Drag &amp; drop any image</span>
+        </div>
+      </div>
+
+      <div class="gallery-section">
+        <div class="gallery-head">
+          <span class="eyebrow"><span class="num">02</span> Session gallery</span>
+          <span class="gallery-count" id="galleryCount">1 image</span>
+        </div>
+        <div class="gallery" id="gallery">
+          <div class="gallery-empty">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m21 15-5-5L5 21"/></svg>
+            Your images will collect here
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel adjuster" aria-label="Image adjustment controls">
+      <div class="panel-head">
+        <span class="eyebrow"><span class="num">03</span> <b>Develop</b></span>
+        <span class="beta-pill" style="border-color:rgba(255,255,255,.11);color:#75736e;background:rgba(255,255,255,.025)">offline</span>
+      </div>
+      <div class="panel-scroll">
+        <section class="adjuster-section">
+          <div class="section-title"><span class="eyebrow">Light &amp; color</span><span class="mini-value">real-time</span></div>
+          <div class="filter-list">
+            <div class="filter-row"><label for="brightness">Brightness</label><input type="range" id="brightness" min="25" max="175" value="100" step="1"><output id="brightnessOut" for="brightness">100%</output></div>
+            <div class="filter-row"><label for="contrast">Contrast</label><input type="range" id="contrast" min="40" max="200" value="100" step="1"><output id="contrastOut" for="contrast">100%</output></div>
+            <div class="filter-row"><label for="saturation">Saturation</label><input type="range" id="saturation" min="0" max="200" value="100" step="1"><output id="saturationOut" for="saturation">100%</output></div>
+            <div class="filter-row"><label for="hue">Hue rotate</label><input type="range" id="hue" min="0" max="360" value="0" step="1"><output id="hueOut" for="hue">0°</output></div>
+            <div class="filter-row"><label for="blur">Blur</label><input type="range" id="blur" min="0" max="20" value="0" step="1"><output id="blurOut" for="blur">0px</output></div>
+            <div class="filter-row"><label for="invert">Invert</label><input type="range" id="invert" min="0" max="100" value="0" step="1"><output id="invertOut" for="invert">0%</output></div>
+          </div>
+        </section>
+
+        <section class="adjuster-section">
+          <div class="section-title"><span class="eyebrow">Frame</span><span class="mini-value" id="sourceSize">1024 × 1024</span></div>
+          <div class="ratio-grid" id="ratioGrid">
+            <button class="ratio-btn active" type="button" data-ratio="1:1"><span class="ratio-icon"></span><b>1:1</b><span>Square</span></button>
+            <button class="ratio-btn" type="button" data-ratio="16:9"><span class="ratio-icon"></span><b>16:9</b><span>Landscape</span></button>
+            <button class="ratio-btn" type="button" data-ratio="9:16"><span class="ratio-icon"></span><b>9:16</b><span>Portrait</span></button>
+          </div>
+          <div class="segmented" id="fitMode">
+            <button class="active" type="button" data-fit="crop">Fill / crop</button>
+            <button type="button" data-fit="fit">Fit whole image</button>
+          </div>
+        </section>
+
+        <section class="adjuster-section">
+          <div class="section-title"><span class="eyebrow">Title overlay</span><span class="mini-value">optional</span></div>
+          <div class="switch-row">
+            <span>Stamp text on image</span>
+            <label class="switch"><input type="checkbox" id="textToggle"><span class="switch-track"></span></label>
+          </div>
+          <div class="text-fields off" id="textFields">
+            <input class="field-input" id="overlayText" type="text" maxlength="80" placeholder="A line worth framing">
+            <div class="text-style-row">
+              <select class="mini-select" id="textStyle" aria-label="Text style">
+                <option value="serif">Editorial serif</option>
+                <option value="sans">Modern sans</option>
+                <option value="mono">Typewriter</option>
+              </select>
+              <select class="mini-select" id="textAlign" aria-label="Text alignment">
+                <option value="center">Center</option>
+                <option value="left">Left</option>
+              </select>
+            </div>
+            <div class="segmented text-pos" id="textPos">
+              <button type="button" data-pos="top">Top</button>
+              <button class="active" type="button" data-pos="bottom">Bottom</button>
+            </div>
+            <div class="size-row"><span>Size</span><input type="range" id="textSize" min="70" max="150" value="100" step="1"><output id="textSizeOut" for="textSize">100%</output></div>
+          </div>
+        </section>
+
+        <button class="reset-btn" id="resetBtn2" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>Reset all edits
+        </button>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<input type="file" id="fileInput" accept="image/*" class="hidden">
+<div class="toast" id="toast" role="status" aria-live="polite">
+  <span class="toast-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></span>
+  <span id="toastMsg">Ready</span>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+  const canvas = $('#studioCanvas');
+  const ctx = canvas.getContext('2d');
+  const defaults = { brightness:100, contrast:100, saturation:100, hue:0, blur:0, invert:0, ratio:'1:1', fit:'crop', textOn:false, text:'', textStyle:'serif', textAlign:'center', textPos:'bottom', textSize:100 };
+  let items = [];
+  let activeId = null;
+  let state = {...defaults};
+  let seed = Math.floor(Math.random() * 900000) + 100000;
+  let seedLocked = false;
+  let busy = false;
+  let generationToken = 0;
+  let timerInterval = null;
+  let toastTimer = null;
+  const randomSeed = () => Math.floor(Math.random() * 2147483646) + 1;
+  const activeItem = () => items.find(item => item.id === activeId);
+
+  function toast(message, type = 'success') {
+    const el = $('#toast');
+    $('#toastMsg').textContent = message;
+    el.className = `toast show ${type}`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+  }
+  function updateSeed() {
+    $('#seedValue').textContent = String(seed).padStart(6, '0');
+    $('#seedMeta').textContent = `SEED ${String(seed).padStart(6, '0')}`;
+  }
+  function updateMeta() {
+    const item = activeItem();
+    if (!item) return;
+    const size = `${canvas.width} × ${canvas.height}`;
+    $('#canvasMeta').textContent = size;
+    $('#sourceSize').textContent = `${item.image.naturalWidth || item.image.width} × ${item.image.naturalHeight || item.image.height}`;
+    $('#typeBadge').textContent = item.type === 'generated' ? 'GENERATED' : item.type === 'imported' ? 'IMPORTED' : 'STUDY';
+    $('#typeBadge').className = `type-badge ${item.type === 'generated' ? 'gen' : item.type === 'imported' ? 'import' : ''}`;
+    $('#currentCaption').textContent = item.title;
+    updateSeed();
+  }
+  function dimensionsForRatio(ratio, sourceW, sourceH) {
+    const maxSide = 1280;
+    const parts = ratio.split(':').map(Number);
+    const targetRatio = parts[0] / parts[1];
+    let w, h;
+    if (targetRatio >= 1) { w = maxSide; h = Math.round(maxSide / targetRatio); }
+    else { h = maxSide; w = Math.round(maxSide * targetRatio); }
+    if (!ratio || !sourceW || !sourceH) return [w, h];
+    return [w, h];
+  }
+  function drawBase(image) {
+    const sourceW = image.naturalWidth || image.width;
+    const sourceH = image.naturalHeight || image.height;
+    const [w, h] = dimensionsForRatio(state.ratio, sourceW, sourceH);
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    ctx.save();
+    ctx.filter = 'none';
+    ctx.fillStyle = '#111114';
+    ctx.fillRect(0, 0, w, h);
+    let sx = 0, sy = 0, sw = sourceW, sh = sourceH, dx = 0, dy = 0, dw = w, dh = h;
+    if (state.fit === 'crop') {
+      const scale = Math.max(w / sourceW, h / sourceH);
+      sw = w / scale; sh = h / scale;
+      sx = (sourceW - sw) / 2; sy = (sourceH - sh) / 2;
+    } else {
+      const scale = Math.min(w / sourceW, h / sourceH);
+      dw = sourceW * scale; dh = sourceH * scale;
+      dx = (w - dw) / 2; dy = (h - dh) / 2;
+    }
+    ctx.filter = `brightness(${state.brightness}%) contrast(${state.contrast}%) saturate(${state.saturation}%) hue-rotate(${state.hue}deg) blur(${state.blur}px) invert(${state.invert}%)`;
+    ctx.drawImage(image, sx, sy, sw, sh, dx, dy, dw, dh);
+    ctx.restore();
+    if (state.textOn && state.text.trim()) drawText();
+    updateMeta();
+    updateGalleryThumb(activeId);
+  }
+  function drawText() {
+    const text = state.text.trim();
+    if (!text) return;
+    const w = canvas.width, h = canvas.height;
+    const family = state.textStyle === 'sans' ? '700' : state.textStyle === 'mono' ? '500' : '400';
+    const face = state.textStyle === 'sans' ? 'Manrope, sans-serif' : state.textStyle === 'mono' ? 'DM Mono, monospace' : 'Instrument Serif, Georgia, serif';
+    const size = Math.max(20, Math.round(Math.min(w, h) * .055 * state.textSize / 100));
+    ctx.save();
+    ctx.font = `${family} ${size}px ${face}`;
+    ctx.textAlign = state.textAlign;
+    ctx.textBaseline = state.textPos === 'top' ? 'top' : 'bottom';
+    const margin = Math.round(Math.min(w, h) * .065);
+    const x = state.textAlign === 'left' ? margin : state.textAlign === 'right' ? w - margin : w / 2;
+    const y = state.textPos === 'top' ? margin : h - margin;
+    ctx.shadowColor = 'rgba(0,0,0,.7)'; ctx.shadowBlur = size * .22; ctx.shadowOffsetY = 2;
+    ctx.lineWidth = Math.max(2, size * .09); ctx.strokeStyle = 'rgba(0,0,0,.48)';
+    ctx.fillStyle = '#fffdf5';
+    const maxWidth = w - margin * 2;
+    const words = text.split(/\s+/); const lines = []; let line = '';
+    for (const word of words) {
+      const test = line ? `${line} ${word}` : word;
+      if (line && ctx.measureText(test).width > maxWidth) { lines.push(line); line = word; } else line = test;
+    }
+    if (line) lines.push(line);
+    const lineHeight = size * 1.15;
+    if (state.textPos === 'top') {
+      lines.forEach((value, i) => { const yy = y + i * lineHeight; ctx.strokeText(value, x, yy, maxWidth); ctx.fillText(value, x, yy, maxWidth); });
+    } else {
+      lines.reverse().forEach((value, i) => { const yy = y - i * lineHeight; ctx.strokeText(value, x, yy, maxWidth); ctx.fillText(value, x, yy, maxWidth); });
+    }
+    ctx.restore();
+  }
+  function saveState() {
+    const item = activeItem();
+    if (item) item.state = {...state};
+  }
+  function syncControls() {
+    ['brightness','contrast','saturation','hue','blur','invert','textSize'].forEach(id => {
+      const input = $(`#${id}`); input.value = state[id]; input.classList.toggle('active', Number(input.value) !== defaults[id]);
+      input.style.setProperty('--pct', `${(Number(input.value) - Number(input.min)) / (Number(input.max) - Number(input.min)) * 100}%`);
+      const suffix = id === 'hue' ? '°' : id === 'blur' ? 'px' : '%';
+      $(`#${id}Out`).textContent = `${state[id]}${suffix}`;
+    });
+    $$('.ratio-btn').forEach(button => button.classList.toggle('active', button.dataset.ratio === state.ratio));
+    $$('#fitMode button').forEach(button => button.classList.toggle('active', button.dataset.fit === state.fit));
+    $('#textToggle').checked = state.textOn;
+    $('#textFields').classList.toggle('off', !state.textOn);
+    $('#overlayText').value = state.text;
+    $('#textStyle').value = state.textStyle;
+    $('#textAlign').value = state.textAlign;
+    $('#textSize').value = state.textSize;
+    $$('#textPos button').forEach(button => button.classList.toggle('active', button.dataset.pos === state.textPos));
+  }
+  function render() {
+    const item = activeItem();
+    if (item) drawBase(item.image);
+  }
+  function thumbData(item) {
+    const temp = document.createElement('canvas');
+    temp.width = 120; temp.height = 76;
+    const c = temp.getContext('2d');
+    const iw = item.image.naturalWidth || item.image.width, ih = item.image.naturalHeight || item.image.height;
+    const scale = Math.max(temp.width / iw, temp.height / ih);
+    const sw = temp.width / scale, sh = temp.height / scale;
+    c.drawImage(item.image, (iw-sw)/2, (ih-sh)/2, sw, sh, 0, 0, temp.width, temp.height);
+    return temp.toDataURL('image/jpeg', .72);
+  }
+  function updateGalleryThumb(id) {
+    const item = items.find(entry => entry.id === id);
+    const element = $(`.gallery-item[data-id="${id}"] .gallery-thumb`);
+    if (item && element) element.style.backgroundImage = `url("${thumbData(item)}")`;
+  }
+  function renderGallery() {
+    const gallery = $('#gallery');
+    gallery.innerHTML = '';
+    $('#galleryCount').textContent = `${items.length} ${items.length === 1 ? 'image' : 'images'}`;
+    if (!items.length) {
+      gallery.innerHTML = '<div class="gallery-empty">Your images will collect here</div>';
+      return;
+    }
+    items.forEach(item => {
+      const button = document.createElement('button');
+      button.type = 'button'; button.className = `gallery-item${item.id === activeId ? ' active' : ''}`; button.dataset.id = item.id;
+      button.setAttribute('aria-label', `Open ${item.title}`);
+      const thumb = document.createElement('span'); thumb.className = 'gallery-thumb';
+      thumb.style.backgroundImage = `url("${thumbData(item)}")`;
+      const kind = document.createElement('span'); kind.className = 'gallery-kind'; kind.textContent = item.type === 'generated' ? 'GEN' : item.type === 'imported' ? 'FILE' : 'STUDY';
+      thumb.append(kind);
+      const label = document.createElement('span'); label.className = 'gallery-label'; label.textContent = item.title;
+      const sub = document.createElement('span'); sub.className = 'gallery-sub'; sub.textContent = item.type === 'generated' ? `SEED ${item.seed}` : 'LOCAL IMAGE';
+      button.append(thumb, label, sub);
+      button.addEventListener('click', () => selectItem(item.id));
+      gallery.append(button);
+    });
+  }
+  function selectItem(id) {
+    if (id === activeId) return;
+    saveState(); activeId = id;
+    const item = activeItem();
+    state = {...defaults, ...(item.state || {})};
+    if (item.seed) seed = item.seed;
+    syncControls(); render(); renderGallery();
+  }
+  function addImage(image, type, title, imageSeed = null) {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+    const item = {id, image, type, title: title || 'Untitled image', seed:imageSeed, state:{...defaults}};
+    saveState(); items.unshift(item); items = items.slice(0, 30); activeId = id; state = {...defaults};
+    if (imageSeed) seed = imageSeed;
+    syncControls(); render(); renderGallery();
+    return item;
+  }
+  function imageFromUrl(url) {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      if (!url.startsWith('data:') && !url.startsWith('blob:')) image.crossOrigin = 'anonymous';
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error('Could not load this image. Check the URL and image-host permissions.'));
+      image.src = url;
+    });
+  }
+  function setBusy(value) {
+    busy = value;
+    $('#generateBtn').disabled = value;
+    $('#generateLabel').textContent = value ? 'Creating image…' : 'Generate image';
+    $('#loadingOverlay').classList.toggle('show', value);
+    $('#loadingOverlay').setAttribute('aria-hidden', String(!value));
+    if (value) {
+      const started = Date.now();
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - started) / 1000);
+        $('#loadTimer').textContent = `${String(Math.floor(elapsed/60)).padStart(2,'0')}:${String(elapsed%60).padStart(2,'0')}`;
+        $('#progressFill').style.width = `${Math.min(92, 12 + elapsed * 3)}%`;
+      }, 400);
+    } else {
+      clearInterval(timerInterval); timerInterval = null;
+      $('#progressFill').style.width = '0%';
+    }
+  }
+  async function generate() {
+    const prompt = $('#prompt').value.trim();
+    if (!prompt) {
+      $('#promptShell').classList.remove('shake'); void $('#promptShell').offsetWidth; $('#promptShell').classList.add('shake');
+      $('#prompt').focus(); toast('Add a prompt to get started.', 'error'); return;
+    }
+    const selectedStyles = $$('.style-chip.active').map(button => button.dataset.style);
+    const fullPrompt = [prompt, ...selectedStyles].join(', ');
+    const ratio = state.ratio;
+    const [width,height] = dimensionsForRatio(ratio, 1024, 1024);
+    if (!seedLocked) { seed = randomSeed(); updateSeed(); }
+    const currentSeed = seed;
+    const imageUrl = $('#imageUrl').value.trim();
+    if (imageUrl && !/^https?:\/\//i.test(imageUrl)) { toast('Img2Img needs a public http(s) image URL.', 'error'); return; }
+    const params = new URLSearchParams({width:String(width),height:String(height),seed:String(currentSeed),nologo:'true'});
+    if (imageUrl) params.set('image', imageUrl);
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?${params.toString()}`;
+    const token = ++generationToken;
+    setBusy(true);
+    $('#loadingTitle').textContent = imageUrl ? 'Remixing your reference' : 'Reading the light';
+    $('#loadingSub').textContent = 'Finding the composition and building your image.';
+    try {
+      const image = await imageFromUrl(url);
+      if (token !== generationToken) return;
+      addImage(image, 'generated', prompt.slice(0, 36) || 'Generated image', currentSeed);
+      toast('Your image is ready.', 'success');
+    } catch (error) {
+      if (token === generationToken) toast(error.message || 'Image generation failed. Please try again.', 'error');
+    } finally {
+      if (token === generationToken) setBusy(false);
+    }
+  }
+  function cancelGeneration() {
+    if (!busy) return;
+    generationToken++; setBusy(false); toast('Generation cancelled.', 'success');
+  }
+  function importFile(file) {
+    if (!file || !file.type.startsWith('image/')) { toast('Choose a valid image file.', 'error'); return; }
+    const reader = new FileReader();
+    reader.onerror = () => toast('Could not read that file.', 'error');
+    reader.onload = async () => {
+      try {
+        const image = await imageFromUrl(reader.result);
+        addImage(image, 'imported', file.name.replace(/\.[^.]+$/, '').slice(0, 36) || 'Imported photo');
+        toast('Photo added to your studio.', 'success');
+      } catch { toast('That image could not be opened.', 'error'); }
+    };
+    reader.readAsDataURL(file);
+  }
+  function resetEdits() {
+    state = {...defaults}; syncControls(); saveState(); render(); toast('Edits reset for this image.', 'success');
+  }
+  function download() {
+    if (!activeItem()) { toast('Add an image before exporting.', 'error'); return; }
+    render();
+    canvas.toBlob(blob => {
+      if (!blob) { toast('Could not export this image.', 'error'); return; }
+      const link = document.createElement('a'); link.href = URL.createObjectURL(blob);
+      link.download = `muse-${new Date().toISOString().slice(0,10)}.png`;
+      document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+      toast('PNG downloaded.', 'success');
+    }, 'image/png');
+  }
+  function setUrlStatus(text, active = false) {
+    const el = $('#remixState'); el.innerHTML = '<span class="dot"></span>';
+    el.append(document.createTextNode(text)); el.classList.toggle('active', active);
+  }
+  $('#generateBtn').addEventListener('click', generate);
+  $('#cancelBtn').addEventListener('click', cancelGeneration);
+  $('#prompt').addEventListener('input', () => $('#charCount').textContent = `${$('#prompt').value.length} / 1000`);
+  $('#prompt').addEventListener('keydown', event => { if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') generate(); });
+  $$('.style-chip').forEach(button => button.addEventListener('click', () => button.classList.toggle('active')));
+  $('#seedShuffle').addEventListener('click', () => { seed = randomSeed(); updateSeed(); toast('Seed shuffled.', 'success'); });
+  $('#seedLock').addEventListener('click', event => {
+    seedLocked = !seedLocked; event.currentTarget.classList.toggle('locked', seedLocked);
+    event.currentTarget.setAttribute('aria-pressed', String(seedLocked));
+    event.currentTarget.title = seedLocked ? 'Unlock seed' : 'Lock seed';
+    event.currentTarget.innerHTML = seedLocked
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 7.5-2"/></svg>';
+  });
+  $('#imageUrl').addEventListener('input', () => setUrlStatus($('#imageUrl').value.trim() ? 'Ready for remix' : 'URL not set', !!$('#imageUrl').value.trim()));
+  $('#urlClear').addEventListener('click', () => { $('#imageUrl').value = ''; setUrlStatus('URL not set'); });
+  $('#loadUrlBtn').addEventListener('click', async () => {
+    const url = $('#imageUrl').value.trim();
+    if (!/^https?:\/\//i.test(url)) { toast('Enter a public http(s) image URL first.', 'error'); return; }
+    setUrlStatus('Loading image…', true);
+    try { const image = await imageFromUrl(url); addImage(image, 'imported', 'Web image'); setUrlStatus('Reference loaded', true); toast('Image loaded onto canvas.', 'success'); }
+    catch (error) { setUrlStatus('Could not load URL'); toast(error.message, 'error'); }
+  });
+  $('#importBtn').addEventListener('click', () => $('#fileInput').click());
+  $('#importTop').addEventListener('click', () => $('#fileInput').click());
+  $('#fileInput').addEventListener('change', event => { importFile(event.target.files[0]); event.target.value = ''; });
+  ['resetBtn','resetBtn2'].forEach(id => $(`#${id}`).addEventListener('click', resetEdits));
+  ['downloadTop'].forEach(id => $(`#${id}`).addEventListener('click', download));
+  $$('.filter-row input, #textSize').forEach(input => input.addEventListener('input', () => {
+    state[input.id] = Number(input.value); syncControls(); saveState(); render();
+  }));
+  $$('.ratio-btn').forEach(button => button.addEventListener('click', () => { state.ratio = button.dataset.ratio; syncControls(); saveState(); render(); }));
+  $$('#fitMode button').forEach(button => button.addEventListener('click', () => { state.fit = button.dataset.fit; syncControls(); saveState(); render(); }));
+  $('#textToggle').addEventListener('change', event => { state.textOn = event.target.checked; syncControls(); saveState(); render(); });
+  $('#overlayText').addEventListener('input', event => { state.text = event.target.value; saveState(); render(); });
+  $('#textStyle').addEventListener('change', event => { state.textStyle = event.target.value; saveState(); render(); });
+  $('#textAlign').addEventListener('change', event => { state.textAlign = event.target.value; saveState(); render(); });
+  $$('#textPos button').forEach(button => button.addEventListener('click', () => { state.textPos = button.dataset.pos; syncControls(); saveState(); render(); }));
+  const dropZone = $('#dropZone');
+  ['dragenter','dragover'].forEach(name => dropZone.addEventListener(name, event => { event.preventDefault(); $('#canvasFrame').classList.add('drag-ready'); $('#dropOverlay').classList.add('show'); }));
+  ['dragleave','drop'].forEach(name => dropZone.addEventListener(name, event => { event.preventDefault(); $('#canvasFrame').classList.remove('drag-ready'); $('#dropOverlay').classList.remove('show'); }));
+  dropZone.addEventListener('drop', event => { const file = [...event.dataTransfer.files].find(entry => entry.type.startsWith('image/')); if (file) importFile(file); else toast('Drop an image file to open it.', 'error'); });
+  document.addEventListener('dragover', event => event.preventDefault());
+  document.addEventListener('drop', event => { if (!dropZone.contains(event.target)) event.preventDefault(); });
+
+  // A small original starter study gives the empty canvas a useful first impression.
+  const starter = new Image();
+  starter.onload = () => { addImage(starter, 'study', 'Starter study · golden hour'); };
+  starter.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#f3ad7d"/><stop offset=".52" stop-color="#d77b62"/><stop offset="1" stop-color="#3d3437"/></linearGradient><radialGradient id="sun"><stop stop-color="#fff2bd"/><stop offset="1" stop-color="#f7c68c" stop-opacity=".05"/></radialGradient><linearGradient id="ground" x2="0" y2="1"><stop stop-color="#815147"/><stop offset="1" stop-color="#252b29"/></linearGradient></defs><rect width="1024" height="1024" fill="url(#sky)"/><circle cx="680" cy="370" r="250" fill="url(#sun)"/><circle cx="680" cy="370" r="93" fill="#ffe4a8"/><path d="M0 620 Q210 570 400 630 T820 610 T1024 625V1024H0Z" fill="#584044"/><path d="M0 720 Q180 650 380 730 T760 690 T1024 710V1024H0Z" fill="url(#ground)"/><path d="M0 815 Q200 765 420 815 T800 790 T1024 820V1024H0Z" fill="#252b29"/><g fill="#27342d"><path d="M146 728h28V520h-28z"/><circle cx="160" cy="505" r="90"/><circle cx="105" cy="548" r="58"/><circle cx="211" cy="550" r="66"/><path d="M842 737h24V494h-24z"/><circle cx="853" cy="465" r="105"/><circle cx="794" cy="510" r="61"/><circle cx="913" cy="520" r="66"/></g><path d="M420 1024V720l100-110 100 110v304" fill="#b87558" opacity=".8"/><path d="M460 1024V740l60-65 60 65v284" fill="#dfaa78" opacity=".38"/><g fill="#ffe4a8" opacity=".6"><circle cx="290" cy="761" r="3"/><circle cx="321" cy="748" r="2"/><circle cx="727" cy="785" r="3"/><circle cx="695" cy="774" r="2"/></g><rect width="1024" height="1024" fill="none" stroke="#fff" stroke-opacity=".08" stroke-width="2"/></svg>`);
+  updateSeed();
+})();
+</script>
+</body>
+</html>
