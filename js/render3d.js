@@ -104,6 +104,60 @@ function makeAsphaltTexture() {
   });
 }
 
+function makeRampTexture() {
+  const rnd = mulberry32(731);
+  return makeTexture(256, 128, (g, w, h) => {
+    g.fillStyle = '#353b41';
+    g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 1500; i++) {
+      const v = rnd();
+      g.fillStyle =
+        v < 0.5 ? 'rgba(16, 19, 22, 0.26)' : 'rgba(150, 158, 166, 0.14)';
+      const s = 0.5 + rnd() * 1.6;
+      g.fillRect(rnd() * w, rnd() * h, s, s);
+    }
+
+    // Hazard strips along both long edges.
+    for (const y of [0, h - 13]) {
+      g.fillStyle = '#e6b32c';
+      g.fillRect(0, y, w, 13);
+      g.fillStyle = '#1a1d1f';
+      for (let x = -h; x < w + h; x += 26) {
+        g.beginPath();
+        g.moveTo(x, y + 13);
+        g.lineTo(x + 13, y);
+        g.lineTo(x + 24, y);
+        g.lineTo(x + 11, y + 13);
+        g.closePath();
+        g.fill();
+      }
+    }
+
+    // Forward-pointing chevrons.
+    g.lineWidth = 12;
+    g.lineJoin = 'miter';
+    g.strokeStyle = '#f2c53b';
+    for (let i = -1; i < 4; i++) {
+      const x = 44 + i * 68;
+      g.beginPath();
+      g.moveTo(x - 30, 27);
+      g.lineTo(x, 64);
+      g.lineTo(x - 30, 101);
+      g.stroke();
+    }
+    g.lineWidth = 3;
+    g.strokeStyle = 'rgba(255, 246, 205, 0.7)';
+    for (let i = -1; i < 4; i++) {
+      const x = 44 + i * 68;
+      g.beginPath();
+      g.moveTo(x - 30, 27);
+      g.lineTo(x, 64);
+      g.lineTo(x - 30, 101);
+      g.stroke();
+    }
+  }, { clampEdge: true });
+}
+
 function makeCheckerTexture() {
   return makeTexture(128, 512, (g, w, h) => {
     g.fillStyle = '#f3efe4';
@@ -581,10 +635,11 @@ function makeInstanced(geometry, material, items) {
 /* ------------------------------------------------------------------ */
 
 export class Renderer3D {
-  constructor(canvas, track, cars) {
+  constructor(canvas, track, cars, ramps = null) {
     this.canvas = canvas;
     this.track = track;
     this.cars = cars;
+    this.ramps = ramps;
     this.time = 0;
     this.skidCursor = 0;
     this.skidCount = 0;
@@ -619,6 +674,7 @@ export class Renderer3D {
     this.buildLights();
     this.buildGround();
     this.buildTrack();
+    this.buildRamps();
     this.buildScenery();
     this.buildStart();
     this.buildCars(cars);
@@ -846,6 +902,101 @@ export class Renderer3D {
       box.rotation.z = -slot.angle;
       box.position.set(slot.x, 0.1, slot.y);
       this.scene.add(box);
+    }
+  }
+
+  buildRamps() {
+    if (!this.ramps || !this.ramps.list.length) return;
+
+    const deckMaterial = new THREE.MeshStandardMaterial({
+      map: makeRampTexture(),
+      roughness: 0.86,
+      metalness: 0.05,
+    });
+    const bodyMaterial = new THREE.MeshStandardMaterial({
+      color: 0x2a3034,
+      roughness: 0.92,
+      metalness: 0.08,
+    });
+    const railMaterial = new THREE.MeshStandardMaterial({
+      color: 0xf0c23a,
+      emissive: 0xffa412,
+      emissiveIntensity: 0.55,
+      roughness: 0.45,
+      metalness: 0.15,
+    });
+    const lipMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffd75a,
+      emissive: 0xff8c00,
+      emissiveIntensity: 1.15,
+      roughness: 0.38,
+    });
+    const baseMaterial = new THREE.MeshBasicMaterial({
+      color: 0xf2c53b,
+      transparent: true,
+      opacity: 0.82,
+      depthWrite: false,
+    });
+
+    for (const ramp of this.ramps.list) {
+      const group = new THREE.Group();
+      group.position.set(ramp.x, 0.08, ramp.z);
+      group.rotation.y = ramp.yaw;
+
+      // Solid wedge: a right-triangle profile extruded across the track.
+      const profile = new THREE.Shape();
+      profile.moveTo(-ramp.halfL, 0);
+      profile.lineTo(ramp.halfL, 0);
+      profile.lineTo(ramp.halfL, ramp.height);
+      profile.lineTo(-ramp.halfL, 0);
+      const wedge = new THREE.Mesh(
+        new THREE.ExtrudeGeometry(profile, { depth: ramp.width, bevelEnabled: false }),
+        bodyMaterial
+      );
+      wedge.position.z = -ramp.halfW;
+      group.add(wedge);
+
+      // Textured deck, laid exactly along the slope.
+      const slopeLength = Math.hypot(ramp.length, ramp.height);
+      const deckPivot = new THREE.Group();
+      deckPivot.position.y = ramp.height / 2 + 0.22;
+      deckPivot.rotation.z = ramp.slope;
+      const deck = new THREE.Mesh(
+        new THREE.PlaneGeometry(slopeLength, ramp.width - 10),
+        deckMaterial
+      );
+      deck.rotation.x = -Math.PI / 2;
+      deckPivot.add(deck);
+      group.add(deckPivot);
+
+      // Glowing edge rails and lip bar make the launch line readable.
+      for (const side of [-1, 1]) {
+        const rail = new THREE.Mesh(
+          new THREE.BoxGeometry(slopeLength, 5.5, 5.5),
+          railMaterial
+        );
+        rail.position.set(0, ramp.height / 2 + 2.8, side * (ramp.halfW - 3));
+        rail.rotation.z = ramp.slope;
+        group.add(rail);
+      }
+      const lip = new THREE.Mesh(
+        new THREE.BoxGeometry(6, 6, ramp.width),
+        lipMaterial
+      );
+      lip.position.set(ramp.halfL - 1, ramp.height + 1.4, 0);
+      group.add(lip);
+
+      // Hazard bars on the run-up.
+      for (const behind of [10, 26]) {
+        const bar = new THREE.Mesh(
+          new THREE.BoxGeometry(7, 0.45, ramp.width - 8),
+          baseMaterial
+        );
+        bar.position.set(-ramp.halfL - behind, 0.05, 0);
+        group.add(bar);
+      }
+
+      this.scene.add(group);
     }
   }
 
@@ -1280,7 +1431,11 @@ export class Renderer3D {
         const sprite = this.sparkSprites[sparkIndex++];
         sprite.material.color.set(0xffd27a);
         sprite.material.opacity = 0.95 * t;
-        sprite.position.set(particle.x, 3.4 + (1 - t) * 6, particle.y);
+        sprite.position.set(
+          particle.x,
+          (particle.height || 0) + 3.4 + (1 - t) * 6,
+          particle.y
+        );
         const size = 5 + (1 - t) * 4;
         sprite.scale.set(size, size, 1);
         sprite.visible = true;
@@ -1293,7 +1448,11 @@ export class Renderer3D {
       if (particle.kind === 'dust') {
         sprite.material.color.set(particle.tint === 'green' ? 0x7f9a62 : 0xbba97f);
         sprite.material.opacity = 0.4 * t;
-        sprite.position.set(particle.x, 2 + (1 - t) * 4, particle.y);
+        sprite.position.set(
+          particle.x,
+          (particle.height || 0) + 2 + (1 - t) * 4,
+          particle.y
+        );
         const size = particle.size * (1.35 - t * 0.4) * 2.2;
         sprite.scale.set(size, size, 1);
       } else {
@@ -1412,10 +1571,11 @@ export class Renderer3D {
     const sin = Math.sin(playerCar.angle);
     const focusX = camera.x;
     const focusY = camera.y;
+    const carY = playerCar.y || 0;
 
     cam.position.set(
       focusX - cos * back,
-      height,
+      height + carY * 0.55,
       focusY - sin * back
     );
 
@@ -1428,7 +1588,7 @@ export class Renderer3D {
 
     cam.lookAt(
       focusX + cos * 92,
-      9,
+      9 + carY * 0.85,
       focusY + sin * 92
     );
 
@@ -1441,8 +1601,9 @@ export class Renderer3D {
     for (const car of cars) {
       const model = this.carModels.get(car);
       if (!model) continue;
-      model.group.position.set(car.pos.x, 0, car.pos.y);
+      model.group.position.set(car.pos.x, car.y || 0, car.pos.y);
       model.group.rotation.y = -car.angle;
+      model.group.rotation.z = car.pitch || 0;
 
       const bounce = car.bump * 1.6;
       model.body.position.y = bounce;
