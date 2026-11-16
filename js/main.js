@@ -1,20 +1,18 @@
 import { clamp, damp, formatTime, mod, TAU, wrapAngle } from './utils.js';
-import { Track, WORLD } from './track.js';
+import { Track } from './track.js';
 import { Car } from './car.js';
 import { AIDriver } from './ai.js';
 import { GameAudio } from './audio.js';
-import { buildWorld, drawCar, drawCarShadow, drawParticles } from './render.js';
+import { Renderer3D, Garage3D } from './render3d.js';
 
 const LAPS = 3;
 const STEP = 1 / 120;
-const SKID_SCALE = 0.5;
 
 /* ------------------------------------------------------------------ */
 /* DOM                                                                 */
 /* ------------------------------------------------------------------ */
 
 const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
 const hud = document.getElementById('hud');
 const lapNowEl = document.getElementById('lapNow');
 const lapTotalEl = document.getElementById('lapTotal');
@@ -38,6 +36,9 @@ const unlockNote = document.getElementById('unlockNote');
 const garageScreen = document.getElementById('garageScreen');
 const garageGrid = document.getElementById('garageGrid');
 const garageProgress = document.getElementById('garageProgress');
+const garageCanvas = document.getElementById('garageCanvas');
+const garageViewName = document.getElementById('garageViewName');
+const garageViewTag = document.getElementById('garageViewTag');
 const garageBtn = document.getElementById('garageBtn');
 const garageCloseBtn = document.getElementById('garageCloseBtn');
 const garageBackBtn = document.getElementById('garageBackBtn');
@@ -49,6 +50,8 @@ const pauseBtn = document.getElementById('pauseBtn');
 const startBtn = document.getElementById('startBtn');
 const againBtn = document.getElementById('againBtn');
 const resultGarageBtn = document.getElementById('resultGarageBtn');
+const resultMenuBtn = document.getElementById('resultMenuBtn');
+const pauseMenuBtn = document.getElementById('pauseMenuBtn');
 const resumeBtn = document.getElementById('resumeBtn');
 const restartBtn = document.getElementById('restartBtn');
 const gaugeCanvas = document.getElementById('gauge');
@@ -63,19 +66,6 @@ lapTotalEl.textContent = String(LAPS);
 /* ------------------------------------------------------------------ */
 
 const track = new Track();
-const world = buildWorld(track);
-const worldCanvas = world.canvas;
-const grassPattern = ctx.createPattern(world.grassTile, 'repeat');
-
-const skidCanvas = document.createElement('canvas');
-skidCanvas.width = Math.round(WORLD.w * SKID_SCALE);
-skidCanvas.height = Math.round(WORLD.h * SKID_SCALE);
-const skidCtx = skidCanvas.getContext('2d');
-skidCtx.lineCap = 'round';
-
-function clearSkids() {
-  skidCtx.clearRect(0, 0, skidCanvas.width, skidCanvas.height);
-}
 
 /* ------------------------------------------------------------------ */
 /* Cars                                                                */
@@ -110,6 +100,7 @@ const cars = carDefs.map((def, i) => {
   return car;
 });
 const playerCar = cars.find((c) => c.isPlayer);
+const world3d = new Renderer3D(canvas, track, cars);
 
 /* ------------------------------------------------------------------ */
 /* Garage                                                              */
@@ -194,6 +185,8 @@ const garageSave = {
   wins: 0,
   unlocked: ['apex'],
 };
+
+const garage3d = new Garage3D(garageCanvas);
 
 function isUnlocked(spec) {
   return !spec.unlock || garageSave.unlocked.includes(spec.id);
@@ -298,6 +291,10 @@ function renderGarage() {
   const races = garageSave.races;
   const wins = garageSave.wins;
   garageProgress.textContent = `${races} race${races === 1 ? '' : 's'} · ${wins} win${wins === 1 ? '' : 's'}`;
+  const active = selectedCarSpec();
+  garageViewName.textContent = active.name;
+  garageViewTag.textContent = active.tag;
+  garageCanvas.setAttribute('aria-label', `${active.name} 3D preview`);
 }
 
 function applyPlayerSetup() {
@@ -312,6 +309,8 @@ function applyPlayerSetup() {
   titleCarName.textContent = spec.name;
   titleCarDot.style.background = spec.color;
   titleCarDot.style.color = spec.color;
+  world3d.setCarStyle(playerCar);
+  garage3d.setCar(spec);
 }
 
 function selectCar(id) {
@@ -327,10 +326,15 @@ function openGarage() {
   if (state.mode !== 'title' && state.mode !== 'results') return;
   renderGarage();
   garageScreen.classList.remove('hidden');
+  garage3d.setCar(selectedCarSpec());
+  garage3d.setActive(true);
+  garage3d.resize();
+  requestAnimationFrame(() => garage3d.resize());
 }
 
 function closeGarage() {
   garageScreen.classList.add('hidden');
+  garage3d.setActive(false);
 }
 
 function recordRaceResult(pos) {
@@ -388,10 +392,8 @@ function resize() {
   viewW = Math.max(1, window.innerWidth);
   viewH = Math.max(1, window.innerHeight);
   dprScale = Math.min(2, window.devicePixelRatio || 1);
-  canvas.width = Math.round(viewW * dprScale);
-  canvas.height = Math.round(viewH * dprScale);
-  canvas.style.width = `${viewW}px`;
-  canvas.style.height = `${viewH}px`;
+  world3d.resize(viewW, viewH, dprScale);
+  garage3d.resize();
 }
 
 function baseZoom() {
@@ -428,7 +430,7 @@ function resetRace() {
   state.hudAccum = 0;
   state.hudCanvasAccum = 0;
   particles.length = 0;
-  clearSkids();
+  world3d.clearSkids();
   bannerEl.classList.remove('show');
   countdownEl.className = 'countdown';
   countdownEl.textContent = '';
@@ -572,6 +574,21 @@ function resumeGame() {
   pauseScreen.classList.add('hidden');
 }
 
+function showTitle() {
+  if (state.mode === 'title') return;
+  state.mode = 'title';
+  state.attract = track.length * 0.32;
+  state.shake = 0;
+  titleScreen.classList.remove('hidden');
+  resultsScreen.classList.add('hidden');
+  pauseScreen.classList.add('hidden');
+  garageScreen.classList.add('hidden');
+  garage3d.setActive(false);
+  hud.classList.remove('live');
+  clearKeys();
+  audio.idle();
+}
+
 function showResults() {
   state.mode = 'results';
   const order = standings();
@@ -620,6 +637,8 @@ function showResults() {
 startBtn.addEventListener('click', startRace);
 againBtn.addEventListener('click', startRace);
 resultGarageBtn.addEventListener('click', openGarage);
+resultMenuBtn.addEventListener('click', showTitle);
+pauseMenuBtn.addEventListener('click', showTitle);
 resumeBtn.addEventListener('click', resumeGame);
 restartBtn.addEventListener('click', startRace);
 garageBtn.addEventListener('click', openGarage);
@@ -725,24 +744,7 @@ function spawnParticle(kind, x, y, vx, vy, size, maxLife, extra = {}) {
 }
 
 function laySkid(car) {
-  const cos = Math.cos(car.angle);
-  const sin = Math.sin(car.angle);
-  const rearX = car.pos.x - cos * car.length * 0.24;
-  const rearY = car.pos.y - sin * car.length * 0.24;
-  const nx = -sin;
-  const ny = cos;
-  const spread = car.width * 0.38;
-  const strength = clamp(car.slip / 260, 0.25, 1);
-  skidCtx.strokeStyle = `rgba(14, 16, 18, ${0.08 + strength * 0.16})`;
-  skidCtx.lineWidth = 4;
-  for (const side of [-1, 1]) {
-    const x = (rearX + nx * spread * side) * SKID_SCALE;
-    const y = (rearY + ny * spread * side) * SKID_SCALE;
-    skidCtx.beginPath();
-    skidCtx.moveTo(x - (car.vel.x * 0.012) * SKID_SCALE, y - (car.vel.y * 0.012) * SKID_SCALE);
-    skidCtx.lineTo(x, y);
-    skidCtx.stroke();
-  }
+  world3d.laySkid(car);
 }
 
 function updateEffects(dt) {
@@ -1218,70 +1220,8 @@ function drawMinimap() {
 /* Render                                                              */
 /* ------------------------------------------------------------------ */
 
-function render() {
-  ctx.setTransform(dprScale, 0, 0, dprScale, 0, 0);
-  ctx.fillStyle = '#122b1c';
-  ctx.fillRect(0, 0, viewW, viewH);
-
-  const shake = state.shake;
-  const sx = (Math.random() - 0.5) * shake * 16;
-  const sy = (Math.random() - 0.5) * shake * 16;
-
-  ctx.save();
-  ctx.translate(viewW / 2 + sx, viewH / 2 + sy);
-  ctx.scale(camera.zoom, camera.zoom);
-  ctx.translate(-camera.x, -camera.y);
-
-  // Only blit the visible region of the large world bitmaps. This is a big
-  // win on software renderers and low-end mobile GPUs.
-  const halfW = viewW / (2 * camera.zoom);
-  const halfH = viewH / (2 * camera.zoom);
-  const pad = 4;
-  const viewLeft = camera.x - halfW - pad;
-  const viewTop = camera.y - halfH - pad;
-  const viewRight = camera.x + halfW + pad;
-  const viewBottom = camera.y + halfH + pad;
-
-  // Endless outer field so the world never reveals a hard edge. Inside the
-  // world bitmap the grass is already baked in, so only paint the pattern
-  // when the camera is close enough to an edge to see beyond it.
-  if (viewLeft < 0 || viewTop < 0 || viewRight > WORLD.w || viewBottom > WORLD.h) {
-    ctx.fillStyle = grassPattern;
-    ctx.fillRect(viewLeft, viewTop, viewRight - viewLeft, viewBottom - viewTop);
-  }
-
-  const left = Math.max(0, Math.floor(viewLeft));
-  const top = Math.max(0, Math.floor(viewTop));
-  const right = Math.min(WORLD.w, Math.ceil(viewRight));
-  const bottom = Math.min(WORLD.h, Math.ceil(viewBottom));
-  if (right > left && bottom > top) {
-    const w = right - left;
-    const h = bottom - top;
-    ctx.drawImage(worldCanvas, left, top, w, h, left, top, w, h);
-    const sl = Math.floor(left * SKID_SCALE);
-    const st = Math.floor(top * SKID_SCALE);
-    const sr = Math.min(skidCanvas.width, Math.ceil(right * SKID_SCALE));
-    const sb = Math.min(skidCanvas.height, Math.ceil(bottom * SKID_SCALE));
-    if (sr > sl && sb > st) {
-      ctx.drawImage(
-        skidCanvas,
-        sl,
-        st,
-        sr - sl,
-        sb - st,
-        sl / SKID_SCALE,
-        st / SKID_SCALE,
-        (sr - sl) / SKID_SCALE,
-        (sb - st) / SKID_SCALE
-      );
-    }
-  }
-
-  for (const car of cars) drawCarShadow(ctx, car);
-  for (const car of cars) drawCar(ctx, car, state.raceTime);
-  drawParticles(ctx, particles);
-
-  ctx.restore();
+function render(dt) {
+  world3d.render({ cars, playerCar, particles, state, camera, dt });
 }
 
 /* ------------------------------------------------------------------ */
@@ -1320,7 +1260,8 @@ function frame(now) {
     drawMinimap();
   }
 
-  render();
+  render(dt);
+  garage3d.update(dt);
 }
 
 /* ------------------------------------------------------------------ */
@@ -1334,7 +1275,7 @@ unlockNewCars();
 applyPlayerSetup();
 renderGarage();
 resetRace();
-state.attract = track.length - 420;
+state.attract = track.length * 0.12;
 
 // Start the attract camera somewhere interesting rather than on the grid.
 {
@@ -1350,4 +1291,14 @@ drawMinimap();
 requestAnimationFrame(frame);
 
 // Debug handle used for automated visual/behaviour checks.
-window.__apex = { cars, track, state, camera, playerCar, startRace, worldCanvas };
+window.__apex = {
+  cars,
+  track,
+  state,
+  camera,
+  playerCar,
+  startRace,
+  world3d,
+  garage3d,
+  renderer3d: world3d,
+};
