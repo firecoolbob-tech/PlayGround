@@ -45,6 +45,16 @@ export class Car {
     this.wallSoundCd = 0;
     this.wheelTurn = 0;
 
+    // Vertical / ramp state
+    this.y = 0;
+    this.vy = 0;
+    this.airborne = false;
+    this.ramp = null;
+    this.rampProgress = 0;
+    this.climbRate = 0;
+    this.pitch = 0;
+    this.landImpact = 0;
+
     // Race state
     this.prog = 0;
     this.progIndex = 0;
@@ -84,6 +94,14 @@ export class Car {
     this.bump = 0;
     this.wallHit = 0;
     this.wallSoundCd = 0;
+    this.y = 0;
+    this.vy = 0;
+    this.airborne = false;
+    this.ramp = null;
+    this.rampProgress = 0;
+    this.climbRate = 0;
+    this.pitch = 0;
+    this.landImpact = 0;
     this.input = { steer: 0, throttle: 0, brake: 0, handbrake: false };
   }
 
@@ -91,7 +109,7 @@ export class Car {
     return Math.round(this.speed * PX_PER_KMH);
   }
 
-  update(dt, input, track) {
+  update(dt, input, track, ramps = null) {
     this.input = input;
     const steerTarget = clamp(input.steer, -1, 1);
     this.steer = damp(this.steer, steerTarget, steerTarget === 0 ? 12 : 9, dt);
@@ -119,6 +137,7 @@ export class Car {
       grip = 6.4;
       surfaceMax = this.maxSpeed * 0.94;
     }
+    if (this.airborne) grip = 0.32;
 
     const throttle = clamp(input.throttle, 0, 1);
     const brake = clamp(input.brake, 0, 1);
@@ -141,6 +160,8 @@ export class Car {
         drive = this.brakePower * throttle;
       }
     }
+    // Wheels have very little authority when they are not on a surface.
+    if (this.airborne) drive *= 0.12;
 
     vx += cosA * drive * dt;
     vy += sinA * drive * dt;
@@ -155,7 +176,7 @@ export class Car {
     }
 
     let speed = Math.hypot(vx, vy);
-    if (this.surface !== 'asphalt' && speed > surfaceMax) {
+    if (!this.airborne && this.surface !== 'asphalt' && speed > surfaceMax) {
       const target = damp(speed, surfaceMax, 3.6, dt);
       const f = target / speed;
       vx *= f;
@@ -181,7 +202,8 @@ export class Car {
     const absLong = Math.abs(vLong);
     const lowSpeed = clamp(absLong / 115, 0, 1);
     const speedRatio = clamp(absLong / this.maxSpeed, 0, 1);
-    const turnRate = 3.18 * lowSpeed * (1 - 0.4 * speedRatio) * (handbrake ? 1.26 : 1);
+    let turnRate = 3.18 * lowSpeed * (1 - 0.4 * speedRatio) * (handbrake ? 1.26 : 1);
+    if (this.airborne) turnRate *= 0.32;
     const direction = vLong < -3 ? -1 : 1;
     this.angle += this.steer * turnRate * direction * dt;
 
@@ -235,6 +257,12 @@ export class Car {
 
     this.vel.x = vx;
     this.vel.y = vy;
+
+    // Ramp flanks and the lip face act as solid walls.
+    if (ramps) ramps.resolveSolids(this);
+    vx = this.vel.x;
+    vy = this.vel.y;
+
     this.speed = Math.hypot(vx, vy);
     this.slip = Math.abs(latV);
     this.drifting =
@@ -242,6 +270,9 @@ export class Car {
       (handbrake && this.speed > 170);
     this.topSpeed = Math.max(this.topSpeed, this.kmh);
     this.bump = Math.max(0, this.bump - dt * 3.2);
+
+    // Analytical ramp mount / launch / gravity.
+    if (ramps) ramps.updateCar(this, dt);
 
     return this;
   }

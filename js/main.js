@@ -4,6 +4,7 @@ import { Car } from './car.js';
 import { AIDriver } from './ai.js';
 import { GameAudio } from './audio.js';
 import { Renderer3D, Garage3D } from './render3d.js';
+import { Ramps } from './ramps.js';
 
 const LAPS = 3;
 const STEP = 1 / 120;
@@ -66,6 +67,7 @@ lapTotalEl.textContent = String(LAPS);
 /* ------------------------------------------------------------------ */
 
 const track = new Track();
+const ramps = new Ramps(track);
 
 /* ------------------------------------------------------------------ */
 /* Cars                                                                */
@@ -100,7 +102,7 @@ const cars = carDefs.map((def, i) => {
   return car;
 });
 const playerCar = cars.find((c) => c.isPlayer);
-const world3d = new Renderer3D(canvas, track, cars);
+const world3d = new Renderer3D(canvas, track, cars, ramps);
 
 /* ------------------------------------------------------------------ */
 /* Garage                                                              */
@@ -774,6 +776,47 @@ function updateEffects(dt) {
       }
     }
 
+    // Touchdown: a burst of sparks and dust, scaled by fall speed.
+    if (car.landImpact > 45) {
+      const impact = car.landImpact;
+      car.landImpact = 0;
+      const count = Math.round(clamp(impact / 38, 4, 14));
+      for (let k = 0; k < count; k++) {
+        const ang = (k / count) * TAU + Math.random() * 0.5;
+        const push = 70 + Math.random() * 150;
+        spawnParticle(
+          'spark',
+          car.pos.x + Math.cos(ang) * 12,
+          car.pos.y + Math.sin(ang) * 12,
+          Math.cos(ang) * push,
+          Math.sin(ang) * push,
+          1,
+          0.18 + Math.random() * 0.24,
+          { height: car.y }
+        );
+        if (k % 2 === 0) {
+          spawnParticle(
+            'dust',
+            car.pos.x + Math.cos(ang) * 16,
+            car.pos.y + Math.sin(ang) * 16,
+            Math.cos(ang) * push * 0.55,
+            Math.sin(ang) * push * 0.55,
+            6 + Math.random() * 6,
+            0.55 + Math.random() * 0.35,
+            { tint: 'dirt', height: car.y }
+          );
+        }
+      }
+      if (car.isPlayer) {
+        state.shake = Math.max(state.shake, clamp(impact / 520, 0.14, 0.55));
+        if (car.wallSoundCd <= 0) {
+          audio.beep(72, 0.12, 'triangle', 0.05);
+          car.wallSoundCd = 0.22;
+        }
+      }
+    }
+
+    if (car.airborne || car.ramp) continue;
     if (car.speed < 40) continue;
     const cos = Math.cos(car.angle);
     const sin = Math.sin(car.angle);
@@ -974,11 +1017,11 @@ function step(dt) {
   for (const car of cars) {
     if (car.isPlayer) {
       const input = state.mode === 'racing' ? readInput() : { steer: 0, throttle: 0, brake: 0.5, handbrake: false };
-      car.update(dt, input, track);
+      car.update(dt, input, track, ramps);
     } else {
       const driver = aiDrivers.get(car);
       const ai = driver ? driver.update(dt, cars, playerCar) : { steer: 0, throttle: 0, brake: 0, handbrake: false };
-      car.update(dt, ai, track);
+      car.update(dt, ai, track, ramps);
     }
   }
 
@@ -1297,6 +1340,7 @@ window.__apex = {
   state,
   camera,
   playerCar,
+  ramps,
   startRace,
   world3d,
   garage3d,
