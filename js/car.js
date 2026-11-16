@@ -16,7 +16,7 @@ export class Car {
     this.width = 27;
     this.radius = 16;
 
-    this.maxSpeed = isPlayer ? 762 : 742;
+    this.maxSpeed = isPlayer ? 600 : 585;
     this.accel = isPlayer ? 720 : 690;
     this.brakePower = 1680;
     this.reverseMax = 205;
@@ -41,6 +41,8 @@ export class Car {
     this.throttle = 0;
     this.handbrake = false;
     this.bump = 0;
+    this.wallHit = 0;
+    this.wallSoundCd = 0;
     this.wheelTurn = 0;
 
     // Race state
@@ -80,6 +82,8 @@ export class Car {
     this.bestLap = null;
     this.topSpeed = 0;
     this.bump = 0;
+    this.wallHit = 0;
+    this.wallSoundCd = 0;
     this.input = { steer: 0, throttle: 0, brake: 0, handbrake: false };
   }
 
@@ -204,6 +208,30 @@ export class Car {
     if (this.pos.y < margin) { this.pos.y = margin; if (vy < 0) { vy *= -0.22; bumped = true; } }
     if (this.pos.y > WORLD.h - margin) { this.pos.y = WORLD.h - margin; if (vy > 0) { vy *= -0.22; bumped = true; } }
     if (bumped) this.bump = 1;
+
+    // Guardrails: clamp the car to the racing surface and bounce it back
+    // toward the center instead of letting it run onto the grass.
+    const barrier = track.nearest(this.pos.x, this.pos.y, near.index);
+    const railLimit = half + 6;
+    if (Math.abs(barrier.offset) > railLimit) {
+      const bn = track.normals[barrier.index];
+      const side = barrier.offset > 0 ? 1 : -1;
+      const push = side * railLimit - barrier.offset;
+      this.pos.x += bn.x * push;
+      this.pos.y += bn.y * push;
+
+      const outward = (vx * bn.x + vy * bn.y) * side;
+      if (outward > 0) {
+        const bounce = 1.3;
+        vx -= bn.x * outward * bounce * side;
+        vy -= bn.y * outward * bounce * side;
+        // Scrub speed along the barrier.
+        vx *= 0.8;
+        vy *= 0.8;
+        this.wallHit = Math.max(this.wallHit, outward);
+        this.bump = Math.max(this.bump, 0.55);
+      }
+    }
 
     this.vel.x = vx;
     this.vel.y = vy;

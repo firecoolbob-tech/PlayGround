@@ -59,7 +59,7 @@ export class AIDriver {
     const ti = (i + lookSamples) % N;
     const p = track.points[ti];
     const n = track.normals[ti];
-    const lanePx = this.lane * track.width * 0.34 + this.avoidShift;
+    const lanePx = clamp(this.lane * track.width * 0.34 + this.avoidShift, -track.width / 2 + 34, track.width / 2 - 34);
     let tx = p.x + n.x * lanePx;
     let ty = p.y + n.y * lanePx;
 

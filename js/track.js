@@ -81,7 +81,7 @@ export class Track {
 
     const maxLat = 1750;
     const brakeDecel = 1500;
-    const topSpeed = 760;
+    const topSpeed = 600;
     const profile = curvature.map((k) =>
       clamp(Math.sqrt(maxLat / Math.max(Math.abs(k), 1e-4)), 170, topSpeed)
     );

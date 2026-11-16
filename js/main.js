@@ -34,10 +34,21 @@ const resultBest = document.getElementById('resultBest');
 const resultSpeed = document.getElementById('resultSpeed');
 const resultRows = document.getElementById('resultRows');
 const resultKicker = document.getElementById('resultKicker');
+const unlockNote = document.getElementById('unlockNote');
+const garageScreen = document.getElementById('garageScreen');
+const garageGrid = document.getElementById('garageGrid');
+const garageProgress = document.getElementById('garageProgress');
+const garageBtn = document.getElementById('garageBtn');
+const garageCloseBtn = document.getElementById('garageCloseBtn');
+const garageBackBtn = document.getElementById('garageBackBtn');
+const garageRaceBtn = document.getElementById('garageRaceBtn');
+const titleCarName = document.getElementById('titleCarName');
+const titleCarDot = document.getElementById('titleCarDot');
 const soundBtn = document.getElementById('soundBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 const startBtn = document.getElementById('startBtn');
 const againBtn = document.getElementById('againBtn');
+const resultGarageBtn = document.getElementById('resultGarageBtn');
 const resumeBtn = document.getElementById('resumeBtn');
 const restartBtn = document.getElementById('restartBtn');
 const gaugeCanvas = document.getElementById('gauge');
@@ -99,6 +110,237 @@ const cars = carDefs.map((def, i) => {
   return car;
 });
 const playerCar = cars.find((c) => c.isPlayer);
+
+/* ------------------------------------------------------------------ */
+/* Garage                                                              */
+/* ------------------------------------------------------------------ */
+
+const GARAGE_KEY = 'apex-drift-garage-v1';
+const BASE_PLAYER_SPEED = 600;
+const BASE_PLAYER_ACCEL = 720;
+const BASE_PLAYER_GRIP = 7.6;
+
+const PLAYER_CARS = [
+  {
+    id: 'apex',
+    name: 'APEX',
+    tag: 'Balanced',
+    color: '#3ae2ff',
+    accent: '#0b7f96',
+    number: 1,
+    speed: 1,
+    accel: 1,
+    grip: 1,
+    stats: [6, 6, 6],
+    unlock: null,
+  },
+  {
+    id: 'jade',
+    name: 'JADE',
+    tag: 'Grip',
+    color: '#86ef6a',
+    accent: '#2f7a28',
+    number: 14,
+    speed: 0.98,
+    accel: 1.02,
+    grip: 1.08,
+    stats: [6, 7, 9],
+    unlock: { type: 'races', count: 1, label: 'Finish 1 race' },
+  },
+  {
+    id: 'blaze',
+    name: 'BLAZE',
+    tag: 'Launch',
+    color: '#ff8a3d',
+    accent: '#8f3a0d',
+    number: 23,
+    speed: 1,
+    accel: 1.12,
+    grip: 0.95,
+    stats: [7, 9, 5],
+    unlock: { type: 'races', count: 3, label: 'Finish 3 races' },
+  },
+  {
+    id: 'nova',
+    name: 'NOVA',
+    tag: 'Top end',
+    color: '#ff5fd2',
+    accent: '#7a1f62',
+    number: 5,
+    speed: 1.05,
+    accel: 0.98,
+    grip: 1.01,
+    stats: [9, 6, 7],
+    unlock: { type: 'wins', count: 1, label: 'Win 1 race' },
+  },
+  {
+    id: 'onyx',
+    name: 'ONYX',
+    tag: 'Prototype',
+    color: '#d5e0e2',
+    accent: '#2a3437',
+    number: 0,
+    speed: 1.03,
+    accel: 1.03,
+    grip: 1.05,
+    stats: [9, 9, 9],
+    unlock: { type: 'wins', count: 3, label: 'Win 3 races' },
+  },
+];
+
+const garageSave = {
+  selected: 'apex',
+  races: 0,
+  wins: 0,
+  unlocked: ['apex'],
+};
+
+function isUnlocked(spec) {
+  return !spec.unlock || garageSave.unlocked.includes(spec.id);
+}
+
+function selectedCarSpec() {
+  const spec = PLAYER_CARS.find((car) => car.id === garageSave.selected);
+  return spec && isUnlocked(spec) ? spec : PLAYER_CARS[0];
+}
+
+function meetsUnlock(spec) {
+  if (!spec.unlock) return true;
+  if (spec.unlock.type === 'races') return garageSave.races >= spec.unlock.count;
+  if (spec.unlock.type === 'wins') return garageSave.wins >= spec.unlock.count;
+  return false;
+}
+
+function saveGarage() {
+  try {
+    localStorage.setItem(GARAGE_KEY, JSON.stringify(garageSave));
+  } catch {
+    /* Storage can be unavailable in private mode; keep the session state. */
+  }
+}
+
+function loadGarage() {
+  try {
+    const raw = localStorage.getItem(GARAGE_KEY);
+    if (raw) {
+      const data = JSON.parse(raw);
+      if (data && typeof data === 'object') {
+        if (typeof data.selected === 'string') garageSave.selected = data.selected;
+        garageSave.races = Math.max(0, Number(data.races) || 0);
+        garageSave.wins = Math.max(0, Number(data.wins) || 0);
+        if (Array.isArray(data.unlocked)) {
+          garageSave.unlocked = data.unlocked.filter((id) => typeof id === 'string');
+        }
+      }
+    }
+  } catch {
+    /* Corrupt storage simply starts a fresh garage. */
+  }
+  if (!garageSave.unlocked.includes('apex')) garageSave.unlocked.push('apex');
+  for (const spec of PLAYER_CARS) {
+    if (spec.unlock && meetsUnlock(spec) && !garageSave.unlocked.includes(spec.id)) {
+      garageSave.unlocked.push(spec.id);
+    }
+  }
+  const chosen = PLAYER_CARS.find((car) => car.id === garageSave.selected);
+  if (!chosen || !isUnlocked(chosen)) garageSave.selected = 'apex';
+  saveGarage();
+}
+
+function unlockNewCars() {
+  const found = [];
+  for (const spec of PLAYER_CARS) {
+    if (spec.unlock && !garageSave.unlocked.includes(spec.id) && meetsUnlock(spec)) {
+      garageSave.unlocked.push(spec.id);
+      found.push(spec);
+    }
+  }
+  if (found.length) saveGarage();
+  return found;
+}
+
+function carIcon(spec) {
+  return `<svg viewBox="0 0 64 96" aria-hidden="true">
+    <ellipse cx="32" cy="87" rx="22" ry="7" fill="rgba(0,0,0,0.35)"/>
+    <path d="M20 7 Q32 -2 44 7 L52 33 L54 70 Q54 88 32 92 Q10 88 10 70 L12 33 Z" fill="${spec.color}"/>
+    <path d="M20 7 Q32 -2 44 7 L48 22 L16 22 Z" fill="${spec.accent}" opacity="0.9"/>
+    <rect x="16" y="27" width="32" height="17" rx="7" fill="rgba(7,16,19,0.78)"/>
+    <rect x="19" y="48" width="26" height="11" rx="5" fill="rgba(255,255,255,0.1)"/>
+    <rect x="22" y="70" width="20" height="8" rx="3" fill="rgba(5,12,14,0.55)"/>
+    <rect x="14" y="32" width="5" height="11" rx="2.5" fill="rgba(5,12,14,0.55)"/>
+    <rect x="45" y="32" width="5" height="11" rx="2.5" fill="rgba(5,12,14,0.55)"/>
+    <rect x="26" y="40" width="12" height="3" rx="1.5" fill="${spec.accent}" opacity="0.8"/>
+  </svg>`;
+}
+
+function renderGarage() {
+  const statLabels = ['SPD', 'ACC', 'GRP'];
+  garageGrid.innerHTML = PLAYER_CARS.map((spec) => {
+    const unlocked = isUnlocked(spec);
+    const selected = garageSave.selected === spec.id;
+    const bars = spec.stats
+      .map(
+        (value, i) =>
+          `<span class="car-stat"><span>${statLabels[i]}</span><i><b style="width:${value * 10}%"></b></i></span>`
+      )
+      .join('');
+    const state = unlocked
+      ? `<span class="car-state">${selected ? 'Selected' : 'Unlocked'}</span>`
+      : `<span class="car-state">Locked</span><span class="car-req">${spec.unlock.label}</span>`;
+    return `<button class="car-card${selected ? ' selected' : ''}${unlocked ? '' : ' locked'}" data-car="${spec.id}" type="button" style="--car:${spec.color}" ${unlocked ? '' : 'disabled'}>
+      <span class="car-card-art">${carIcon(spec)}</span>
+      <span class="car-card-name">${spec.name}</span>
+      <span class="car-card-tag">${spec.tag}</span>
+      <span class="car-stats">${bars}</span>
+      ${state}
+    </button>`;
+  }).join('');
+  const races = garageSave.races;
+  const wins = garageSave.wins;
+  garageProgress.textContent = `${races} race${races === 1 ? '' : 's'} · ${wins} win${wins === 1 ? '' : 's'}`;
+}
+
+function applyPlayerSetup() {
+  const spec = selectedCarSpec();
+  playerCar.name = spec.name;
+  playerCar.color = spec.color;
+  playerCar.accent = spec.accent;
+  playerCar.number = spec.number;
+  playerCar.maxSpeed = BASE_PLAYER_SPEED * spec.speed;
+  playerCar.accel = BASE_PLAYER_ACCEL * spec.accel;
+  playerCar.grip = BASE_PLAYER_GRIP * spec.grip;
+  titleCarName.textContent = spec.name;
+  titleCarDot.style.background = spec.color;
+  titleCarDot.style.color = spec.color;
+}
+
+function selectCar(id) {
+  const spec = PLAYER_CARS.find((car) => car.id === id);
+  if (!spec || !isUnlocked(spec)) return;
+  garageSave.selected = id;
+  saveGarage();
+  applyPlayerSetup();
+  renderGarage();
+}
+
+function openGarage() {
+  if (state.mode !== 'title' && state.mode !== 'results') return;
+  renderGarage();
+  garageScreen.classList.remove('hidden');
+}
+
+function closeGarage() {
+  garageScreen.classList.add('hidden');
+}
+
+function recordRaceResult(pos) {
+  garageSave.races += 1;
+  if (pos === 1) garageSave.wins += 1;
+  const unlocked = unlockNewCars();
+  saveGarage();
+  renderGarage();
+  return unlocked;
+}
 
 const aiDrivers = new Map();
 carDefs.forEach((def, i) => {
@@ -202,6 +444,7 @@ function startRace() {
   titleScreen.classList.add('hidden');
   resultsScreen.classList.add('hidden');
   pauseScreen.classList.add('hidden');
+  garageScreen.classList.add('hidden');
   resetRace();
   state.mode = 'countdown';
   state.countdown = 3.0;
@@ -245,6 +488,10 @@ window.addEventListener('keydown', (event) => {
 
   if (event.code === 'KeyR' && state.mode !== 'title') startRace();
   if (event.code === 'KeyM') toggleSound();
+  if (event.code === 'Escape' && !garageScreen.classList.contains('hidden')) {
+    closeGarage();
+    return;
+  }
   if (event.code === 'Escape' || event.code === 'KeyP') {
     if (state.mode === 'paused') resumeGame();
     else pauseGame();
@@ -355,6 +602,15 @@ function showResults() {
     resultRows.appendChild(tr);
   });
 
+  const unlocked = recordRaceResult(pos);
+  if (unlocked.length) {
+    const names = unlocked.map((car) => car.name).join(' & ');
+    unlockNote.innerHTML = `<b>New car unlocked</b> — ${names}. Open the garage to drive it.`;
+    unlockNote.classList.remove('hidden');
+  } else {
+    unlockNote.classList.add('hidden');
+  }
+
   resultsScreen.classList.remove('hidden');
   pauseScreen.classList.add('hidden');
   bannerEl.classList.remove('show');
@@ -363,8 +619,23 @@ function showResults() {
 
 startBtn.addEventListener('click', startRace);
 againBtn.addEventListener('click', startRace);
+resultGarageBtn.addEventListener('click', openGarage);
 resumeBtn.addEventListener('click', resumeGame);
 restartBtn.addEventListener('click', startRace);
+garageBtn.addEventListener('click', openGarage);
+garageCloseBtn.addEventListener('click', closeGarage);
+garageBackBtn.addEventListener('click', closeGarage);
+garageRaceBtn.addEventListener('click', () => {
+  closeGarage();
+  startRace();
+});
+garageGrid.addEventListener('click', (event) => {
+  const card = event.target.closest('[data-car]');
+  if (card) selectCar(card.dataset.car);
+});
+garageScreen.addEventListener('click', (event) => {
+  if (event.target === garageScreen) closeGarage();
+});
 pauseBtn.addEventListener('click', () => {
   if (state.mode === 'paused') resumeGame();
   else pauseGame();
@@ -476,6 +747,31 @@ function laySkid(car) {
 
 function updateEffects(dt) {
   for (const car of cars) {
+    car.wallSoundCd = Math.max(0, car.wallSoundCd - dt);
+
+    // Barrier scrape: throw sparks and shake the camera on a hard hit.
+    if (car.wallHit > 45) {
+      const impact = car.wallHit;
+      car.wallHit = 0;
+      const count = Math.round(clamp(impact / 55, 2, 9));
+      for (let k = 0; k < count; k++) {
+        spawnParticle(
+          'spark',
+          car.pos.x + (Math.random() - 0.5) * 18,
+          car.pos.y + (Math.random() - 0.5) * 18,
+          (Math.random() - 0.5) * 300,
+          (Math.random() - 0.5) * 300,
+          1,
+          0.22 + Math.random() * 0.3
+        );
+      }
+      if (car.isPlayer) state.shake = Math.max(state.shake, clamp(impact / 320, 0.18, 0.6));
+      if (car.wallSoundCd <= 0 && impact > 110) {
+        audio.beep(110, 0.06, 'sawtooth', 0.03);
+        car.wallSoundCd = 0.2;
+      }
+    }
+
     if (car.speed < 40) continue;
     const cos = Math.cos(car.angle);
     const sin = Math.sin(car.angle);
@@ -760,7 +1056,7 @@ function drawGauge(kmh, reverse) {
   g.lineCap = 'round';
   g.stroke();
 
-  const ratio = clamp(kmh / 320, 0, 1);
+  const ratio = clamp(kmh / 280, 0, 1);
   if (ratio > 0.002) {
     const grad = g.createLinearGradient(-140, 0, 140, 0);
     grad.addColorStop(0, '#3ae2ff');
@@ -1033,6 +1329,10 @@ function frame(now) {
 
 resize();
 window.addEventListener('resize', resize);
+loadGarage();
+unlockNewCars();
+applyPlayerSetup();
+renderGarage();
 resetRace();
 state.attract = track.length - 420;
 
