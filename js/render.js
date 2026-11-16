@@ -428,6 +428,46 @@ export function buildWorld(track) {
     }
   }
 
+  // Guardrails. These match the barrier collision limit in car.js, so the
+  // cars are stopped right at the visible rail instead of driving onto grass.
+  const railOffset = W / 2 + 26;
+  const rails = [edgePoints(track, railOffset), edgePoints(track, -railOffset)];
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (const pts of rails) {
+    const railPath = trackPath(pts);
+    ctx.strokeStyle = 'rgba(5, 10, 9, 0.45)';
+    ctx.lineWidth = 13;
+    ctx.stroke(railPath);
+    ctx.strokeStyle = '#596665';
+    ctx.lineWidth = 8;
+    ctx.stroke(railPath);
+    ctx.strokeStyle = '#a8b4b1';
+    ctx.lineWidth = 4;
+    ctx.stroke(railPath);
+    ctx.strokeStyle = 'rgba(235, 244, 240, 0.75)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke(railPath);
+  }
+
+  // Rail posts and alternating red/white reflectors.
+  for (let e = 0; e < 2; e++) {
+    const side = e === 0 ? 1 : -1;
+    const pts = rails[e];
+    for (let i = 0; i < track.N; i += 12) {
+      const p = pts[i];
+      const t = track.tangents[i];
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(Math.atan2(t.y, t.x));
+      ctx.fillStyle = '#33403f';
+      ctx.fillRect(-2.5, side > 0 ? 2 : -10, 5, 8);
+      ctx.fillStyle = (i / 12) % 2 === 0 ? '#e7e1d2' : '#d44a42';
+      ctx.fillRect(-4, -2, 8, 4);
+      ctx.restore();
+    }
+  }
+
   // Start / finish checker band.
   const sp = track.points[0];
   const sa = track.startAngle;
