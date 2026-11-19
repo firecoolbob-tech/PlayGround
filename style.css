@@ -415,6 +415,140 @@ html, body {
   color: rgba(202, 221, 221, 0.82);
 }
 
+/* ---------- Circuit selector ---------- */
+
+.title-circuits {
+  max-width: 580px;
+  margin: -6px 0 24px;
+}
+.circuits-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-family: var(--font-display);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(166, 192, 192, 0.62);
+}
+.circuits-head b {
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: rgba(255, 210, 74, 0.85);
+}
+.track-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.track-chip {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 7px 7px 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
+}
+.track-chip:hover {
+  border-color: color-mix(in srgb, var(--loc) 62%, transparent);
+  background: rgba(255, 255, 255, 0.06);
+  transform: translateY(-2px);
+}
+.track-chip.selected {
+  border-color: var(--loc);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.025));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--loc) 55%, transparent), 0 10px 26px rgba(0, 0, 0, 0.28);
+}
+.track-swatch {
+  position: relative;
+  display: block;
+  height: 27px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--sky-a) 0%, var(--sky-b) 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.track-swatch::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 10px;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.58), transparent);
+}
+.track-orb {
+  position: absolute;
+  right: 12px;
+  top: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--loc);
+  box-shadow: 0 0 10px var(--loc), 0 0 22px color-mix(in srgb, var(--loc) 55%, transparent);
+}
+.track-star {
+  position: absolute;
+  left: 9px;
+  top: 7px;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: rgba(232, 244, 255, 0.92);
+  box-shadow:
+    9px 3px 0 rgba(232, 244, 255, 0.7),
+    18px -2px 0 rgba(232, 244, 255, 0.55),
+    27px 4px 0 rgba(232, 244, 255, 0.75),
+    5px 9px 0 rgba(232, 244, 255, 0.42);
+}
+.track-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.track-copy b {
+  font-family: var(--font-display);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: #fff;
+}
+.track-copy small {
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-size: 7px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(166, 192, 192, 0.72);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.track-wins {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: rgba(3, 9, 10, 0.68);
+  font-family: var(--font-display);
+  font-size: 6.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+}
+
 .title-current {
   display: inline-flex;
   align-items: center;
@@ -1074,6 +1208,10 @@ kbd {
   .kicker { justify-content: center; font-size: 9.5px; letter-spacing: 0.24em; }
   .logo { font-size: clamp(52px, 16vw, 82px); transform-origin: center bottom; }
   .tagline { font-size: 13px; max-width: 340px; margin-left: auto; margin-right: auto; }
+  .title-circuits { max-width: 420px; margin: 0 auto 18px; text-align: left; }
+  .track-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+  .track-swatch { height: 22px; }
+  .circuits-head { font-size: 8px; }
   .title-actions { justify-content: center; margin-bottom: 26px; }
   .title-current { margin: -8px auto 22px; }
   .btn-primary { padding: 15px 46px; }
@@ -1148,6 +1286,11 @@ kbd {
   .title-screen { padding: 4vh 6vw; }
   .logo { font-size: clamp(42px, 9vw, 72px); margin-bottom: 10px; }
   .tagline { display: none; }
+  .title-circuits { max-width: 520px; margin: 0 0 12px; }
+  .track-list { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .track-swatch { height: 16px; }
+  .track-copy small { display: none; }
+  .track-chip { padding: 5px 6px 6px; gap: 4px; }
   .title-actions { margin-bottom: 16px; }
   .title-controls { display: none; }
   .mobile-note { display: none; }
@@ -1177,7 +1320,8 @@ kbd {
 /* Keep the driving controls out of menus and end screens. */
 #titleScreen:not(.hidden) ~ #touch,
 #resultsScreen:not(.hidden) ~ #touch,
-#pauseScreen:not(.hidden) ~ #touch {
+#pauseScreen:not(.hidden) ~ #touch,
+#garageScreen:not(.hidden) ~ #touch {
   display: none;
 }
 .result-table tr.you td:last-child { color: var(--gold); }

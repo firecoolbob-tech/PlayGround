@@ -5,6 +5,7 @@ import { AIDriver } from './ai.js';
 import { GameAudio } from './audio.js';
 import { Renderer3D, Garage3D } from './render3d.js';
 import { Ramps } from './ramps.js';
+import { LOCATIONS, getLocation } from './locations.js';
 
 const LAPS = 3;
 const STEP = 1 / 120;
@@ -46,6 +47,12 @@ const garageBackBtn = document.getElementById('garageBackBtn');
 const garageRaceBtn = document.getElementById('garageRaceBtn');
 const titleCarName = document.getElementById('titleCarName');
 const titleCarDot = document.getElementById('titleCarDot');
+const titleTagline = document.getElementById('titleTagline');
+const titleFoot = document.getElementById('titleFoot');
+const titleKicker = document.getElementById('titleKicker');
+const trackListEl = document.getElementById('trackList');
+const trackWinsEl = document.getElementById('trackWins');
+const garageSub = document.getElementById('garageSub');
 const soundBtn = document.getElementById('soundBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 const startBtn = document.getElementById('startBtn');
@@ -179,6 +186,75 @@ const PLAYER_CARS = [
     stats: [9, 9, 9],
     unlock: { type: 'wins', count: 3, label: 'Win 3 races' },
   },
+  {
+    id: 'talon',
+    name: 'TALON',
+    tag: 'Night runner',
+    color: '#37e0a1',
+    accent: '#0c6d4d',
+    number: 11,
+    speed: 1.02,
+    accel: 1.02,
+    grip: 1.04,
+    stats: [8, 7, 8],
+    unlock: { type: 'trackWins', track: 'neon', count: 1, label: 'Win at Neon Bay' },
+  },
+  {
+    id: 'ember',
+    name: 'EMBER',
+    tag: 'Desert heat',
+    color: '#ff7043',
+    accent: '#7d2a12',
+    number: 44,
+    speed: 1.05,
+    accel: 1.05,
+    grip: 0.97,
+    stats: [9, 8, 6],
+    unlock: { type: 'trackWins', track: 'canyon', count: 1, label: 'Win at Canyon Dawn' },
+  },
+  {
+    id: 'frost',
+    name: 'FROST',
+    tag: 'Ice grip',
+    color: '#8fdcff',
+    accent: '#28607a',
+    number: 18,
+    speed: 0.99,
+    accel: 1,
+    grip: 1.13,
+    stats: [7, 8, 10],
+    unlock: { type: 'trackWins', track: 'alpine', count: 1, label: 'Win at Alpine Night' },
+  },
+  {
+    id: 'viper',
+    name: 'VIPER',
+    tag: 'Neon outlaw',
+    color: '#b6ff3d',
+    accent: '#4d7a0c',
+    number: 77,
+    speed: 1.07,
+    accel: 1.07,
+    grip: 1,
+    stats: [10, 9, 7],
+    unlock: { type: 'trackWins', track: 'neon', count: 2, label: 'Win twice at Neon Bay' },
+  },
+  {
+    id: 'spectre',
+    name: 'SPECTRE',
+    tag: 'Circuit master',
+    color: '#c9b6ff',
+    accent: '#4a3a8f',
+    number: 13,
+    speed: 1.08,
+    accel: 1.06,
+    grip: 1.1,
+    stats: [10, 10, 10],
+    unlock: {
+      type: 'tour',
+      tracks: ['neon', 'alpine', 'canyon'],
+      label: 'Win at all 3 new circuits',
+    },
+  },
 ];
 
 const garageSave = {
@@ -186,7 +262,11 @@ const garageSave = {
   races: 0,
   wins: 0,
   unlocked: ['apex'],
+  trackWins: {},
+  track: 'ridge',
 };
+
+let selectedLocation = 'ridge';
 
 const garage3d = new Garage3D(garageCanvas);
 
@@ -203,6 +283,14 @@ function meetsUnlock(spec) {
   if (!spec.unlock) return true;
   if (spec.unlock.type === 'races') return garageSave.races >= spec.unlock.count;
   if (spec.unlock.type === 'wins') return garageSave.wins >= spec.unlock.count;
+  if (spec.unlock.type === 'trackWins') {
+    return (garageSave.trackWins[spec.unlock.track] || 0) >= spec.unlock.count;
+  }
+  if (spec.unlock.type === 'tour') {
+    return spec.unlock.tracks.every(
+      (track) => (garageSave.trackWins[track] || 0) >= 1
+    );
+  }
   return false;
 }
 
@@ -223,6 +311,14 @@ function loadGarage() {
         if (typeof data.selected === 'string') garageSave.selected = data.selected;
         garageSave.races = Math.max(0, Number(data.races) || 0);
         garageSave.wins = Math.max(0, Number(data.wins) || 0);
+        if (data.trackWins && typeof data.trackWins === 'object') {
+          for (const loc of LOCATIONS) {
+            garageSave.trackWins[loc.id] = Math.max(0, Number(data.trackWins[loc.id]) || 0);
+          }
+        }
+        if (typeof data.track === 'string' && LOCATIONS.some((loc) => loc.id === data.track)) {
+          selectedLocation = data.track;
+        }
         if (Array.isArray(data.unlocked)) {
           garageSave.unlocked = data.unlocked.filter((id) => typeof id === 'string');
         }
@@ -232,6 +328,10 @@ function loadGarage() {
     /* Corrupt storage simply starts a fresh garage. */
   }
   if (!garageSave.unlocked.includes('apex')) garageSave.unlocked.push('apex');
+  for (const loc of LOCATIONS) {
+    garageSave.trackWins[loc.id] = Math.max(0, Number(garageSave.trackWins[loc.id]) || 0);
+  }
+  garageSave.track = selectedLocation;
   for (const spec of PLAYER_CARS) {
     if (spec.unlock && meetsUnlock(spec) && !garageSave.unlocked.includes(spec.id)) {
       garageSave.unlocked.push(spec.id);
@@ -292,7 +392,13 @@ function renderGarage() {
   }).join('');
   const races = garageSave.races;
   const wins = garageSave.wins;
-  garageProgress.textContent = `${races} race${races === 1 ? '' : 's'} · ${wins} win${wins === 1 ? '' : 's'}`;
+  const circuitWins = LOCATIONS.filter((loc) => (garageSave.trackWins[loc.id] || 0) > 0).length;
+  garageProgress.textContent = `${races} race${races === 1 ? '' : 's'} · ${wins} win${wins === 1 ? '' : 's'} · ${circuitWins}/4 circuits won`;
+  const remaining = PLAYER_CARS.filter((spec) => !isUnlocked(spec)).length;
+  garageSub.textContent =
+    remaining === 0
+      ? 'Every car is in the garage. Pick a favourite and defend the line.'
+      : `${remaining} car${remaining === 1 ? '' : 's'} still locked. Win races across the four circuits to bring them home.`;
   const active = selectedCarSpec();
   garageViewName.textContent = active.name;
   garageViewTag.textContent = active.tag;
@@ -313,6 +419,48 @@ function applyPlayerSetup() {
   titleCarDot.style.color = spec.color;
   world3d.setCarStyle(playerCar);
   garage3d.setCar(spec);
+}
+
+function hexColor(value) {
+  return `#${value.toString(16).padStart(6, '0')}`;
+}
+
+function renderTrackList() {
+  trackListEl.innerHTML = LOCATIONS.map((loc) => {
+    const wins = garageSave.trackWins[loc.id] || 0;
+    const selected = loc.id === selectedLocation;
+    return `<button class="track-chip${selected ? ' selected' : ''}" data-track="${loc.id}" type="button"
+      style="--loc:${loc.accent};--sky-a:${hexColor(loc.sky.top)};--sky-b:${hexColor(loc.sky.horizon)}"
+      aria-pressed="${selected ? 'true' : 'false'}" aria-label="${loc.name}, ${loc.tag}">
+      <span class="track-swatch" aria-hidden="true"><i class="track-orb"></i>${loc.night ? '<i class="track-star"></i>' : ''}</span>
+      <span class="track-copy"><b>${loc.short}</b><small>${loc.chip || loc.tag}</small></span>
+      ${wins ? `<span class="track-wins">${wins}W</span>` : ''}
+    </button>`;
+  }).join('');
+  const loc = getLocation(selectedLocation);
+  const wins = garageSave.trackWins[loc.id] || 0;
+  trackWinsEl.textContent = wins
+    ? `${wins} win${wins === 1 ? '' : 's'} here`
+    : 'No wins here yet';
+}
+
+function applyLocationUI() {
+  const loc = getLocation(selectedLocation);
+  titleKicker.textContent = `3D arcade racing · ${loc.tag}`;
+  titleTagline.textContent = loc.blurb;
+  titleFoot.textContent = `${loc.name} · 3 LAPS · 4 DRIVERS`;
+  renderTrackList();
+}
+
+function selectLocation(id) {
+  if (!LOCATIONS.some((loc) => loc.id === id)) return;
+  selectedLocation = id;
+  garageSave.track = id;
+  saveGarage();
+  world3d.setLocation(getLocation(id));
+  applyLocationUI();
+  audio.init();
+  audio.beep(680, 0.06, 'triangle', 0.03);
 }
 
 function selectCar(id) {
@@ -341,10 +489,15 @@ function closeGarage() {
 
 function recordRaceResult(pos) {
   garageSave.races += 1;
-  if (pos === 1) garageSave.wins += 1;
+  if (pos === 1) {
+    garageSave.wins += 1;
+    garageSave.trackWins[selectedLocation] =
+      (garageSave.trackWins[selectedLocation] || 0) + 1;
+  }
   const unlocked = unlockNewCars();
   saveGarage();
   renderGarage();
+  renderTrackList();
   return unlocked;
 }
 
@@ -445,6 +598,8 @@ function resetRace() {
 
 function startRace() {
   audio.init();
+  const loc = getLocation(selectedLocation);
+  world3d.setLocation(loc);
   titleScreen.classList.add('hidden');
   resultsScreen.classList.add('hidden');
   pauseScreen.classList.add('hidden');
@@ -455,6 +610,7 @@ function startRace() {
   state.lastCount = 3;
   state.attract = track.length * 0.32;
   hud.classList.add('live');
+  showBanner(`${loc.name} · 3 LAPS`, 2.4);
   showCountdown('3');
   audio.countdown(3);
 }
@@ -588,6 +744,7 @@ function showTitle() {
   garage3d.setActive(false);
   hud.classList.remove('live');
   clearKeys();
+  applyLocationUI();
   audio.idle();
 }
 
@@ -596,15 +753,16 @@ function showResults() {
   const order = standings();
   state.finishPosition = order.indexOf(playerCar) + 1;
   const pos = state.finishPosition;
+  const loc = getLocation(selectedLocation);
 
   const titles = ['VICTORY', 'P2', 'P3', 'P4'];
   const subs = [
-    'First across the line. Clean and quick.',
-    'So close. The line came up a corner too soon.',
-    'On the podium. There is more pace in the car.',
-    'Brought it home. Time to find some grip.',
+    `First across the line at ${loc.short}. Clean and quick.`,
+    `So close at ${loc.short}. The line came up a corner too soon.`,
+    `On the podium at ${loc.short}. There is more pace in the car.`,
+    `Brought it home at ${loc.short}. Time to find some grip.`,
   ];
-  resultKicker.innerHTML = '<span class="kicker-rule"></span>Race complete';
+  resultKicker.innerHTML = `<span class="kicker-rule"></span>${loc.name} · Race complete`;
   resultTitle.textContent = pos === 1 ? 'VICTORY' : titles[pos - 1] || 'FINISH';
   resultSub.textContent = subs[pos - 1] || 'Race complete.';
   resultTotal.textContent = formatTime(playerCar.finishTime ?? state.raceTime);
@@ -653,6 +811,10 @@ garageRaceBtn.addEventListener('click', () => {
 garageGrid.addEventListener('click', (event) => {
   const card = event.target.closest('[data-car]');
   if (card) selectCar(card.dataset.car);
+});
+trackListEl.addEventListener('click', (event) => {
+  const card = event.target.closest('[data-track]');
+  if (card) selectLocation(card.dataset.track);
 });
 garageScreen.addEventListener('click', (event) => {
   if (event.target === garageScreen) closeGarage();
@@ -1314,9 +1476,11 @@ function frame(now) {
 resize();
 window.addEventListener('resize', resize);
 loadGarage();
+world3d.setLocation(getLocation(selectedLocation));
 unlockNewCars();
 applyPlayerSetup();
 renderGarage();
+applyLocationUI();
 resetRace();
 state.attract = track.length * 0.12;
 
@@ -1345,4 +1509,8 @@ window.__apex = {
   world3d,
   garage3d,
   renderer3d: world3d,
+  locations: LOCATIONS,
+  selectLocation,
+  garageSave,
+  recordRaceResult,
 };
