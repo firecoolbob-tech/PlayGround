@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import { clamp, mulberry32 } from './utils.js';
+import { clamp, mod, mulberry32 } from './utils.js';
 import { getLocation } from './locations.js';
 
 /* ------------------------------------------------------------------ */
@@ -691,24 +691,24 @@ function buildCarModel(spec) {
   shadow.scale.set(62, 40, 1);
   group.add(shadow);
 
-  // Player underglow ring.
-  let ring = null;
-  if (spec.isPlayer) {
-    ring = new THREE.Mesh(
-      new THREE.RingGeometry(17, 21, 40),
-      new THREE.MeshBasicMaterial({
-        color: 0x3ae2ff,
-        transparent: true,
-        opacity: 0.26,
-        side: THREE.DoubleSide,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-      })
-    );
-    ring.rotation.x = -Math.PI / 2;
-    ring.position.y = 0.12;
-    group.add(ring);
-  }
+  // Soft additive underglow plane, just above the road. It sits inside the
+  // car group so it tilts with the chassis on ramps and banked curves.
+  const ring = new THREE.Mesh(
+    new THREE.PlaneGeometry(spec.isPlayer ? 92 : 70, spec.isPlayer ? 54 : 42),
+    new THREE.MeshBasicMaterial({
+      map: GLOW_TEX,
+      color: spec.color,
+      transparent: true,
+      opacity: spec.isPlayer ? 0.5 : 0.3,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+    })
+  );
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = 0.05;
+  ring.renderOrder = 2;
+  group.add(ring);
 
   const model = {
     group,
@@ -735,6 +735,7 @@ function applyCarStyle(model, spec, force = false) {
   model.styleKey = key;
   model.paint.color.set(spec.color);
   model.accent.color.set(spec.accent);
+  if (model.ring) model.ring.material.color.set(spec.color);
   if (model.roundelMat.map) model.roundelMat.map.dispose();
   model.roundelMat.map = makeRoundelTexture(spec.number);
   model.roundelMat.needsUpdate = true;
@@ -745,7 +746,14 @@ function applyCarStyle(model, spec, force = false) {
 /* Geometry builders                                                   */
 /* ------------------------------------------------------------------ */
 
-function ribbonGeometry(track, offsetA, offsetB, y, vScale = 150) {
+function profileY(track, features, index, offset, baseY) {
+  if (!features) return baseY;
+  const half = Math.max(1, track.width / 2);
+  const lateral = clamp(offset / half, -1, 1);
+  return baseY + features.heightAtIndex(index) + features.bankAtIndex(index) * lateral;
+}
+
+function ribbonGeometry(track, offsetA, offsetB, y, vScale = 150, features = null) {
   const N = track.N;
   const positions = [];
   const uvs = [];
@@ -760,8 +768,16 @@ function ribbonGeometry(track, offsetA, offsetB, y, vScale = 150) {
       const prev = track.points[(i - 1) % N];
       distance += Math.hypot(p.x - prev.x, p.y - prev.y);
     }
-    positions.push(p.x + n.x * offsetA, y, p.y + n.y * offsetA);
-    positions.push(p.x + n.x * offsetB, y, p.y + n.y * offsetB);
+    positions.push(
+      p.x + n.x * offsetA,
+      profileY(track, features, index, offsetA, y),
+      p.y + n.y * offsetA
+    );
+    positions.push(
+      p.x + n.x * offsetB,
+      profileY(track, features, index, offsetB, y),
+      p.y + n.y * offsetB
+    );
     uvs.push(0, distance / vScale, 1, distance / vScale);
   }
 
@@ -781,7 +797,7 @@ function ribbonGeometry(track, offsetA, offsetB, y, vScale = 150) {
   return geometry;
 }
 
-function kerbGeometry(track, side, step = 4) {
+function kerbGeometry(track, side, step = 4, features = null) {
   const W = track.width;
   const lo = Math.min(side * (W / 2 - 0.5), side * (W / 2 + 12.5));
   const hi = Math.max(side * (W / 2 - 0.5), side * (W / 2 + 12.5));
@@ -801,8 +817,16 @@ function kerbGeometry(track, side, step = 4) {
       const index = (start + k) % track.N;
       const p = track.points[index];
       const n = track.normals[index];
-      positions.push(p.x + n.x * lo, y, p.y + n.y * lo);
-      positions.push(p.x + n.x * hi, y, p.y + n.y * hi);
+      positions.push(
+        p.x + n.x * lo,
+        profileY(track, features, index, lo, y),
+        p.y + n.y * lo
+      );
+      positions.push(
+        p.x + n.x * hi,
+        profileY(track, features, index, hi, y),
+        p.y + n.y * hi
+      );
       colors.push(color.r, color.g, color.b, color.r, color.g, color.b);
       vertex += 2;
     }
@@ -823,7 +847,7 @@ function kerbGeometry(track, side, step = 4) {
   return geometry;
 }
 
-function wallGeometry(track, offset, height) {
+function wallGeometry(track, offset, height, features = null) {
   const N = track.N;
   const positions = [];
   const uvs = [];
@@ -838,8 +862,9 @@ function wallGeometry(track, offset, height) {
       const prev = track.points[(i - 1) % N];
       distance += Math.hypot(p.x - prev.x, p.y - prev.y);
     }
-    positions.push(p.x + n.x * offset, 0.15, p.y + n.y * offset);
-    positions.push(p.x + n.x * offset, height, p.y + n.y * offset);
+    const base = profileY(track, features, index, offset, 0.15);
+    positions.push(p.x + n.x * offset, base, p.y + n.y * offset);
+    positions.push(p.x + n.x * offset, base + height, p.y + n.y * offset);
     uvs.push(distance / 90, 0, distance / 90, 1);
   }
 
@@ -1149,11 +1174,21 @@ class WorldPostFX {
 /* ------------------------------------------------------------------ */
 
 export class Renderer3D {
-  constructor(canvas, track, cars, ramps = null) {
+  constructor(canvas, track, cars, ramps = null, features = null) {
     this.canvas = canvas;
     this.track = track;
     this.cars = cars;
     this.ramps = ramps;
+    this.features = features;
+    this.hazards = [];
+    this.hazardMeshes = [];
+    this.garageMeshes = [];
+    this.camSmooth = new THREE.Vector3();
+    this.lookSmooth = new THREE.Vector3();
+    this.camGoal = new THREE.Vector3();
+    this.lookGoal = new THREE.Vector3();
+    this.camMode = null;
+    this.camReady = false;
     this.time = 0;
     this.skidCursor = 0;
     this.skidCount = 0;
@@ -1214,9 +1249,11 @@ export class Renderer3D {
     this.buildLights();
     this.buildGround();
     this.buildTrack();
+    this.buildFeatures();
     this.buildRamps();
     this.buildScenery();
     this.buildLocationDecor();
+    this.buildAtmosphere();
     this.buildStart();
     this.buildCars(cars);
     this.buildSkids();
@@ -1243,31 +1280,38 @@ export class Renderer3D {
    * Every track-dependent mesh is rebuilt into a fresh scene; persistent
    * resources (ground textures, car geometry, glow sprites) are retained.
    */
-  setTrack(track, ramps = this.ramps) {
+  setTrack(track, ramps = this.ramps, features = this.features) {
     if (!track) return;
-    if (track === this.track && ramps === this.ramps) return;
+    if (track === this.track && ramps === this.ramps && features === this.features) return;
 
     const oldScene = this.scene;
     this.track = track;
     this.ramps = ramps;
+    this.features = features;
     this.scene = new THREE.Scene();
     this.scene.fog = new THREE.Fog(FOG_COLOR, 950, 3000);
     this.theme = {};
     this.scenery = null;
+    this.garageMeshes = [];
+    this.hazards = [];
+    this.hazardMeshes = [];
     this.carModels.clear();
     this.particleSprites = [];
     this.particleCursor = 0;
     this.skidLast.clear();
     this.skidCursor = 0;
     this.skidCount = 0;
+    this.camReady = false;
 
     this.buildSky();
     this.buildLights();
     this.buildGround();
     this.buildTrack();
+    this.buildFeatures();
     this.buildRamps();
     this.buildScenery();
     this.buildLocationDecor();
+    this.buildAtmosphere();
     this.buildStart();
     this.buildCars(this.cars);
     this.buildSkids();
@@ -1405,7 +1449,7 @@ export class Renderer3D {
       roughness: 0.98,
     });
     const shoulder = new THREE.Mesh(
-      ribbonGeometry(track, -W / 2 - 16, W / 2 + 16, 0.02, 180),
+      ribbonGeometry(track, -W / 2 - 16, W / 2 + 16, 0.02, 180, this.features),
       this.theme.shoulder
     );
     shoulder.receiveShadow = false;
@@ -1418,7 +1462,7 @@ export class Renderer3D {
       metalness: 0.03,
     });
     const road = new THREE.Mesh(
-      ribbonGeometry(track, -W / 2, W / 2, 0.08, 150),
+      ribbonGeometry(track, -W / 2, W / 2, 0.08, 150, this.features),
       this.theme.road
     );
     this.scene.add(road);
@@ -1435,7 +1479,7 @@ export class Renderer3D {
       const a = side * (W / 2 - 10.5);
       const b = side * (W / 2 - 6);
       this.scene.add(
-        new THREE.Mesh(ribbonGeometry(track, Math.min(a, b), Math.max(a, b), 0.11, 90), lineMaterial)
+        new THREE.Mesh(ribbonGeometry(track, Math.min(a, b), Math.max(a, b), 0.11, 90, this.features), lineMaterial)
       );
     }
 
@@ -1445,8 +1489,8 @@ export class Renderer3D {
       roughness: 0.7,
     });
     const kerbMaterial = this.theme.kerb;
-    this.scene.add(new THREE.Mesh(kerbGeometry(track, 1), kerbMaterial));
-    this.scene.add(new THREE.Mesh(kerbGeometry(track, -1), kerbMaterial));
+    this.scene.add(new THREE.Mesh(kerbGeometry(track, 1, 4, this.features), kerbMaterial));
+    this.scene.add(new THREE.Mesh(kerbGeometry(track, -1, 4, this.features), kerbMaterial));
 
     // Guardrails.
     this.theme.rail = new THREE.MeshStandardMaterial({
@@ -1460,11 +1504,11 @@ export class Renderer3D {
     const railHeight = 13;
     for (const side of [1, -1]) {
       this.scene.add(
-        new THREE.Mesh(wallGeometry(track, side * railOffset, railHeight), railMaterial)
+        new THREE.Mesh(wallGeometry(track, side * railOffset, railHeight, this.features), railMaterial)
       );
       this.scene.add(
         new THREE.Mesh(
-          ribbonGeometry(track, side * railOffset - 2.5, side * railOffset + 2.5, railHeight, 70),
+          ribbonGeometry(track, side * railOffset - 2.5, side * railOffset + 2.5, railHeight, 70, this.features),
           railMaterial
         )
       );
@@ -1483,11 +1527,12 @@ export class Renderer3D {
         const t = track.tangents[i];
         const x = p.x + n.x * railOffset * side;
         const z = p.y + n.y * railOffset * side;
-        posts.push({ x, z, rot: -Math.atan2(t.y, t.x), sx: 3, sy: 15, sz: 3, color: postColor });
+        const base = this.features ? this.features.heightAtIndex(i) : 0;
+        posts.push({ x, z, y: base, rot: -Math.atan2(t.y, t.x), sx: 3, sy: 15, sz: 3, color: postColor });
         reflectors.push({
           x: x - n.x * 2.2 * side,
           z: z - n.y * 2.2 * side,
-          y: railHeight - 2.4,
+          y: base + railHeight - 2.4,
           rot: -Math.atan2(t.y, t.x),
           sx: 2.2,
           sy: 3.2,
@@ -1541,6 +1586,285 @@ export class Renderer3D {
       box.position.set(slot.x, 0.1, slot.y);
       this.scene.add(box);
     }
+  }
+
+  buildFeatures() {
+    this.garageMeshes = [];
+    const list = this.features?.list || [];
+    if (!list.length) return;
+
+    const track = this.track;
+    const W = track.width;
+    this.theme.featureSolid = new THREE.MeshStandardMaterial({
+      color: 0x313b40,
+      roughness: 0.82,
+      metalness: 0.12,
+    });
+    this.theme.featureGlow = new THREE.MeshStandardMaterial({
+      color: 0x8ff6ff,
+      emissive: 0x39d8ff,
+      emissiveIntensity: 0.85,
+      roughness: 0.42,
+      metalness: 0.2,
+    });
+    this.theme.featureGlass = new THREE.MeshStandardMaterial({
+      color: 0xbfe8e6,
+      emissive: 0x2ea7b8,
+      emissiveIntensity: 0.26,
+      transparent: true,
+      opacity: 0.72,
+      roughness: 0.25,
+      metalness: 0.18,
+      side: THREE.DoubleSide,
+    });
+    // A dimmer accent for the large structures. The thin rails keep the
+    // brighter glow, but roofs and lintels must not bloom into white slabs.
+    this.theme.featureTrim = new THREE.MeshStandardMaterial({
+      color: 0x9fffe8,
+      emissive: 0x2ea7b8,
+      emissiveIntensity: 0.24,
+      roughness: 0.46,
+      metalness: 0.32,
+    });
+
+    const solid = this.theme.featureSolid;
+    const glow = this.theme.featureGlow;
+    const trim = this.theme.featureTrim;
+    const pillars = [];
+    const rails = [];
+    const chevrons = [];
+    const barriers = [];
+    const garageGroups = [];
+
+    for (const f of list) {
+      if (f.type === 'dip') {
+        // The trough sits above the world plane; short retaining walls close
+        // the gap between the raised approach and the ground on both sides.
+        for (let k = 0; k < f.length; k += 2) {
+          const idx = mod(f.start + k, track.N);
+          const p = track.points[idx];
+          const n = track.normals[idx];
+          const t = track.tangents[idx];
+          const y = this.features.heightAtIndex(idx);
+          if (y < 1.2) continue;
+          for (const side of [-1, 1]) {
+            pillars.push({
+              x: p.x + n.x * side * (W / 2 + 15),
+              z: p.y + n.y * side * (W / 2 + 15),
+              y: y / 2,
+              sx: 6,
+              sy: y,
+              sz: Math.max(8, track.ds * 2.6),
+              rot: -Math.atan2(t.y, t.x),
+            });
+          }
+        }
+        for (const end of [1, f.length - 2]) {
+          const idx = mod(f.start + end, track.N);
+          const p = track.points[idx];
+          const t = track.tangents[idx];
+          chevrons.push({
+            x: p.x,
+            z: p.y,
+            y: this.features.heightAtIndex(idx) + 0.5,
+            sx: W - 12,
+            sy: 0.7,
+            sz: 7,
+            rot: -Math.atan2(t.y, t.x),
+          });
+        }
+      } else if (f.type === 'bridge') {
+        // Support pillars under the elevated deck.
+        for (let k = 4; k < f.length - 3; k += 7) {
+          const idx = mod(f.start + k, track.N);
+          const p = track.points[idx];
+          const n = track.normals[idx];
+          const t = track.tangents[idx];
+          const deck = this.features.heightAtIndex(idx);
+          for (const side of [-1, 1]) {
+            pillars.push({
+              x: p.x + n.x * side * (W / 2 - 16),
+              z: p.y + n.y * side * (W / 2 - 16),
+              y: deck / 2,
+              sx: 11,
+              sy: Math.max(4, deck),
+              sz: 11,
+              rot: -Math.atan2(t.y, t.x),
+            });
+          }
+        }
+        for (const end of [2, f.length - 3]) {
+          const idx = mod(f.start + end, track.N);
+          const p = track.points[idx];
+          const n = track.normals[idx];
+          const t = track.tangents[idx];
+          for (const side of [-1, 1]) {
+            rails.push({
+              x: p.x + n.x * side * (W / 2 + 5),
+              z: p.y + n.y * side * (W / 2 + 5),
+              y: this.features.heightAtIndex(idx) + 14,
+              sx: 7,
+              sy: 8,
+              sz: 16,
+              rot: -Math.atan2(t.y, t.x),
+            });
+          }
+        }
+      } else if (f.type === 'bank') {
+        // Support wall under the raised outside edge, then bright chevrons
+        // sitting on top of it.
+        for (let k = 0; k < f.length; k += 2) {
+          const idx = mod(f.start + k, track.N);
+          const p = track.points[idx];
+          const n = track.normals[idx];
+          const t = track.tangents[idx];
+          const edge = this.features.heightAtIndex(idx) + this.features.bankAtIndex(idx) * f.side;
+          if (edge < 1.2) continue;
+          pillars.push({
+            x: p.x + n.x * f.side * (W / 2 + 14),
+            z: p.y + n.y * f.side * (W / 2 + 14),
+            y: edge / 2,
+            sx: 6,
+            sy: edge,
+            sz: Math.max(8, track.ds * 2.6),
+            rot: -Math.atan2(t.y, t.x),
+          });
+        }
+        for (let k = 3; k < f.length - 2; k += 6) {
+          const idx = mod(f.start + k, track.N);
+          const p = track.points[idx];
+          const n = track.normals[idx];
+          const t = track.tangents[idx];
+          const off = f.side * (W / 2 - 7);
+          rails.push({
+            x: p.x + n.x * off,
+            z: p.y + n.y * off,
+            y: this.features.heightAtIndex(idx) + this.features.bankAtIndex(idx) * f.side + 3,
+            sx: 16,
+            sy: 4,
+            sz: 9,
+            rot: -Math.atan2(t.y, t.x),
+          });
+        }
+      } else if (f.type === 'chicane') {
+        for (const b of this.features.barriers) {
+          if (mod(b.index - f.start, track.N) < f.length) barriers.push(b);
+        }
+      } else if (f.type === 'garage') {
+        const group = new THREE.Group();
+        group.position.set(f.x, 0, f.z);
+        group.rotation.y = f.yaw;
+        const depth = Math.max(140, f.lengthPx);
+        const roofY = 168;
+        const sideZ = W / 2 + 16;
+        const roofMat = this.theme.featureGlass.clone();
+        roofMat.opacity = 0.44;
+        roofMat.emissiveIntensity = 0.1;
+        roofMat.depthWrite = false;
+
+        const roof = new THREE.Mesh(
+          new THREE.BoxGeometry(depth + 40, 5, W + 60),
+          roofMat
+        );
+        roof.position.y = roofY;
+        group.add(roof);
+
+        // Low side walls keep the tunnel feeling enclosed without ever
+        // blocking the chase or hood camera.
+        for (const sz of [-1, 1]) {
+          const wall = new THREE.Mesh(
+            new THREE.BoxGeometry(depth + 24, 56, 8),
+            solid
+          );
+          wall.position.set(0, 28, sz * sideZ);
+          group.add(wall);
+          const strip = new THREE.Mesh(
+            new THREE.BoxGeometry(depth + 16, 3, 3.4),
+            trim
+          );
+          strip.position.set(0, 58, sz * sideZ);
+          group.add(strip);
+        }
+
+        // Structural columns at the four corners.
+        for (const sx of [-1, 1]) {
+          for (const sz of [-1, 1]) {
+            const column = new THREE.Mesh(
+              new THREE.BoxGeometry(10, roofY, 10),
+              solid
+            );
+            column.position.set(sx * (depth / 2 - 2), roofY / 2, sz * sideZ);
+            group.add(column);
+          }
+        }
+
+        // Long accent beams under the roof line.
+        for (const sz of [-1, 1]) {
+          const beam = new THREE.Mesh(
+            new THREE.BoxGeometry(depth + 20, 5, 4),
+            trim
+          );
+          beam.position.set(0, roofY - 10, sz * sideZ);
+          group.add(beam);
+        }
+
+        // Entry and exit lintels sit above the chase camera.
+        for (const sx of [-1, 1]) {
+          const frame = new THREE.Mesh(
+            new THREE.BoxGeometry(6, 18, W + 44),
+            trim
+          );
+          frame.position.set(sx * (depth / 2), roofY - 16, 0);
+          group.add(frame);
+        }
+
+        // Ceiling light strips read as a lit garage from inside and out.
+        for (const sz of [-1, 1]) {
+          const light = new THREE.Mesh(
+            new THREE.BoxGeometry(depth * 0.68, 1.6, 4),
+            glow
+          );
+          light.position.set(0, roofY - 7, sz * (W * 0.22));
+          group.add(light);
+        }
+
+        group.traverse((object) => {
+          if (object.isMesh) object.castShadow = false;
+        });
+        garageGroups.push({ group, roofMat, feature: f });
+        this.scene.add(group);
+      }
+    }
+
+    if (pillars.length) {
+      this.scene.add(makeInstanced(new THREE.BoxGeometry(1, 1, 1), solid, pillars));
+    }
+    if (rails.length) {
+      this.scene.add(makeInstanced(new THREE.BoxGeometry(1, 1, 1), glow, rails));
+    }
+    if (chevrons.length) {
+      this.scene.add(makeInstanced(new THREE.BoxGeometry(1, 1, 1), glow, chevrons));
+    }
+    if (barriers.length) {
+      const stripe = new THREE.MeshStandardMaterial({
+        color: 0xffe7ea,
+        emissive: 0xff6a8a,
+        emissiveIntensity: 0.55,
+        roughness: 0.52,
+      });
+      this.theme.chicane = stripe;
+      for (const b of barriers) {
+        const mesh = new THREE.Mesh(
+          new THREE.BoxGeometry(b.halfLen * 2, 16, b.halfWidth * 2),
+          stripe
+        );
+        mesh.position.set(b.x, 8, b.z);
+        mesh.rotation.y = b.yaw;
+        this.scene.add(mesh);
+      }
+    }
+
+    this.garageMeshes = garageGroups;
   }
 
   buildRamps() {
@@ -2699,6 +3023,41 @@ export class Renderer3D {
     return group;
   }
 
+  /**
+   * Low-cost themed air: a single Points cloud, tinted per location, gives
+   * each circuit a distinct mood (neon dust, alpine snow, canyon grit,
+   * candy sparkle, haunted motes) without per-particle draw calls.
+   */
+  buildAtmosphere() {
+    const bounds = this.track.bounds;
+    const w = bounds.maxX - bounds.minX;
+    const h = bounds.maxY - bounds.minY;
+    const count = 260;
+    const positions = new Float32Array(count * 3);
+    const rnd = mulberry32(9127);
+    for (let i = 0; i < count; i++) {
+      positions[i * 3] = bounds.minX - 120 + rnd() * (w + 240);
+      positions[i * 3 + 1] = 8 + rnd() * 170;
+      positions[i * 3 + 2] = bounds.minY - 120 + rnd() * (h + 240);
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const material = new THREE.PointsMaterial({
+      color: 0x9fe8ff,
+      size: 3.1,
+      transparent: true,
+      opacity: 0.55,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      sizeAttenuation: true,
+    });
+    const points = new THREE.Points(geometry, material);
+    points.frustumCulled = false;
+    this.atmosphere = points;
+    this.atmosphereBase = positions.slice();
+    this.scene.add(points);
+  }
+
   buildStars() {
     const bounds = this.track.bounds;
     const cx = (bounds.minX + bounds.maxX) / 2;
@@ -2847,11 +3206,41 @@ export class Renderer3D {
       t.rampBase.color.set(loc.rampRail);
     }
 
+    if (t.featureGlow) {
+      t.featureGlow.color.set(loc.kerb);
+      t.featureGlow.emissive.set(loc.kerb);
+      t.featureGlow.emissiveIntensity = loc.night ? 0.85 : 0.55;
+      t.featureSolid.color.set(loc.shoulder).multiplyScalar(1.35);
+      t.featureGlass.color.set(loc.kerb);
+      t.featureGlass.emissive.set(loc.accent);
+      t.featureGlass.emissiveIntensity = loc.night ? 0.3 : 0.16;
+      if (t.featureTrim) {
+        t.featureTrim.color.set(loc.rail).lerp(new THREE.Color(loc.kerb), 0.42);
+        t.featureTrim.emissive.set(loc.accent);
+        t.featureTrim.emissiveIntensity = loc.night ? 0.4 : 0.22;
+      }
+      for (const entry of this.garageMeshes) {
+        entry.roofMat.color.set(loc.rail).lerp(new THREE.Color(loc.kerb), 0.25);
+        entry.roofMat.emissive.set(loc.accent);
+        entry.roofMat.emissiveIntensity = loc.night ? 0.18 : 0.1;
+      }
+      if (t.chicane) {
+        t.chicane.emissive.set(loc.accent);
+        t.chicane.color.set(loc.kerb).lerp(new THREE.Color(0xffffff), 0.35);
+      }
+    }
+
     t.leaf.color.set(loc.leafTint);
     t.trunk.color.set(loc.trunkTint);
     t.rock.color.set(loc.rockTint);
     t.tire.color.set(loc.night ? 0x0d1118 : 0x171b1e);
     this.tintScenery(loc);
+
+    if (this.atmosphere) {
+      this.atmosphere.material.color.set(loc.accent);
+      this.atmosphere.material.opacity = loc.night ? 0.72 : 0.42;
+      this.atmosphere.visible = true;
+    }
 
     for (const [key, group] of Object.entries(this.decor)) {
       if (group) group.visible = key === loc.props;
@@ -3049,6 +3438,22 @@ export class Renderer3D {
         continue;
       }
 
+      if (particle.kind === 'fire') {
+        if (sparkIndex >= this.sparkSprites.length) continue;
+        const sprite = this.sparkSprites[sparkIndex++];
+        sprite.material.color.set(t > 0.55 ? 0xffe08a : 0xff6a24);
+        sprite.material.opacity = 0.9 * t;
+        sprite.position.set(
+          particle.x,
+          (particle.height || 0) + 5 + (1 - t) * 18,
+          particle.y
+        );
+        const size = particle.size * (1.5 + (1 - t) * 1.6);
+        sprite.scale.set(size, size, 1);
+        sprite.visible = true;
+        continue;
+      }
+
       if (smokeIndex >= this.smokeSprites.length) continue;
       const sprite = this.smokeSprites[smokeIndex++];
 
@@ -3153,7 +3558,7 @@ export class Renderer3D {
     this.camera.updateProjectionMatrix();
   }
 
-  updateCamera(playerCar, state, camera) {
+  updateCamera(playerCar, state, camera, dt = 1 / 60) {
     const cam = this.camera;
     const track = this.track;
     cam.up.set(0, 1, 0);
@@ -3165,17 +3570,23 @@ export class Renderer3D {
       const speed = 190;
       const back = 170;
       const height = 104;
-      cam.position.set(
+      this.camGoal.set(
         camera.x - t.x * back + n.x * 28,
         height + Math.sin(this.time * 0.7) * 2.4,
         camera.y - t.y * back + n.y * 28
       );
-      cam.lookAt(
-        camera.x + t.x * speed,
-        10,
-        camera.y + t.y * speed
-      );
-      cam.fov = 56;
+      this.lookGoal.set(camera.x + t.x * speed, 10, camera.y + t.y * speed);
+      if (!this.camReady) {
+        this.camSmooth.copy(this.camGoal);
+        this.lookSmooth.copy(this.lookGoal);
+        this.camReady = true;
+      }
+      const k = 1 - Math.exp(-3.2 * dt);
+      this.camSmooth.lerp(this.camGoal, k);
+      this.lookSmooth.lerp(this.lookGoal, k);
+      cam.position.copy(this.camSmooth);
+      cam.lookAt(this.lookSmooth);
+      cam.fov += (56 - cam.fov) * 0.1;
       cam.updateProjectionMatrix();
       return;
     }
@@ -3188,74 +3599,84 @@ export class Renderer3D {
     const carY = playerCar.y || 0;
     const mode = state.cameraMode || 'chase';
 
-    if (mode === 'top') {
-      // North-up overhead view. The car stays centred and rotates beneath
-      // the camera, which makes the new grid-built circuits easy to read.
-      const height = Math.max(560, track.width * 3.6) + carY;
-      cam.up.set(0, 0, -1);
-      cam.position.set(focusX, height, focusY + 0.01);
-      if (state.shake > 0.001) {
-        const shake = state.shake * 4;
-        cam.position.x += (Math.random() - 0.5) * shake;
-        cam.position.z += (Math.random() - 0.5) * shake;
-      }
-      cam.lookAt(focusX, carY, focusY);
-      const targetFov = 42 + speedRatio * 4;
-      cam.fov += (targetFov - cam.fov) * 0.1;
-      cam.updateProjectionMatrix();
-      return;
+    if (mode !== this.camMode) {
+      this.camMode = mode;
+      this.camReady = false;
     }
+
+    let fovTarget = 58;
+    let followRate = 5.5;
+    let lookRate = 7;
 
     if (mode === 'hood') {
-      // Mounted just ahead of the nose: the road leads the view and no body
-      // geometry blocks it, even at speed.
-      const lift = 21 + carY * 0.9;
-      cam.position.set(
-        playerCar.pos.x + cos * 28,
-        lift,
-        playerCar.pos.y + sin * 28
+      // True 3D hood mount just ahead of the nose. High follow rate keeps
+      // it glued to the car without the body geometry blocking the road.
+      this.camGoal.set(
+        playerCar.pos.x + cos * 30,
+        22 + carY * 0.92,
+        playerCar.pos.y + sin * 30
       );
-      if (state.shake > 0.001) {
-        const shake = state.shake * 5;
-        cam.position.x += (Math.random() - 0.5) * shake;
-        cam.position.y += (Math.random() - 0.5) * shake * 0.5;
-        cam.position.z += (Math.random() - 0.5) * shake;
-      }
-      cam.lookAt(
-        playerCar.pos.x + cos * 150,
-        12 + carY + (playerCar.pitch || 0) * 24,
-        playerCar.pos.y + sin * 150
+      this.lookGoal.set(
+        playerCar.pos.x + cos * 165,
+        13 + carY + (playerCar.pitch || 0) * 28,
+        playerCar.pos.y + sin * 165
       );
-      const targetFov = 68 + speedRatio * 7;
-      cam.fov += (targetFov - cam.fov) * 0.12;
-      cam.updateProjectionMatrix();
-      return;
+      fovTarget = 68 + speedRatio * 7;
+      followRate = 16;
+      lookRate = 18;
+    } else if (mode === 'overview') {
+      // Wide 3D overview: high 3/4 chase with a little lateral offset so
+      // the whole car and the next corner stay in frame. No flat top-down.
+      const nx = -sin;
+      const ny = cos;
+      this.camGoal.set(
+        focusX - cos * 330 + nx * 118,
+        255 + carY * 0.7 + speedRatio * 20,
+        focusY - sin * 330 + ny * 118
+      );
+      this.lookGoal.set(
+        focusX + cos * 120,
+        8 + carY * 0.8,
+        focusY + sin * 120
+      );
+      fovTarget = 60 + speedRatio * 8;
+      followRate = 3.4;
+      lookRate = 5.2;
+    } else {
+      const back = 158 + speedRatio * 38;
+      const height = 92 + speedRatio * 10;
+      this.camGoal.set(
+        focusX - cos * back,
+        height + carY * 0.55,
+        focusY - sin * back
+      );
+      this.lookGoal.set(
+        focusX + cos * 92,
+        9 + carY * 0.85,
+        focusY + sin * 92
+      );
+      fovTarget = 58 + speedRatio * 11;
     }
 
-    const back = 158 + speedRatio * 38;
-    const height = 92 + speedRatio * 10;
+    if (!this.camReady) {
+      this.camSmooth.copy(this.camGoal);
+      this.lookSmooth.copy(this.lookGoal);
+      this.camReady = true;
+    }
+    const follow = 1 - Math.exp(-followRate * dt);
+    const look = 1 - Math.exp(-lookRate * dt);
+    this.camSmooth.lerp(this.camGoal, follow);
+    this.lookSmooth.lerp(this.lookGoal, look);
 
-    cam.position.set(
-      focusX - cos * back,
-      height + carY * 0.55,
-      focusY - sin * back
-    );
-
+    cam.position.copy(this.camSmooth);
     if (state.shake > 0.001) {
-      const shake = state.shake * 9;
+      const shake = state.shake * (mode === 'hood' ? 5 : mode === 'overview' ? 6 : 9);
       cam.position.x += (Math.random() - 0.5) * shake;
       cam.position.y += (Math.random() - 0.5) * shake * 0.6;
       cam.position.z += (Math.random() - 0.5) * shake;
     }
-
-    cam.lookAt(
-      focusX + cos * 92,
-      9 + carY * 0.85,
-      focusY + sin * 92
-    );
-
-    const targetFov = 58 + speedRatio * 11;
-    cam.fov += (targetFov - cam.fov) * 0.08;
+    cam.lookAt(this.lookSmooth);
+    cam.fov += (fovTarget - cam.fov) * Math.min(1, dt * 6);
     cam.updateProjectionMatrix();
   }
 
@@ -3266,6 +3687,14 @@ export class Renderer3D {
       model.group.position.set(car.pos.x, car.y || 0, car.pos.y);
       model.group.rotation.y = -car.angle;
       model.group.rotation.z = car.pitch || 0;
+
+      // Match the chassis to the road's cross-slope so the wheels sit on a
+      // banked curve. Local +Z maps to the track normal, so a positive bank
+      // raises that side and needs a negative rotation about local X.
+      const bank = this.features && !car.airborne && !car.ramp
+        ? this.features.bankAtIndex(car.prevIndex)
+        : 0;
+      model.group.rotation.x = -Math.atan2(bank, this.track.width / 2);
 
       const bounce = car.bump * 1.6;
       model.body.position.y = bounce;
@@ -3284,17 +3713,131 @@ export class Renderer3D {
       model.tailGlowMat.opacity = braking ? 0.7 : 0.16;
 
       if (model.ring) {
+        // Soft additive pool on the road. It fades away when the wheels
+        // leave the ground, so jumps do not carry a fake glow into the air.
+        const fade = car.airborne ? 0.05 : car.ramp ? 0.8 : 1;
+        const base = car.isPlayer ? 0.5 : 0.3;
         model.ring.material.opacity =
-          0.2 + Math.sin(this.time * 3.4) * 0.05 + (car.isPlayer ? 0.04 : 0);
+          (base + Math.sin(this.time * 3.4) * 0.035) * fade;
         model.ring.visible = state.mode !== 'title' || car.isPlayer;
+      }
+    }
+
+    // Covered garages fade their roof while the player is underneath.
+    if (this.garageMeshes.length) {
+      const player = cars.find((car) => car.isPlayer);
+      for (const entry of this.garageMeshes) {
+        let inside = false;
+        if (player && this.features) {
+          const near = this.track.nearest(player.pos.x, player.pos.y, player.prevIndex);
+          inside = Boolean(this.features.garageAt(near.index, near.offset));
+        }
+        const target = inside ? 0.16 : 0.62;
+        entry.roofMat.opacity += (target - entry.roofMat.opacity) * 0.12;
+      }
+    }
+  }
+
+  /* ------------------------------ hazards --------------------------- */
+
+  clearHazardMeshes() {
+    if (!this.hazardMeshes) {
+      this.hazardMeshes = [];
+      return;
+    }
+    for (const mesh of this.hazardMeshes) {
+      this.scene.remove(mesh);
+      mesh.traverse?.((object) => {
+        if (object.geometry) object.geometry.dispose();
+        if (object.material) {
+          const materials = Array.isArray(object.material)
+            ? object.material
+            : [object.material];
+          for (const material of materials) material.dispose?.();
+        }
+      });
+    }
+    this.hazardMeshes.length = 0;
+  }
+
+  setHazards(hazards) {
+    if (!this.hazardMeshes) this.hazardMeshes = [];
+    this.clearHazardMeshes();
+    const bodyGeo = new THREE.CylinderGeometry(9, 10, 23, 10);
+    const bandGeo = new THREE.CylinderGeometry(10.4, 10.4, 5, 10);
+    const bodyMat = new THREE.MeshStandardMaterial({
+      color: 0xc8442e,
+      emissive: 0x3a0d06,
+      emissiveIntensity: 0.35,
+      roughness: 0.6,
+      metalness: 0.24,
+    });
+    const bandMat = new THREE.MeshStandardMaterial({
+      color: 0xffe27a,
+      emissive: 0xffa41e,
+      emissiveIntensity: 0.9,
+      roughness: 0.4,
+    });
+    const ringMat = new THREE.MeshBasicMaterial({
+      map: GLOW_TEX,
+      color: 0xffb347,
+      transparent: true,
+      opacity: 0.55,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+    });
+    for (const hazard of hazards) {
+      const group = new THREE.Group();
+      group.position.set(hazard.x, 0, hazard.z);
+      const body = new THREE.Mesh(bodyGeo, bodyMat);
+      body.position.y = 12;
+      group.add(body);
+      for (const y of [6, 17]) {
+        const band = new THREE.Mesh(bandGeo, bandMat);
+        band.position.y = y;
+        group.add(band);
+      }
+      const ring = new THREE.Mesh(new THREE.PlaneGeometry(52, 52), ringMat.clone());
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.y = 0.18;
+      group.add(ring);
+      hazard.mesh = group;
+      hazard.ringMesh = ring;
+      this.scene.add(group);
+      this.hazardMeshes.push(group);
+    }
+    this.hazards = hazards;
+  }
+
+  updateHazards(hazards, dt) {
+    for (const hazard of hazards) {
+      if (!hazard.mesh) continue;
+      if (!hazard.alive) {
+        hazard.mesh.visible = false;
+        continue;
+      }
+      hazard.mesh.visible = true;
+      const pulse = 1 + Math.sin(this.time * 4.2 + hazard.phase) * 0.06;
+      hazard.mesh.scale.set(pulse, 1, pulse);
+      if (hazard.ringMesh) {
+        const warn = 0.34 + Math.abs(Math.sin(this.time * 3.1 + hazard.phase)) * 0.4;
+        hazard.ringMesh.material.opacity = warn;
+        hazard.ringMesh.rotation.z = this.time * 0.6;
       }
     }
   }
 
   render({ cars, playerCar, particles, state, camera, dt }) {
     this.time += dt || 0;
+    if (this.atmosphere) {
+      this.atmosphere.rotation.y = this.time * 0.006;
+      this.atmosphere.material.opacity =
+        (state.mode === 'title' ? 0.4 : 0.55) *
+        (0.7 + Math.sin(this.time * 0.8) * 0.12);
+    }
     this.updateCars(cars, state);
-    this.updateCamera(playerCar, state, camera);
+    this.updateCamera(playerCar, state, camera, dt || 1 / 60);
     this.updateParticles(particles || []);
     this.postfx.render(this.scene, this.camera);
   }

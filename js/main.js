@@ -5,6 +5,7 @@ import { AIDriver } from './ai.js';
 import { GameAudio } from './audio.js';
 import { Renderer3D, Garage3D } from './render3d.js';
 import { Ramps, autoRampDefs } from './ramps.js';
+import { TrackFeatures, FEATURE_TYPES, FEATURE_INFO } from './features.js';
 import { LOCATIONS, getLocation } from './locations.js';
 
 const LAPS = 3;
@@ -65,6 +66,13 @@ const builderCancelBtn = document.getElementById('builderCancelBtn');
 const builderCloseBtn = document.getElementById('builderCloseBtn');
 const builderClearBtn = document.getElementById('builderClearBtn');
 const builderPresetBtn = document.getElementById('builderPresetBtn');
+const builderPresetSelect = document.getElementById('builderPresetSelect');
+const builderRandomBtn = document.getElementById('builderRandomBtn');
+const builderRotateBtn = document.getElementById('builderRotateBtn');
+const hazardBtn = document.getElementById('hazardBtn');
+const builderHazardBtn = document.getElementById('builderHazardBtn');
+const creditsEl = document.getElementById('credits');
+const garageTune = document.getElementById('garageTune');
 const startBtn = document.getElementById('startBtn');
 const againBtn = document.getElementById('againBtn');
 const resultGarageBtn = document.getElementById('resultGarageBtn');
@@ -90,21 +98,104 @@ const CUSTOM_WIDTH = 164;
 
 const keyOf = (cell) => `${cell.c},${cell.r}`;
 
-function makePresetCells() {
+function rectangleCells(left, right, top, bottom) {
   const cells = [];
-  const left = 1;
-  const right = 9;
-  const top = 1;
-  const bottom = 5;
   for (let c = left; c <= right; c++) {
-    cells.push({ c, r: top, ramp: c === 4 });
-    cells.push({ c, r: bottom, ramp: c === 6 });
+    cells.push({ c, r: top, ramp: false });
+    if (bottom !== top) cells.push({ c, r: bottom, ramp: false });
   }
   for (let r = top + 1; r < bottom; r++) {
     cells.push({ c: left, r, ramp: false });
-    cells.push({ c: right, r, ramp: false });
+    if (right !== left) cells.push({ c: right, r, ramp: false });
   }
   return cells;
+}
+
+function decorate(cells, decorations = []) {
+  for (const item of decorations) {
+    const cell = cells.find((entry) => entry.c === item.c && entry.r === item.r);
+    if (!cell) continue;
+    if (item.ramp) {
+      cell.ramp = true;
+      cell.feature = null;
+    }
+    if (item.feature) {
+      cell.feature = item.feature;
+      cell.rotation = item.rotation || 0;
+      cell.ramp = false;
+    }
+  }
+  return cells;
+}
+
+const LAYOUT_PRESETS = {
+  classic: () =>
+    decorate(rectangleCells(1, 9, 1, 5), [
+      { c: 4, r: 1, ramp: true },
+      { c: 6, r: 5, ramp: true },
+    ]),
+  jump: () =>
+    decorate(rectangleCells(1, 9, 1, 5), [
+      { c: 3, r: 1, ramp: true },
+      { c: 7, r: 1, ramp: true },
+      { c: 5, r: 5, ramp: true },
+      { c: 6, r: 1, feature: 'dip', rotation: 0 },
+      { c: 8, r: 5, feature: 'bridge', rotation: 0 },
+    ]),
+  structure: () =>
+    decorate(rectangleCells(1, 9, 1, 5), [
+      { c: 4, r: 1, feature: 'bridge', rotation: 0 },
+      { c: 6, r: 5, feature: 'garage', rotation: 0 },
+      { c: 1, r: 3, feature: 'bank', rotation: 0 },
+      { c: 9, r: 3, feature: 'chicane', rotation: 0 },
+      { c: 3, r: 5, ramp: true },
+    ]),
+  technical: () =>
+    decorate(rectangleCells(2, 8, 0, 6), [
+      { c: 2, r: 2, feature: 'chicane', rotation: 1 },
+      { c: 8, r: 2, feature: 'bank', rotation: 1 },
+      { c: 3, r: 0, feature: 'dip', rotation: 0 },
+      { c: 7, r: 6, feature: 'garage', rotation: 0 },
+      { c: 5, r: 0, ramp: true },
+      { c: 6, r: 3, feature: 'bridge', rotation: 0 },
+    ]),
+};
+
+function makePresetCells(kind = 'classic') {
+  return (LAYOUT_PRESETS[kind] || LAYOUT_PRESETS.classic)();
+}
+
+function randomizeCells() {
+  const width = 5 + Math.floor(Math.random() * 4);
+  const height = 2 + Math.floor(Math.random() * 4);
+  const left = Math.floor(Math.random() * (CUSTOM_COLS - width));
+  const top = Math.floor(Math.random() * (CUSTOM_ROWS - height));
+  const cells = rectangleCells(left, left + width, top, top + height);
+  const features = FEATURE_TYPES.slice();
+  const count = 2 + Math.floor(Math.random() * 4);
+  for (let k = 0; k < count; k++) {
+    const cell = cells[Math.floor(Math.random() * cells.length)];
+    if (!cell || cell.feature) continue;
+    if (Math.random() < 0.32) {
+      cell.ramp = true;
+    } else {
+      const type = features[Math.floor(Math.random() * features.length)];
+      cell.feature = type;
+      cell.rotation = Math.floor(Math.random() * 4);
+      cell.ramp = false;
+    }
+  }
+  return cells;
+}
+
+function serializeCells(cells) {
+  return cells.map((cell) => ({
+    c: cell.c,
+    r: cell.r,
+    ramp: Boolean(cell.ramp),
+    feature: cell.feature || null,
+    rotation: cell.rotation || 0,
+  }));
 }
 
 function sanitizeCells(input) {
@@ -120,7 +211,14 @@ function sanitizeCells(input) {
     const key = `${c},${r}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    cells.push({ c, r, ramp: Boolean(raw.ramp) });
+    const feature = FEATURE_TYPES.includes(raw.feature) ? raw.feature : null;
+    cells.push({
+      c,
+      r,
+      ramp: !feature && Boolean(raw.ramp),
+      feature,
+      rotation: feature ? mod(Math.round(Number(raw.rotation) || 0), 4) : 0,
+    });
   }
   return cells;
 }
@@ -200,6 +298,9 @@ function layoutFromCells(cells) {
   });
   const points = route.map(toWorld);
   const rampAnchors = route.filter((cell) => cell.ramp).map(toWorld);
+  const featureAnchors = route
+    .filter((cell) => cell.feature)
+    .map((cell) => ({ ...toWorld(cell), type: cell.feature, rotation: cell.rotation || 0 }));
   return {
     layout: {
       cx: WORLD.w / 2,
@@ -211,6 +312,7 @@ function layoutFromCells(cells) {
       rawCount: points.length * 8,
     },
     rampAnchors,
+    featureAnchors,
   };
 }
 
@@ -258,12 +360,41 @@ function createRampsForLocation(loc, nextTrack) {
   return new Ramps(nextTrack, autoRampDefs(nextTrack, loc.rampCount || 3));
 }
 
+function createFeaturesForLocation(loc, nextTrack, nextRamps) {
+  if (loc.id !== 'custom') return new TrackFeatures(nextTrack, []);
+  const anchors = customTrackData.featureAnchors || [];
+  if (!anchors.length) return new TrackFeatures(nextTrack, []);
+  const N = nextTrack.N;
+  const rampIndices = new Set((nextRamps?.list || []).map((ramp) => ramp.index));
+  const defs = [];
+  for (const anchor of anchors) {
+    const near = nextTrack.nearest(anchor.x, anchor.y);
+    let blocked = false;
+    for (const rampIndex of rampIndices) {
+      const d = Math.abs(rampIndex - near.index);
+      if (Math.min(d, N - d) < 14) {
+        blocked = true;
+        break;
+      }
+    }
+    if (blocked) continue;
+    defs.push({
+      index: near.index,
+      type: anchor.type,
+      rotation: anchor.rotation || 0,
+      samples: FEATURE_INFO[anchor.type]?.samples || 26,
+    });
+  }
+  return new TrackFeatures(nextTrack, defs);
+}
+
 /* ------------------------------------------------------------------ */
 /* World                                                               */
 /* ------------------------------------------------------------------ */
 
 let track = createTrackForLocation(getLocation('ridge'));
 let ramps = createRampsForLocation(getLocation('ridge'), track);
+let features = createFeaturesForLocation(getLocation('ridge'), track, ramps);
 
 /* ------------------------------------------------------------------ */
 /* Cars                                                                */
@@ -298,7 +429,7 @@ const cars = carDefs.map((def, i) => {
   return car;
 });
 const playerCar = cars.find((c) => c.isPlayer);
-const world3d = new Renderer3D(canvas, track, cars, ramps);
+const world3d = new Renderer3D(canvas, track, cars, ramps, features);
 
 /* ------------------------------------------------------------------ */
 /* Garage                                                              */
@@ -306,7 +437,7 @@ const world3d = new Renderer3D(canvas, track, cars, ramps);
 
 const GARAGE_KEY = 'apex-drift-garage-v1';
 const BASE_PLAYER_SPEED = 600;
-const BASE_PLAYER_ACCEL = 720;
+const BASE_PLAYER_ACCEL = 330;
 const BASE_PLAYER_GRIP = 7.6;
 
 const PLAYER_CARS = [
@@ -334,7 +465,7 @@ const PLAYER_CARS = [
     accel: 1.02,
     grip: 1.08,
     stats: [6, 7, 9],
-    unlock: { type: 'races', count: 1, label: 'Finish 1 race' },
+    unlock: { type: 'wins', count: 1, label: 'Win 1 race' },
   },
   {
     id: 'blaze',
@@ -347,7 +478,7 @@ const PLAYER_CARS = [
     accel: 1.12,
     grip: 0.95,
     stats: [7, 9, 5],
-    unlock: { type: 'races', count: 3, label: 'Finish 3 races' },
+    unlock: { type: 'wins', count: 3, label: 'Win 3 races' },
   },
   {
     id: 'nova',
@@ -360,7 +491,7 @@ const PLAYER_CARS = [
     accel: 0.98,
     grip: 1.01,
     stats: [9, 6, 7],
-    unlock: { type: 'wins', count: 1, label: 'Win 1 race' },
+    unlock: { type: 'wins', count: 2, label: 'Win 2 races' },
   },
   {
     id: 'onyx',
@@ -373,7 +504,7 @@ const PLAYER_CARS = [
     accel: 1.03,
     grip: 1.05,
     stats: [9, 9, 9],
-    unlock: { type: 'wins', count: 3, label: 'Win 3 races' },
+    unlock: { type: 'wins', count: 6, label: 'Win 6 races' },
   },
   {
     id: 'talon',
@@ -386,7 +517,7 @@ const PLAYER_CARS = [
     accel: 1.02,
     grip: 1.04,
     stats: [8, 7, 8],
-    unlock: { type: 'trackWins', track: 'neon', count: 1, label: 'Win at Neon Bay' },
+    unlock: { type: 'trackWins', track: 'neon', count: 2, label: 'Win twice at Neon Bay' },
   },
   {
     id: 'ember',
@@ -399,7 +530,7 @@ const PLAYER_CARS = [
     accel: 1.05,
     grip: 0.97,
     stats: [9, 8, 6],
-    unlock: { type: 'trackWins', track: 'canyon', count: 1, label: 'Win at Canyon Dawn' },
+    unlock: { type: 'trackWins', track: 'canyon', count: 2, label: 'Win twice at Canyon Dawn' },
   },
   {
     id: 'frost',
@@ -412,7 +543,7 @@ const PLAYER_CARS = [
     accel: 1,
     grip: 1.13,
     stats: [7, 8, 10],
-    unlock: { type: 'trackWins', track: 'alpine', count: 1, label: 'Win at Alpine Night' },
+    unlock: { type: 'trackWins', track: 'alpine', count: 2, label: 'Win twice at Alpine Night' },
   },
   {
     id: 'viper',
@@ -425,7 +556,7 @@ const PLAYER_CARS = [
     accel: 1.07,
     grip: 1,
     stats: [10, 9, 7],
-    unlock: { type: 'trackWins', track: 'neon', count: 2, label: 'Win twice at Neon Bay' },
+    unlock: { type: 'trackWins', track: 'neon', count: 4, label: 'Win 4 times at Neon Bay' },
   },
   {
     id: 'spectre',
@@ -438,11 +569,7 @@ const PLAYER_CARS = [
     accel: 1.06,
     grip: 1.1,
     stats: [10, 10, 10],
-    unlock: {
-      type: 'tour',
-      tracks: ['neon', 'alpine', 'canyon'],
-      label: 'Win at Neon, Alpine & Canyon',
-    },
+    unlock: { type: 'wins', count: 8, label: 'Win 8 races' },
   },
   {
     id: 'gumdrop',
@@ -455,7 +582,7 @@ const PLAYER_CARS = [
     accel: 1.05,
     grip: 1.17,
     stats: [7, 8, 10],
-    unlock: { type: 'trackWins', track: 'candy', count: 1, label: 'Win at Candyland' },
+    unlock: { type: 'trackWins', track: 'candy', count: 2, label: 'Win twice at Candyland' },
   },
   {
     id: 'wraith',
@@ -468,7 +595,7 @@ const PLAYER_CARS = [
     accel: 1.03,
     grip: 1.06,
     stats: [10, 8, 8],
-    unlock: { type: 'trackWins', track: 'haunt', count: 1, label: 'Win at Haunted House' },
+    unlock: { type: 'trackWins', track: 'haunt', count: 2, label: 'Win twice at Haunted House' },
   },
   {
     id: 'prism',
@@ -481,7 +608,7 @@ const PLAYER_CARS = [
     accel: 1.1,
     grip: 1.12,
     stats: [10, 10, 9],
-    unlock: { type: 'wins', count: 5, label: 'Win 5 races' },
+    unlock: { type: 'wins', count: 10, label: 'Win 10 races' },
   },
 ];
 
@@ -489,11 +616,48 @@ const garageSave = {
   selected: 'apex',
   races: 0,
   wins: 0,
+  credits: 0,
   unlocked: ['apex'],
   trackWins: {},
   track: 'ridge',
   custom: [],
+  upgrades: {},
+  explosive: false,
 };
+
+const UPGRADE_MAX = 3;
+const UPGRADE_BASE_COST = 220;
+const UPGRADE_KEYS = ['speed', 'accel', 'grip'];
+
+function carUpgrades(id) {
+  if (!garageSave.upgrades[id]) {
+    garageSave.upgrades[id] = { speed: 0, accel: 0, grip: 0 };
+  }
+  return garageSave.upgrades[id];
+}
+
+function upgradeCost(level) {
+  return UPGRADE_BASE_COST * (level + 1);
+}
+
+function buyUpgrade(id, key) {
+  const spec = PLAYER_CARS.find((car) => car.id === id);
+  if (!spec || !isUnlocked(spec) || !UPGRADE_KEYS.includes(key)) return;
+  const upgrades = carUpgrades(id);
+  const level = upgrades[key] || 0;
+  if (level >= UPGRADE_MAX) return;
+  const cost = upgradeCost(level);
+  if (garageSave.credits < cost) {
+    audio.beep(150, 0.12, 'sawtooth', 0.04);
+    return;
+  }
+  garageSave.credits -= cost;
+  upgrades[key] = level + 1;
+  saveGarage();
+  applyPlayerSetup();
+  renderGarage();
+  audio.beep(880, 0.1, 'square', 0.05);
+}
 
 let selectedLocation = 'ridge';
 
@@ -540,6 +704,19 @@ function loadGarage() {
         if (typeof data.selected === 'string') garageSave.selected = data.selected;
         garageSave.races = Math.max(0, Number(data.races) || 0);
         garageSave.wins = Math.max(0, Number(data.wins) || 0);
+        garageSave.credits = Math.max(0, Number(data.credits) || 0);
+        garageSave.explosive = Boolean(data.explosive);
+        if (data.upgrades && typeof data.upgrades === 'object') {
+          for (const spec of PLAYER_CARS) {
+            const saved = data.upgrades[spec.id];
+            if (!saved || typeof saved !== 'object') continue;
+            const levels = { speed: 0, accel: 0, grip: 0 };
+            for (const key of UPGRADE_KEYS) {
+              levels[key] = Math.max(0, Math.min(UPGRADE_MAX, Math.round(Number(saved[key]) || 0)));
+            }
+            garageSave.upgrades[spec.id] = levels;
+          }
+        }
         if (data.trackWins && typeof data.trackWins === 'object') {
           for (const loc of LOCATIONS) {
             garageSave.trackWins[loc.id] = Math.max(0, Number(data.trackWins[loc.id]) || 0);
@@ -566,7 +743,8 @@ function loadGarage() {
   }
   garageSave.track = selectedLocation;
   customTrackData = makeCustomTrackData(customCells);
-  garageSave.custom = customCells.map((cell) => ({ c: cell.c, r: cell.r, ramp: Boolean(cell.ramp) }));
+  garageSave.custom = serializeCells(customCells);
+  for (const spec of PLAYER_CARS) carUpgrades(spec.id);
   for (const spec of PLAYER_CARS) {
     if (spec.unlock && meetsUnlock(spec) && !garageSave.unlocked.includes(spec.id)) {
       garageSave.unlocked.push(spec.id);
@@ -628,7 +806,8 @@ function renderGarage() {
   const races = garageSave.races;
   const wins = garageSave.wins;
   const circuitWins = LOCATIONS.filter((loc) => (garageSave.trackWins[loc.id] || 0) > 0).length;
-  garageProgress.textContent = `${races} race${races === 1 ? '' : 's'} · ${wins} win${wins === 1 ? '' : 's'} · ${circuitWins}/${LOCATIONS.length} circuits won`;
+  garageProgress.textContent = `${races} race${races === 1 ? '' : 's'} · ${wins} win${wins === 1 ? '' : 's'} · ${circuitWins}/${LOCATIONS.length} circuits won · ${garageSave.credits} cr`;
+  if (creditsEl) creditsEl.textContent = `${garageSave.credits} CR`;
   const remaining = PLAYER_CARS.filter((spec) => !isUnlocked(spec)).length;
   garageSub.textContent =
     remaining === 0
@@ -638,17 +817,40 @@ function renderGarage() {
   garageViewName.textContent = active.name;
   garageViewTag.textContent = active.tag;
   garageCanvas.setAttribute('aria-label', `${active.name} 3D preview`);
+
+  if (garageTune) {
+    const upgrades = carUpgrades(active.id);
+    const labels = { speed: 'TOP SPEED', accel: 'LAUNCH', grip: 'GRIP' };
+    const rows = UPGRADE_KEYS.map((key) => {
+      const level = upgrades[key] || 0;
+      const maxed = level >= UPGRADE_MAX;
+      const cost = upgradeCost(level);
+      const affordable = garageSave.credits >= cost;
+      const pips = Array.from({ length: UPGRADE_MAX }, (_, i) =>
+        `<i class="${i < level ? 'on' : ''}"></i>`).join('');
+      return `<button class="tune-btn" data-upgrade="${key}" type="button" ${maxed || !affordable ? 'disabled' : ''}>
+        <span class="tune-name">${labels[key]}</span>
+        <span class="tune-pips">${pips}</span>
+        <span class="tune-cost">${maxed ? 'MAX' : `${cost} CR`}</span>
+      </button>`;
+    }).join('');
+    garageTune.innerHTML = `<div class="tune-head"><span>Factory tune</span><b>${garageSave.credits} CR</b></div><div class="tune-grid">${rows}</div>`;
+  }
 }
 
 function applyPlayerSetup() {
   const spec = selectedCarSpec();
+  const upgrades = carUpgrades(spec.id);
   playerCar.name = spec.name;
   playerCar.color = spec.color;
   playerCar.accent = spec.accent;
   playerCar.number = spec.number;
-  playerCar.maxSpeed = BASE_PLAYER_SPEED * spec.speed;
-  playerCar.accel = BASE_PLAYER_ACCEL * spec.accel;
-  playerCar.grip = BASE_PLAYER_GRIP * spec.grip;
+  // Top speed, launch and grip all come from the car plus its tune levels.
+  playerCar.maxSpeed = BASE_PLAYER_SPEED * spec.speed * (1 + 0.038 * upgrades.speed);
+  playerCar.baseMaxSpeed = playerCar.maxSpeed;
+  playerCar.accel = BASE_PLAYER_ACCEL * spec.accel * (1 + 0.05 * upgrades.accel);
+  playerCar.baseAccel = playerCar.accel;
+  playerCar.grip = BASE_PLAYER_GRIP * spec.grip * (1 + 0.045 * upgrades.grip);
   titleCarName.textContent = spec.name;
   titleCarDot.style.background = spec.color;
   titleCarDot.style.color = spec.color;
@@ -690,9 +892,11 @@ function applyLocationUI() {
 function swapTrackForLocation(loc) {
   track = createTrackForLocation(loc);
   ramps = createRampsForLocation(loc, track);
-  world3d.setTrack(track, ramps);
+  features = createFeaturesForLocation(loc, track, ramps);
+  world3d.setTrack(track, ramps, features);
   aiDrivers.forEach((driver) => {
     driver.track = track;
+    driver.features = features;
   });
   state.attract = track.length * 0.32;
   camera.x = track.points[0].x;
@@ -710,18 +914,52 @@ function swapTrackForLocation(loc) {
 
 let builderCells = [];
 let builderTool = 'track';
+let builderRotation = 0;
 let builderPainting = false;
+
+function toggleHazards() {
+  garageSave.explosive = !garageSave.explosive;
+  state.explosive = garageSave.explosive;
+  saveGarage();
+  syncBuilderActions();
+  if (['racing', 'countdown', 'finished', 'paused'].includes(state.mode)) {
+    buildHazards();
+  }
+  if (state.mode !== 'title') {
+    showBanner(`HAZARDS ${garageSave.explosive ? 'ON' : 'OFF'}`, 1.2);
+  }
+  audio.beep(garageSave.explosive ? 520 : 300, 0.07, 'square', 0.04);
+}
 
 function openBuilder() {
   if (state.mode !== 'title' && state.mode !== 'results') return;
   builderCells = customCells.map((cell) => ({ ...cell }));
   builderTool = 'track';
+  builderRotation = 0;
   builderScreen.classList.remove('hidden');
   builderRaceBtn.disabled = false;
   document.querySelectorAll('[data-build-tool]').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.buildTool === builderTool);
   });
+  if (builderPresetSelect) builderPresetSelect.value = 'classic';
+  syncBuilderActions();
   renderBuilderGrid();
+}
+
+function syncBuilderActions() {
+  if (builderRotateBtn) {
+    builderRotateBtn.textContent = `Rotate ${builderRotation * 90}°`;
+  }
+  if (builderHazardBtn) {
+    builderHazardBtn.textContent = `Hazards ${garageSave.explosive ? 'ON' : 'OFF'}`;
+    builderHazardBtn.classList.toggle('active', garageSave.explosive);
+    builderHazardBtn.setAttribute('aria-pressed', garageSave.explosive ? 'true' : 'false');
+  }
+  if (hazardBtn) {
+    hazardBtn.textContent = `Hazards ${garageSave.explosive ? 'ON' : 'OFF'}`;
+    hazardBtn.classList.toggle('active', garageSave.explosive);
+    hazardBtn.setAttribute('aria-pressed', garageSave.explosive ? 'true' : 'false');
+  }
 }
 
 function closeBuilder() {
@@ -740,10 +978,28 @@ function renderBuilderGrid() {
       const classes = ['build-cell'];
       if (cell) classes.push('on');
       if (cell && cell.ramp) classes.push('ramp');
+      if (cell && cell.feature) classes.push('feature', `feat-${cell.feature}`);
       if (start && cell === start) classes.push('start');
+      const info = cell && cell.feature ? FEATURE_INFO[cell.feature] : null;
+      const label = cell
+        ? cell.feature
+          ? info.short.slice(0, 2)
+          : cell.ramp
+            ? 'R'
+            : start && cell === start
+              ? 'S'
+              : ''
+        : '';
+      const detail = cell
+        ? cell.feature
+          ? `, ${info.label}, rotated ${((cell.rotation || 0) * 90)} degrees`
+          : cell.ramp
+            ? ', ramp tile'
+            : ', track tile'
+        : ', empty';
       parts.push(
-        `<button class="${classes.join(' ')}" data-c="${c}" data-r="${r}" type="button" aria-label="Grid ${c + 1}, ${r + 1}${cell ? (cell.ramp ? ', ramp tile' : ', track tile') : ', empty'}">
-          <span>${cell ? (cell.ramp ? 'R' : start && cell === start ? 'S' : '') : ''}</span>
+        `<button class="${classes.join(' ')}" data-c="${c}" data-r="${r}" type="button" aria-label="Grid ${c + 1}, ${r + 1}${detail}">
+          <span>${label}</span>
         </button>`
       );
     }
@@ -755,7 +1011,8 @@ function renderBuilderGrid() {
 function updateBuilderStatus(trace = traceBuilderLoop(builderCells)) {
   if (trace.ok) {
     const ramps = builderCells.filter((cell) => cell.ramp).length;
-    builderStatus.textContent = `Loop ready · ${builderCells.length} tiles · ${ramps} ramp${ramps === 1 ? '' : 's'}`;
+    const feats = builderCells.filter((cell) => cell.feature).length;
+    builderStatus.textContent = `Loop ready · ${builderCells.length} tiles · ${ramps} ramp${ramps === 1 ? '' : 's'} · ${feats} feature${feats === 1 ? '' : 's'} · rot ${builderRotation * 90}°`;
     builderStatus.classList.remove('error');
     builderRaceBtn.disabled = false;
   } else {
@@ -775,15 +1032,38 @@ function applyBuilderTool(c, r) {
     }
   } else if (builderTool === 'track') {
     if (index < 0) {
-      builderCells.push({ c, r, ramp: false });
+      builderCells.push({ c, r, ramp: false, feature: null, rotation: 0 });
+      changed = true;
+    } else if (builderCells[index].ramp || builderCells[index].feature) {
+      builderCells[index].ramp = false;
+      builderCells[index].feature = null;
+      builderCells[index].rotation = 0;
       changed = true;
     }
   } else if (builderTool === 'ramp') {
     if (index < 0) {
-      builderCells.push({ c, r, ramp: true });
+      builderCells.push({ c, r, ramp: true, feature: null, rotation: 0 });
       changed = true;
     } else if (!builderCells[index].ramp) {
       builderCells[index].ramp = true;
+      builderCells[index].feature = null;
+      builderCells[index].rotation = 0;
+      changed = true;
+    }
+  } else if (FEATURE_TYPES.includes(builderTool)) {
+    if (index < 0) {
+      builderCells.push({
+        c,
+        r,
+        ramp: false,
+        feature: builderTool,
+        rotation: builderRotation,
+      });
+      changed = true;
+    } else {
+      builderCells[index].ramp = false;
+      builderCells[index].feature = builderTool;
+      builderCells[index].rotation = builderRotation;
       changed = true;
     }
   }
@@ -799,11 +1079,7 @@ function buildAndRace() {
   }
   customCells = builderCells.map((cell) => ({ ...cell }));
   customTrackData = makeCustomTrackData(customCells);
-  garageSave.custom = customCells.map((cell) => ({
-    c: cell.c,
-    r: cell.r,
-    ramp: Boolean(cell.ramp),
-  }));
+  garageSave.custom = serializeCells(customCells);
   selectedLocation = 'custom';
   garageSave.track = 'custom';
   saveGarage();
@@ -813,8 +1089,8 @@ function buildAndRace() {
   startRace();
 }
 
-const CAMERA_MODES = ['chase', 'top', 'hood'];
-const CAMERA_LABELS = { chase: 'CHASE', top: 'TOP-DOWN', hood: 'HOOD' };
+const CAMERA_MODES = ['chase', 'overview', 'hood'];
+const CAMERA_LABELS = { chase: 'CHASE', overview: 'WIDE 3D', hood: 'HOOD' };
 
 function cycleCamera() {
   const index = CAMERA_MODES.indexOf(state.cameraMode);
@@ -863,10 +1139,14 @@ function closeGarage() {
 
 function recordRaceResult(pos) {
   garageSave.races += 1;
+  // Payouts are deliberately modest: upgrades take a few races, and the
+  // faster cars stay behind genuine wins rather than a short grind.
+  garageSave.credits += pos === 1 ? 260 : pos === 2 ? 150 : 90;
   if (pos === 1) {
     garageSave.wins += 1;
     garageSave.trackWins[selectedLocation] =
       (garageSave.trackWins[selectedLocation] || 0) + 1;
+    garageSave.credits += 90;
   }
   const unlocked = unlockNewCars();
   saveGarage();
@@ -878,7 +1158,10 @@ function recordRaceResult(pos) {
 const aiDrivers = new Map();
 carDefs.forEach((def, i) => {
   if (!def.isPlayer) {
-    aiDrivers.set(cars[i], new AIDriver(cars[i], track, { skill: def.skill, lane: def.lane }));
+    aiDrivers.set(
+      cars[i],
+      new AIDriver(cars[i], track, { skill: def.skill, lane: def.lane, features })
+    );
   }
 });
 
@@ -902,12 +1185,15 @@ const state = {
   goTimer: 0,
   started: false,
   cameraMode: 'chase',
+  explosive: false,
 };
+
+const hazards = [];
 
 const camera = { x: track.points[0].x, y: track.points[0].y, zoom: 1 };
 const particles = [];
 const audio = new GameAudio();
-const touch = { left: false, right: false, throttle: false, brake: false, drift: false };
+const touch = { left: false, right: false, throttle: false, brake: false };
 const keys = Object.create(null);
 
 let viewW = 1;
@@ -967,12 +1253,139 @@ function resetRace() {
   camera.x = playerCar.pos.x;
   camera.y = playerCar.pos.y;
   camera.zoom = baseZoom() * 1.02;
+  buildHazards();
   updateHud(0, true);
   drawGauge(0, false);
 }
 
+/* ------------------------------------------------------------------ */
+/* Explosive hazards                                                   */
+/* ------------------------------------------------------------------ */
+
+function buildHazards() {
+  hazards.length = 0;
+  if (!state.explosive) {
+    world3d.setHazards(hazards);
+    return;
+  }
+  const N = track.N;
+  const count = 10;
+  for (let k = 0; k < count; k++) {
+    const index = mod(34 + Math.round((k / count) * (N - 68)), N);
+    const p = track.points[index];
+    const n = track.normals[index];
+    const roadside = k % 5 === 4;
+    const side = k % 2 === 0 ? 1 : -1;
+    const offset = roadside
+      ? side * (track.width / 2 + 38)
+      : side * (track.width * 0.24 + Math.random() * 10);
+    hazards.push({
+      index,
+      offset,
+      x: p.x + n.x * offset,
+      z: p.y + n.y * offset,
+      radius: roadside ? 18 : 24,
+      alive: true,
+      respawn: 0,
+      phase: Math.random() * 6.28,
+      roadside,
+    });
+  }
+  world3d.setHazards(hazards);
+}
+
+function detonateHazard(hazard, car) {
+  hazard.alive = false;
+  hazard.respawn = 6.5;
+  state.shake = Math.max(state.shake, car.isPlayer ? 1.0 : 0.45);
+
+  // Sparks, fire and debris. Kept inside the existing pooled sprite budget.
+  for (let k = 0; k < 18; k++) {
+    const a = Math.random() * TAU;
+    const speed = 90 + Math.random() * 300;
+    spawnParticle(
+      'spark',
+      hazard.x,
+      hazard.z,
+      Math.cos(a) * speed,
+      Math.sin(a) * speed,
+      8 + Math.random() * 8,
+      0.28 + Math.random() * 0.42,
+      { height: 8 + Math.random() * 18 }
+    );
+  }
+  for (let k = 0; k < 10; k++) {
+    spawnParticle(
+      'fire',
+      hazard.x + (Math.random() - 0.5) * 26,
+      hazard.z + (Math.random() - 0.5) * 26,
+      (Math.random() - 0.5) * 110,
+      (Math.random() - 0.5) * 110,
+      16 + Math.random() * 18,
+      0.34 + Math.random() * 0.34,
+      { height: 6 + Math.random() * 22 }
+    );
+  }
+  for (let k = 0; k < 6; k++) {
+    spawnParticle(
+      'dust',
+      hazard.x,
+      hazard.z,
+      (Math.random() - 0.5) * 180,
+      (Math.random() - 0.5) * 180,
+      10 + Math.random() * 12,
+      0.5 + Math.random() * 0.4,
+      { tint: 'dirt', height: 6 + Math.random() * 10 }
+    );
+  }
+
+  // Fair, bounded knockback: push away from the barrel and scrub some speed,
+  // but never add enough velocity to punt a car through a barrier.
+  let dx = car.pos.x - hazard.x;
+  let dz = car.pos.y - hazard.z;
+  const dist = Math.hypot(dx, dz) || 1;
+  dx /= dist;
+  dz /= dist;
+  const push = car.isPlayer ? 150 : 110;
+  car.vel.x = car.vel.x * 0.62 + dx * push;
+  car.vel.y = car.vel.y * 0.62 + dz * push;
+  const speed = Math.hypot(car.vel.x, car.vel.y);
+  const cap = Math.max(150, car.maxSpeed * 0.82);
+  if (speed > cap) {
+    car.vel.x *= cap / speed;
+    car.vel.y *= cap / speed;
+  }
+  car.bump = Math.max(car.bump, 0.9);
+  if (car.isPlayer) {
+    showBanner('BARREL HIT', 0.9);
+    audio.beep(90, 0.22, 'sawtooth', 0.06);
+  }
+}
+
+function updateHazards(dt) {
+  if (!state.explosive) return;
+  for (const hazard of hazards) {
+    if (!hazard.alive) {
+      hazard.respawn -= dt;
+      if (hazard.respawn <= 0) hazard.alive = true;
+      continue;
+    }
+    for (const car of cars) {
+      if (car.airborne && car.y > hazard.radius) continue;
+      const dx = car.pos.x - hazard.x;
+      const dz = car.pos.y - hazard.z;
+      if (dx * dx + dz * dz < (hazard.radius + car.radius) ** 2) {
+        detonateHazard(hazard, car);
+        break;
+      }
+    }
+  }
+  world3d.updateHazards(hazards, dt);
+}
+
 function startRace() {
   audio.init();
+  state.explosive = Boolean(garageSave.explosive);
   const loc = getLocation(selectedLocation);
   world3d.setLocation(loc);
   titleScreen.classList.add('hidden');
@@ -1000,12 +1413,11 @@ function readInput() {
   const right = Boolean(keys.KeyD || keys.ArrowRight || touch.right);
   const up = Boolean(keys.KeyW || keys.ArrowUp || touch.throttle);
   const down = Boolean(keys.KeyS || keys.ArrowDown || touch.brake);
-  const drift = Boolean(keys.Space || touch.drift);
   return {
     steer: (right ? 1 : 0) - (left ? 1 : 0),
     throttle: up ? 1 : 0,
     brake: down ? 1 : 0,
-    handbrake: drift,
+    handbrake: false,
   };
 }
 
@@ -1016,7 +1428,7 @@ function clearKeys() {
 }
 
 window.addEventListener('keydown', (event) => {
-  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(event.code)) {
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.code)) {
     event.preventDefault();
   }
   keys[event.code] = true;
@@ -1212,9 +1624,37 @@ builderClearBtn.addEventListener('click', () => {
   renderBuilderGrid();
 });
 builderPresetBtn.addEventListener('click', () => {
-  builderCells = makePresetCells();
+  builderCells = makePresetCells(builderPresetSelect?.value || 'classic');
   renderBuilderGrid();
 });
+if (builderPresetSelect) {
+  builderPresetSelect.addEventListener('change', () => {
+    builderCells = makePresetCells(builderPresetSelect.value);
+    renderBuilderGrid();
+  });
+}
+if (builderRandomBtn) {
+  builderRandomBtn.addEventListener('click', () => {
+    builderCells = randomizeCells();
+    renderBuilderGrid();
+  });
+}
+if (builderRotateBtn) {
+  builderRotateBtn.addEventListener('click', () => {
+    builderRotation = (builderRotation + 1) % 4;
+    syncBuilderActions();
+    updateBuilderStatus();
+    audio.beep(640, 0.04, 'square', 0.03);
+  });
+}
+if (hazardBtn) hazardBtn.addEventListener('click', toggleHazards);
+if (builderHazardBtn) builderHazardBtn.addEventListener('click', toggleHazards);
+if (garageTune) {
+  garageTune.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-upgrade]');
+    if (button) buyUpgrade(garageSave.selected, button.dataset.upgrade);
+  });
+}
 builderRaceBtn.addEventListener('click', buildAndRace);
 document.querySelectorAll('[data-build-tool]').forEach((btn) => {
   btn.addEventListener('click', () => {
@@ -1601,15 +2041,16 @@ function step(dt) {
   for (const car of cars) {
     if (car.isPlayer) {
       const input = state.mode === 'racing' ? readInput() : { steer: 0, throttle: 0, brake: 0.5, handbrake: false };
-      car.update(dt, input, track, ramps);
+      car.update(dt, input, track, ramps, features);
     } else {
       const driver = aiDrivers.get(car);
       const ai = driver ? driver.update(dt, cars, playerCar) : { steer: 0, throttle: 0, brake: 0, handbrake: false };
-      car.update(dt, ai, track, ramps);
+      car.update(dt, ai, track, ramps, features);
     }
   }
 
   collideCars();
+  updateHazards(dt);
 
   if (state.mode === 'racing') {
     state.raceTime += dt;
@@ -1916,6 +2357,8 @@ unlockNewCars();
 applyPlayerSetup();
 renderGarage();
 applyLocationUI();
+syncBuilderActions();
+if (camBtn) camBtn.setAttribute('aria-label', `Camera: ${CAMERA_LABELS[state.cameraMode]}`);
 resetRace();
 state.attract = track.length * 0.12;
 

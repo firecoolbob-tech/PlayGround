@@ -16,8 +16,10 @@ export class Car {
     this.radius = 16;
 
     this.maxSpeed = isPlayer ? 600 : 585;
-    this.accel = isPlayer ? 720 : 690;
-    this.brakePower = 1680;
+    this.baseMaxSpeed = this.maxSpeed;
+    this.accel = isPlayer ? 330 : 318;
+    this.baseAccel = this.accel;
+    this.brakePower = 1580;
     this.reverseMax = 205;
     this.reverseAccel = 520;
     this.grip = 7.6;
@@ -108,7 +110,7 @@ export class Car {
     return Math.round(this.speed * PX_PER_KMH);
   }
 
-  update(dt, input, track, ramps = null) {
+  update(dt, input, track, ramps = null, features = null) {
     this.input = input;
     const steerTarget = clamp(input.steer, -1, 1);
     this.steer = damp(this.steer, steerTarget, steerTarget === 0 ? 12 : 9, dt);
@@ -136,6 +138,11 @@ export class Car {
       grip = 6.4;
       surfaceMax = this.maxSpeed * 0.94;
     }
+    if (features) {
+      // Banked corners carry a little more speed before the tyres give up.
+      grip *= features.gripBonus(near.index);
+      surfaceMax *= 1 + Math.min(0.05, Math.abs(features.bankAtIndex(near.index)) * 0.0035);
+    }
     if (this.airborne) grip = 0.32;
 
     const throttle = clamp(input.throttle, 0, 1);
@@ -153,8 +160,13 @@ export class Car {
       else drive = -this.reverseAccel * brake;
     } else if (throttle > 0.05) {
       if (vLong >= -3) {
-        const headroom = 1 - 0.52 * Math.pow(clamp(vLong / surfaceMax, 0, 1), 2);
-        drive = this.accel * throttle * headroom;
+        // Progressive power curve: strong off the line, tapering as the car
+        // approaches its car-specific top speed. This keeps the launch
+        // readable instead of snapping to max speed in under a second.
+        const ratio = clamp(vLong / Math.max(1, surfaceMax), 0, 1);
+        const headroom = Math.pow(1 - ratio * ratio, 0.86);
+        const lowEnd = 1.16 - 0.16 * clamp(vLong / 170, 0, 1);
+        drive = this.accel * throttle * headroom * lowEnd;
       } else {
         drive = this.brakePower * throttle;
       }
@@ -264,8 +276,9 @@ export class Car {
     this.vel.x = vx;
     this.vel.y = vy;
 
-    // Ramp flanks and the lip face act as solid walls.
+    // Ramp flanks, lip faces and chicane barriers act as solid walls.
     if (ramps) ramps.resolveSolids(this);
+    if (features) features.resolveSolids(this);
     vx = this.vel.x;
     vy = this.vel.y;
 
@@ -278,7 +291,18 @@ export class Car {
     this.bump = Math.max(0, this.bump - dt * 3.2);
 
     // Analytical ramp mount / launch / gravity.
-    if (ramps) ramps.updateCar(this, dt);
+    if (ramps) ramps.updateCar(this, dt, features);
+
+    // Grounded feature profile: dips, bridges and banked corners. This runs
+    // after the ramp solver so a ramp always owns its own footprint.
+    if (features && !this.ramp && !this.airborne) {
+      const ground = features.groundHeight(this.prevIndex, this.nearOffset);
+      this.y = ground;
+      this.vy = 0;
+      const targetPitch = features.slopeAtIndex(this.prevIndex);
+      const rate = 12;
+      this.pitch += (targetPitch - this.pitch) * Math.min(1, rate * dt);
+    }
 
     return this;
   }
