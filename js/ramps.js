@@ -177,8 +177,11 @@ export class Ramps {
    * lip using the climb rate, and integrates a cheap ballistic arc in the
    * air. No rigid-body solver, no raycasts.
    */
-  updateCar(car, dt) {
+  updateCar(car, dt, features = null) {
     const hit = this.query(car.pos.x, car.pos.y);
+    const ground = features
+      ? Math.max(-26, features.groundHeight(car.prevIndex, car.nearOffset))
+      : 0;
 
     if (hit && (!car.airborne || car.y <= hit.surface + 2)) {
       // Touching the slope: snap to the exact surface height.
@@ -220,9 +223,9 @@ export class Ramps {
         car.airborne = true;
         car.vy = overLip ? Math.max(car.climbRate, 0) : 0;
         car.y = height;
-        this.integrateAir(car, dt, 0);
+        this.integrateAir(car, dt, ground);
       } else {
-        car.y = 0;
+        car.y = ground;
         car.vy = 0;
         car.airborne = false;
       }
@@ -231,12 +234,12 @@ export class Ramps {
     }
 
     if (car.airborne) {
-      this.integrateAir(car, dt, 0);
+      this.integrateAir(car, dt, ground);
       this.updatePitch(car, dt);
       return;
     }
 
-    car.y = 0;
+    car.y = ground;
     car.vy = 0;
     this.updatePitch(car, dt);
   }

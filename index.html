@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="theme-color" content="#0a1512" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a1512'/%3E%3Cpath d='M10 44 24 18h9l-7 14h12l-5 10h11L38 56H19z' fill='%233ae2ff'/%3E%3C/svg%3E" />
-<meta name="description" content="Apex Drift — a 3D arcade racing game. Seven circuits, thirteen cars, a track builder, and three camera views." />
+<meta name="description" content="Apex Drift — a 3D arcade racing game with seven circuits, thirteen cars, modular track building, hazards, and three true 3D camera views." />
 <title>Apex Drift — 3D Arcade Racing</title>
 <link rel="stylesheet" href="style.css" />
 </head>
@@ -56,7 +56,7 @@
     </div>
 
     <div class="key-hints" aria-hidden="true">
-      <span><b>WASD</b> drive</span><span><b>SPACE</b> drift</span><span><b>C</b> camera</span><span><b>R</b> restart</span><span><b>P</b> pause</span>
+      <span><b>WASD</b> drive</span><span><b>C</b> camera</span><span><b>R</b> restart</span><span><b>P</b> pause</span>
     </div>
   </div>
 
@@ -76,15 +76,17 @@
         <span class="current-dot" id="titleCarDot"></span>
         <span>Current car</span>
         <b id="titleCarName">APEX</b>
+        <span class="title-credits" id="credits">0 CR</span>
       </div>
       <div class="title-actions">
         <button id="startBtn" class="btn-primary" type="button">START</button>
         <button id="garageBtn" class="btn-secondary" type="button">GARAGE</button>
         <button id="builderBtn" class="btn-secondary" type="button">BUILD TRACK</button>
+        <button id="hazardBtn" class="btn-toggle" type="button" aria-pressed="false">Hazards OFF</button>
       </div>
       <div class="title-controls">
         <div><span class="key-group"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>Drive</div>
-        <div><span class="key-group"><kbd>SPACE</kbd></span>Drift</div>
+
         <div><span class="key-group"><kbd>C</kbd></span>Camera</div>
         <div><span class="key-group"><kbd>R</kbd></span>Restart</div>
       </div>
@@ -154,6 +156,7 @@
           <div id="garageGrid" class="garage-grid"></div>
         </div>
       </div>
+      <div id="garageTune" class="garage-tune"></div>
       <div class="garage-foot">
         <span id="garageProgress" class="garage-progress"></span>
         <div class="garage-actions">
@@ -175,19 +178,41 @@
           <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/></svg>
         </button>
       </div>
+      <div class="builder-presets">
+        <label for="builderPresetSelect">Layout preset</label>
+        <select id="builderPresetSelect">
+          <option value="classic">Classic Loop</option>
+          <option value="jump">Jump &amp; Dip</option>
+          <option value="structure">Structure Run</option>
+          <option value="technical">Technical Turns</option>
+        </select>
+        <button id="builderPresetBtn" class="builder-small" type="button">Apply</button>
+        <button id="builderRandomBtn" class="builder-small" type="button">Randomize</button>
+      </div>
       <div class="builder-toolbar" role="toolbar" aria-label="Builder tools">
         <button class="build-tool active" data-build-tool="track" type="button">Track</button>
         <button class="build-tool" data-build-tool="ramp" type="button">Ramp</button>
+        <button class="build-tool" data-build-tool="bank" type="button">Bank</button>
+        <button class="build-tool" data-build-tool="dip" type="button">Dip</button>
+        <button class="build-tool" data-build-tool="bridge" type="button">Bridge</button>
+        <button class="build-tool" data-build-tool="garage" type="button">Garage</button>
+        <button class="build-tool" data-build-tool="chicane" type="button">Chicane</button>
         <button class="build-tool" data-build-tool="erase" type="button">Erase</button>
+        <button id="builderRotateBtn" class="builder-small rotate" type="button">Rotate 0°</button>
+        <button id="builderHazardBtn" class="builder-small" type="button" aria-pressed="false">Hazards OFF</button>
         <span class="builder-spacer"></span>
-        <button id="builderPresetBtn" class="builder-small" type="button">Preset</button>
         <button id="builderClearBtn" class="builder-small" type="button">Clear</button>
       </div>
       <div class="builder-stage">
         <div id="builderGrid" class="builder-grid" role="grid" aria-label="Top-down track grid"></div>
         <div class="builder-legend">
-          <span><i class="legend-track"></i>Track tile</span>
+          <span><i class="legend-track"></i>Track</span>
           <span><i class="legend-ramp"></i>Ramp</span>
+          <span><i class="legend-bank"></i>Bank</span>
+          <span><i class="legend-dip"></i>Dip</span>
+          <span><i class="legend-bridge"></i>Bridge</span>
+          <span><i class="legend-garage"></i>Garage</span>
+          <span><i class="legend-chicane"></i>Chicane</span>
           <span><i class="legend-start"></i>Start</span>
         </div>
         <div id="builderStatus" class="builder-status" role="status"></div>
@@ -210,7 +235,6 @@
     </div>
     <div class="touch-pedals">
       <button class="touch-btn brake" data-act="brake" type="button" aria-label="Brake and reverse">BRAKE</button>
-      <button class="touch-btn drift" data-act="drift" type="button" aria-label="Handbrake drift">DRIFT</button>
       <button class="touch-btn gas" data-act="throttle" type="button" aria-label="Accelerate">GAS</button>
     </div>
   </div>
