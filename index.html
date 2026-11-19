@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="theme-color" content="#0a1512" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a1512'/%3E%3Cpath d='M10 44 24 18h9l-7 14h12l-5 10h11L38 56H19z' fill='%233ae2ff'/%3E%3C/svg%3E" />
-<meta name="description" content="Apex Drift — a 3D arcade racing game. Three laps, four cars, one racing line." />
+<meta name="description" content="Apex Drift — a 3D arcade racing game. Four circuits, ten cars, one racing line." />
 <title>Apex Drift — 3D Arcade Racing</title>
 <link rel="stylesheet" href="style.css" />
 </head>
@@ -60,27 +60,15 @@
   <div id="banner" class="banner" aria-live="polite"></div>
   <div id="countdown" class="countdown" aria-live="assertive"></div>
 
-  <div id="touch" class="touch" aria-label="Touch controls">
-    <div class="touch-steer">
-      <button class="touch-btn steer" data-act="left" type="button" aria-label="Steer left">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-      <button class="touch-btn steer" data-act="right" type="button" aria-label="Steer right">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-    </div>
-    <div class="touch-pedals">
-      <button class="touch-btn brake" data-act="brake" type="button" aria-label="Brake and reverse">BRAKE</button>
-      <button class="touch-btn drift" data-act="drift" type="button" aria-label="Handbrake drift">DRIFT</button>
-      <button class="touch-btn gas" data-act="throttle" type="button" aria-label="Accelerate">GAS</button>
-    </div>
-  </div>
-
   <div id="titleScreen" class="overlay title-screen">
     <div class="title-inner">
-      <div class="kicker"><span class="kicker-rule"></span>3D arcade racing</div>
+      <div class="kicker"><span class="kicker-rule"></span><span id="titleKicker">3D arcade racing</span></div>
       <h1 class="logo">APEX <em>DRIFT</em></h1>
-      <p class="tagline">Three laps around the Ridge Circuit. Four drivers, one racing line, no brakes on the first corner.</p>
+      <p id="titleTagline" class="tagline">Golden-hour sweep above the valley. Long shadows, warm asphalt, and a sun sitting on the horizon.</p>
+      <div class="title-circuits">
+        <div class="circuits-head"><span>Circuit</span><b id="trackWins">No wins here yet</b></div>
+        <div id="trackList" class="track-list" role="group" aria-label="Choose circuit"></div>
+      </div>
       <div class="title-current">
         <span class="current-dot" id="titleCarDot"></span>
         <span>Current car</span>
@@ -97,7 +85,7 @@
       </div>
       <div class="mobile-note">Touch controls appear on phones &amp; tablets</div>
     </div>
-    <div class="title-foot">RIDGE CIRCUIT · 3 LAPS · 4 DRIVERS</div>
+    <div id="titleFoot" class="title-foot">SUNSET RIDGE · 3 LAPS · 4 DRIVERS</div>
   </div>
 
   <div id="resultsScreen" class="overlay center-screen hidden">
@@ -142,7 +130,7 @@
         <div>
           <div class="kicker"><span class="kicker-rule"></span>Garage</div>
           <h2 class="garage-title">CHOOSE YOUR RIDE</h2>
-          <p class="garage-sub">Four more cars are waiting. Finish races and take wins to unlock them.</p>
+          <p id="garageSub" class="garage-sub">Win races across the four circuits to unlock more cars.</p>
         </div>
         <button id="garageCloseBtn" class="icon-btn garage-close" type="button" aria-label="Close garage">
           <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/></svg>
@@ -170,6 +158,22 @@
       </div>
     </div>
   </div>
+  <div id="touch" class="touch" aria-label="Touch controls">
+    <div class="touch-steer">
+      <button class="touch-btn steer" data-act="left" type="button" aria-label="Steer left">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="touch-btn steer" data-act="right" type="button" aria-label="Steer right">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+    <div class="touch-pedals">
+      <button class="touch-btn brake" data-act="brake" type="button" aria-label="Brake and reverse">BRAKE</button>
+      <button class="touch-btn drift" data-act="drift" type="button" aria-label="Handbrake drift">DRIFT</button>
+      <button class="touch-btn gas" data-act="throttle" type="button" aria-label="Accelerate">GAS</button>
+    </div>
+  </div>
+
 </div>
 <script type="module" src="js/main.js"></script>
 </body>
