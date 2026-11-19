@@ -1,10 +1,10 @@
 import { clamp, damp, formatTime, mod, TAU, wrapAngle } from './utils.js';
-import { Track } from './track.js';
+import { Track, WORLD } from './track.js';
 import { Car } from './car.js';
 import { AIDriver } from './ai.js';
 import { GameAudio } from './audio.js';
 import { Renderer3D, Garage3D } from './render3d.js';
-import { Ramps } from './ramps.js';
+import { Ramps, autoRampDefs } from './ramps.js';
 import { LOCATIONS, getLocation } from './locations.js';
 
 const LAPS = 3;
@@ -55,6 +55,16 @@ const trackWinsEl = document.getElementById('trackWins');
 const garageSub = document.getElementById('garageSub');
 const soundBtn = document.getElementById('soundBtn');
 const pauseBtn = document.getElementById('pauseBtn');
+const camBtn = document.getElementById('camBtn');
+const builderBtn = document.getElementById('builderBtn');
+const builderScreen = document.getElementById('builderScreen');
+const builderGrid = document.getElementById('builderGrid');
+const builderStatus = document.getElementById('builderStatus');
+const builderRaceBtn = document.getElementById('builderRaceBtn');
+const builderCancelBtn = document.getElementById('builderCancelBtn');
+const builderCloseBtn = document.getElementById('builderCloseBtn');
+const builderClearBtn = document.getElementById('builderClearBtn');
+const builderPresetBtn = document.getElementById('builderPresetBtn');
 const startBtn = document.getElementById('startBtn');
 const againBtn = document.getElementById('againBtn');
 const resultGarageBtn = document.getElementById('resultGarageBtn');
@@ -70,11 +80,190 @@ const miniCtx = miniCanvas.getContext('2d');
 lapTotalEl.textContent = String(LAPS);
 
 /* ------------------------------------------------------------------ */
+/* Track layouts                                                       */
+/* ------------------------------------------------------------------ */
+
+const CUSTOM_COLS = 11;
+const CUSTOM_ROWS = 7;
+const CUSTOM_CELL = 300;
+const CUSTOM_WIDTH = 164;
+
+const keyOf = (cell) => `${cell.c},${cell.r}`;
+
+function makePresetCells() {
+  const cells = [];
+  const left = 1;
+  const right = 9;
+  const top = 1;
+  const bottom = 5;
+  for (let c = left; c <= right; c++) {
+    cells.push({ c, r: top, ramp: c === 4 });
+    cells.push({ c, r: bottom, ramp: c === 6 });
+  }
+  for (let r = top + 1; r < bottom; r++) {
+    cells.push({ c: left, r, ramp: false });
+    cells.push({ c: right, r, ramp: false });
+  }
+  return cells;
+}
+
+function sanitizeCells(input) {
+  if (!Array.isArray(input)) return null;
+  const seen = new Set();
+  const cells = [];
+  for (const raw of input) {
+    if (!raw || typeof raw !== 'object') continue;
+    const c = Math.round(Number(raw.c));
+    const r = Math.round(Number(raw.r));
+    if (!Number.isFinite(c) || !Number.isFinite(r)) continue;
+    if (c < 0 || c >= CUSTOM_COLS || r < 0 || r >= CUSTOM_ROWS) continue;
+    const key = `${c},${r}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    cells.push({ c, r, ramp: Boolean(raw.ramp) });
+  }
+  return cells;
+}
+
+/**
+ * A valid builder loop is a single connected cycle of four-way neighbours.
+ * Each tile must touch exactly two other tiles. This rejects blobs, branches,
+ * diagonal joins and open lines before they become an undrivable circuit.
+ */
+function traceBuilderLoop(cells) {
+  if (!Array.isArray(cells) || cells.length < 8) {
+    return { ok: false, error: 'Paint at least 8 track tiles to make a loop.' };
+  }
+  const map = new Map();
+  for (const cell of cells) map.set(keyOf(cell), cell);
+
+  const neighbours = (cell) =>
+    [
+      map.get(`${cell.c + 1},${cell.r}`),
+      map.get(`${cell.c - 1},${cell.r}`),
+      map.get(`${cell.c},${cell.r + 1}`),
+      map.get(`${cell.c},${cell.r - 1}`),
+    ].filter(Boolean);
+
+  for (const cell of cells) {
+    if (neighbours(cell).length !== 2) {
+      return {
+        ok: false,
+        error: 'Every tile needs exactly two neighbours. Erase branches or fill diagonal gaps.',
+      };
+    }
+  }
+
+  const route = [];
+  let previous = null;
+  let current = cells[0];
+  let closed = false;
+  for (let guard = 0; guard <= cells.length; guard++) {
+    route.push(current);
+    const options = neighbours(current).filter((cell) => cell !== previous);
+    const next = options[0];
+    if (!next) break;
+    if (next === route[0]) {
+      closed = true;
+      break;
+    }
+    if (route.includes(next)) break;
+    previous = current;
+    current = next;
+  }
+
+  if (!closed || route.length !== cells.length) {
+    return { ok: false, error: 'The tiles must form one closed loop, not separate paths.' };
+  }
+  return { ok: true, route };
+}
+
+function layoutFromCells(cells) {
+  const trace = traceBuilderLoop(cells);
+  if (!trace.ok) throw new Error(trace.error);
+  const route = trace.route;
+  let minC = Infinity;
+  let maxC = -Infinity;
+  let minR = Infinity;
+  let maxR = -Infinity;
+  for (const cell of route) {
+    minC = Math.min(minC, cell.c);
+    maxC = Math.max(maxC, cell.c);
+    minR = Math.min(minR, cell.r);
+    maxR = Math.max(maxR, cell.r);
+  }
+  const averageC = (minC + maxC) / 2;
+  const averageR = (minR + maxR) / 2;
+  const toWorld = (cell) => ({
+    x: WORLD.w / 2 + (cell.c - averageC) * CUSTOM_CELL,
+    y: WORLD.h / 2 + (cell.r - averageR) * CUSTOM_CELL,
+  });
+  const points = route.map(toWorld);
+  const rampAnchors = route.filter((cell) => cell.ramp).map(toWorld);
+  return {
+    layout: {
+      cx: WORLD.w / 2,
+      cy: WORLD.h / 2,
+      points,
+      width: CUSTOM_WIDTH,
+      chaikin: 3,
+      smoothPasses: 1,
+      rawCount: points.length * 8,
+    },
+    rampAnchors,
+  };
+}
+
+function makeCustomTrackData(cells) {
+  try {
+    return layoutFromCells(cells);
+  } catch {
+    return layoutFromCells(makePresetCells());
+  }
+}
+
+let customCells = makePresetCells();
+let customTrackData = makeCustomTrackData(customCells);
+
+function createTrackForLocation(loc) {
+  if (loc.id === 'custom') {
+    return new Track(customTrackData.layout);
+  }
+  return new Track(loc.layout);
+}
+
+function createRampsForLocation(loc, nextTrack) {
+  if (loc.id === 'custom' && customTrackData.rampAnchors.length) {
+    const defs = customTrackData.rampAnchors.map((anchor, index) => {
+      const near = nextTrack.nearest(anchor.x, anchor.y);
+      return {
+        index: near.index,
+        offset: 0,
+        width: nextTrack.width * 0.74,
+        length: 158,
+        height: 32 + (index % 2) * 4,
+      };
+    });
+    // Two builder ramp tiles can land on the same sample after smoothing.
+    const unique = [];
+    const used = new Set();
+    for (const def of defs) {
+      if (!used.has(def.index)) {
+        used.add(def.index);
+        unique.push(def);
+      }
+    }
+    return new Ramps(nextTrack, unique);
+  }
+  return new Ramps(nextTrack, autoRampDefs(nextTrack, loc.rampCount || 3));
+}
+
+/* ------------------------------------------------------------------ */
 /* World                                                               */
 /* ------------------------------------------------------------------ */
 
-const track = new Track();
-const ramps = new Ramps(track);
+let track = createTrackForLocation(getLocation('ridge'));
+let ramps = createRampsForLocation(getLocation('ridge'), track);
 
 /* ------------------------------------------------------------------ */
 /* Cars                                                                */
@@ -252,8 +441,47 @@ const PLAYER_CARS = [
     unlock: {
       type: 'tour',
       tracks: ['neon', 'alpine', 'canyon'],
-      label: 'Win at all 3 new circuits',
+      label: 'Win at Neon, Alpine & Canyon',
     },
+  },
+  {
+    id: 'gumdrop',
+    name: 'GUMDROP',
+    tag: 'Sugar grip',
+    color: '#ff86c8',
+    accent: '#8f2d61',
+    number: 21,
+    speed: 0.98,
+    accel: 1.05,
+    grip: 1.17,
+    stats: [7, 8, 10],
+    unlock: { type: 'trackWins', track: 'candy', count: 1, label: 'Win at Candyland' },
+  },
+  {
+    id: 'wraith',
+    name: 'WRAITH',
+    tag: 'Mansion phantom',
+    color: '#9dffb0',
+    accent: '#2d7a48',
+    number: 66,
+    speed: 1.09,
+    accel: 1.03,
+    grip: 1.06,
+    stats: [10, 8, 8],
+    unlock: { type: 'trackWins', track: 'haunt', count: 1, label: 'Win at Haunted House' },
+  },
+  {
+    id: 'prism',
+    name: 'PRISM',
+    tag: 'Factory prototype',
+    color: '#ffd7f2',
+    accent: '#a13d8f',
+    number: 99,
+    speed: 1.06,
+    accel: 1.1,
+    grip: 1.12,
+    stats: [10, 10, 9],
+    unlock: { type: 'wins', count: 5, label: 'Win 5 races' },
   },
 ];
 
@@ -264,6 +492,7 @@ const garageSave = {
   unlocked: ['apex'],
   trackWins: {},
   track: 'ridge',
+  custom: [],
 };
 
 let selectedLocation = 'ridge';
@@ -319,6 +548,10 @@ function loadGarage() {
         if (typeof data.track === 'string' && LOCATIONS.some((loc) => loc.id === data.track)) {
           selectedLocation = data.track;
         }
+        if (Array.isArray(data.custom)) {
+          const clean = sanitizeCells(data.custom);
+          if (clean && traceBuilderLoop(clean).ok) customCells = clean;
+        }
         if (Array.isArray(data.unlocked)) {
           garageSave.unlocked = data.unlocked.filter((id) => typeof id === 'string');
         }
@@ -332,6 +565,8 @@ function loadGarage() {
     garageSave.trackWins[loc.id] = Math.max(0, Number(garageSave.trackWins[loc.id]) || 0);
   }
   garageSave.track = selectedLocation;
+  customTrackData = makeCustomTrackData(customCells);
+  garageSave.custom = customCells.map((cell) => ({ c: cell.c, r: cell.r, ramp: Boolean(cell.ramp) }));
   for (const spec of PLAYER_CARS) {
     if (spec.unlock && meetsUnlock(spec) && !garageSave.unlocked.includes(spec.id)) {
       garageSave.unlocked.push(spec.id);
@@ -393,12 +628,12 @@ function renderGarage() {
   const races = garageSave.races;
   const wins = garageSave.wins;
   const circuitWins = LOCATIONS.filter((loc) => (garageSave.trackWins[loc.id] || 0) > 0).length;
-  garageProgress.textContent = `${races} race${races === 1 ? '' : 's'} · ${wins} win${wins === 1 ? '' : 's'} · ${circuitWins}/4 circuits won`;
+  garageProgress.textContent = `${races} race${races === 1 ? '' : 's'} · ${wins} win${wins === 1 ? '' : 's'} · ${circuitWins}/${LOCATIONS.length} circuits won`;
   const remaining = PLAYER_CARS.filter((spec) => !isUnlocked(spec)).length;
   garageSub.textContent =
     remaining === 0
       ? 'Every car is in the garage. Pick a favourite and defend the line.'
-      : `${remaining} car${remaining === 1 ? '' : 's'} still locked. Win races across the four circuits to bring them home.`;
+      : `${remaining} car${remaining === 1 ? '' : 's'} still locked. Win races across every circuit to bring them home.`;
   const active = selectedCarSpec();
   garageViewName.textContent = active.name;
   garageViewTag.textContent = active.tag;
@@ -452,12 +687,151 @@ function applyLocationUI() {
   renderTrackList();
 }
 
+function swapTrackForLocation(loc) {
+  track = createTrackForLocation(loc);
+  ramps = createRampsForLocation(loc, track);
+  world3d.setTrack(track, ramps);
+  aiDrivers.forEach((driver) => {
+    driver.track = track;
+  });
+  state.attract = track.length * 0.32;
+  camera.x = track.points[0].x;
+  camera.y = track.points[0].y;
+  camera.zoom = baseZoom();
+  setupMinimap();
+  world3d.setLocation(loc);
+  resetRace();
+  state.attract = track.length * 0.12;
+}
+
+/* ------------------------------------------------------------------ */
+/* Track builder                                                       */
+/* ------------------------------------------------------------------ */
+
+let builderCells = [];
+let builderTool = 'track';
+let builderPainting = false;
+
+function openBuilder() {
+  if (state.mode !== 'title' && state.mode !== 'results') return;
+  builderCells = customCells.map((cell) => ({ ...cell }));
+  builderTool = 'track';
+  builderScreen.classList.remove('hidden');
+  builderRaceBtn.disabled = false;
+  document.querySelectorAll('[data-build-tool]').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.buildTool === builderTool);
+  });
+  renderBuilderGrid();
+}
+
+function closeBuilder() {
+  builderScreen.classList.add('hidden');
+  builderPainting = false;
+}
+
+function renderBuilderGrid() {
+  const trace = traceBuilderLoop(builderCells);
+  const map = new Map(builderCells.map((cell) => [keyOf(cell), cell]));
+  const start = trace.ok ? trace.route[0] : null;
+  const parts = [];
+  for (let r = 0; r < CUSTOM_ROWS; r++) {
+    for (let c = 0; c < CUSTOM_COLS; c++) {
+      const cell = map.get(`${c},${r}`);
+      const classes = ['build-cell'];
+      if (cell) classes.push('on');
+      if (cell && cell.ramp) classes.push('ramp');
+      if (start && cell === start) classes.push('start');
+      parts.push(
+        `<button class="${classes.join(' ')}" data-c="${c}" data-r="${r}" type="button" aria-label="Grid ${c + 1}, ${r + 1}${cell ? (cell.ramp ? ', ramp tile' : ', track tile') : ', empty'}">
+          <span>${cell ? (cell.ramp ? 'R' : start && cell === start ? 'S' : '') : ''}</span>
+        </button>`
+      );
+    }
+  }
+  builderGrid.innerHTML = parts.join('');
+  updateBuilderStatus(trace);
+}
+
+function updateBuilderStatus(trace = traceBuilderLoop(builderCells)) {
+  if (trace.ok) {
+    const ramps = builderCells.filter((cell) => cell.ramp).length;
+    builderStatus.textContent = `Loop ready · ${builderCells.length} tiles · ${ramps} ramp${ramps === 1 ? '' : 's'}`;
+    builderStatus.classList.remove('error');
+    builderRaceBtn.disabled = false;
+  } else {
+    builderStatus.textContent = trace.error;
+    builderStatus.classList.add('error');
+    builderRaceBtn.disabled = true;
+  }
+}
+
+function applyBuilderTool(c, r) {
+  const index = builderCells.findIndex((cell) => cell.c === c && cell.r === r);
+  let changed = false;
+  if (builderTool === 'erase') {
+    if (index >= 0) {
+      builderCells.splice(index, 1);
+      changed = true;
+    }
+  } else if (builderTool === 'track') {
+    if (index < 0) {
+      builderCells.push({ c, r, ramp: false });
+      changed = true;
+    }
+  } else if (builderTool === 'ramp') {
+    if (index < 0) {
+      builderCells.push({ c, r, ramp: true });
+      changed = true;
+    } else if (!builderCells[index].ramp) {
+      builderCells[index].ramp = true;
+      changed = true;
+    }
+  }
+  if (changed) renderBuilderGrid();
+}
+
+function buildAndRace() {
+  const trace = traceBuilderLoop(builderCells);
+  if (!trace.ok) {
+    updateBuilderStatus(trace);
+    audio.beep(140, 0.16, 'sawtooth', 0.04);
+    return;
+  }
+  customCells = builderCells.map((cell) => ({ ...cell }));
+  customTrackData = makeCustomTrackData(customCells);
+  garageSave.custom = customCells.map((cell) => ({
+    c: cell.c,
+    r: cell.r,
+    ramp: Boolean(cell.ramp),
+  }));
+  selectedLocation = 'custom';
+  garageSave.track = 'custom';
+  saveGarage();
+  closeBuilder();
+  swapTrackForLocation(getLocation('custom'));
+  applyLocationUI();
+  startRace();
+}
+
+const CAMERA_MODES = ['chase', 'top', 'hood'];
+const CAMERA_LABELS = { chase: 'CHASE', top: 'TOP-DOWN', hood: 'HOOD' };
+
+function cycleCamera() {
+  const index = CAMERA_MODES.indexOf(state.cameraMode);
+  state.cameraMode = CAMERA_MODES[(index + 1) % CAMERA_MODES.length];
+  const label = CAMERA_LABELS[state.cameraMode];
+  if (state.mode !== 'title') showBanner(`CAMERA · ${label}`, 1.1);
+  if (camBtn) camBtn.setAttribute('aria-label', `Camera: ${label}`);
+  audio.beep(760, 0.05, 'square', 0.03);
+}
+
 function selectLocation(id) {
   if (!LOCATIONS.some((loc) => loc.id === id)) return;
+  if (id === selectedLocation && state.mode === 'title') return;
   selectedLocation = id;
   garageSave.track = id;
   saveGarage();
-  world3d.setLocation(getLocation(id));
+  swapTrackForLocation(getLocation(id));
   applyLocationUI();
   audio.init();
   audio.beep(680, 0.06, 'triangle', 0.03);
@@ -527,6 +901,7 @@ const state = {
   finishPosition: 0,
   goTimer: 0,
   started: false,
+  cameraMode: 'chase',
 };
 
 const camera = { x: track.points[0].x, y: track.points[0].y, zoom: 1 };
@@ -604,6 +979,7 @@ function startRace() {
   resultsScreen.classList.add('hidden');
   pauseScreen.classList.add('hidden');
   garageScreen.classList.add('hidden');
+  builderScreen.classList.add('hidden');
   resetRace();
   state.mode = 'countdown';
   state.countdown = 3.0;
@@ -648,6 +1024,11 @@ window.addEventListener('keydown', (event) => {
 
   if (event.code === 'KeyR' && state.mode !== 'title') startRace();
   if (event.code === 'KeyM') toggleSound();
+  if (event.code === 'KeyC' && state.mode !== 'title') cycleCamera();
+  if (event.code === 'Escape' && !builderScreen.classList.contains('hidden')) {
+    closeBuilder();
+    return;
+  }
   if (event.code === 'Escape' && !garageScreen.classList.contains('hidden')) {
     closeGarage();
     return;
@@ -741,6 +1122,7 @@ function showTitle() {
   resultsScreen.classList.add('hidden');
   pauseScreen.classList.add('hidden');
   garageScreen.classList.add('hidden');
+  builderScreen.classList.add('hidden');
   garage3d.setActive(false);
   hud.classList.remove('live');
   clearKeys();
@@ -819,6 +1201,46 @@ trackListEl.addEventListener('click', (event) => {
 garageScreen.addEventListener('click', (event) => {
   if (event.target === garageScreen) closeGarage();
 });
+builderBtn.addEventListener('click', openBuilder);
+builderCloseBtn.addEventListener('click', closeBuilder);
+builderCancelBtn.addEventListener('click', closeBuilder);
+builderScreen.addEventListener('click', (event) => {
+  if (event.target === builderScreen) closeBuilder();
+});
+builderClearBtn.addEventListener('click', () => {
+  builderCells = [];
+  renderBuilderGrid();
+});
+builderPresetBtn.addEventListener('click', () => {
+  builderCells = makePresetCells();
+  renderBuilderGrid();
+});
+builderRaceBtn.addEventListener('click', buildAndRace);
+document.querySelectorAll('[data-build-tool]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    builderTool = btn.dataset.buildTool;
+    document.querySelectorAll('[data-build-tool]').forEach((other) => {
+      other.classList.toggle('active', other === btn);
+    });
+  });
+});
+builderGrid.addEventListener('pointerdown', (event) => {
+  const cell = event.target.closest('[data-c]');
+  if (!cell) return;
+  event.preventDefault();
+  builderPainting = true;
+  applyBuilderTool(Number(cell.dataset.c), Number(cell.dataset.r));
+});
+builderGrid.addEventListener('pointerover', (event) => {
+  if (!builderPainting) return;
+  const cell = event.target.closest('[data-c]');
+  if (!cell) return;
+  applyBuilderTool(Number(cell.dataset.c), Number(cell.dataset.r));
+});
+window.addEventListener('pointerup', () => {
+  builderPainting = false;
+});
+camBtn.addEventListener('click', cycleCamera);
 pauseBtn.addEventListener('click', () => {
   if (state.mode === 'paused') resumeGame();
   else pauseGame();
@@ -1320,35 +1742,41 @@ function drawGauge(kmh, reverse) {
 
 const miniW = miniCanvas.width;
 const miniH = miniCanvas.height;
-const miniBounds = track.bounds;
 const miniPad = 28;
-const miniScale = Math.min(
-  (miniW - miniPad * 2) / (miniBounds.maxX - miniBounds.minX),
-  (miniH - miniPad * 2) / (miniBounds.maxY - miniBounds.minY)
-);
-const miniOffX = (miniW - (miniBounds.maxX - miniBounds.minX) * miniScale) / 2 - miniBounds.minX * miniScale;
-const miniOffY = (miniH - (miniBounds.maxY - miniBounds.minY) * miniScale) / 2 - miniBounds.minY * miniScale;
-const miniPath = new Path2D();
-track.points.forEach((p, i) => {
-  const x = p.x * miniScale + miniOffX;
-  const y = p.y * miniScale + miniOffY;
-  if (i === 0) miniPath.moveTo(x, y);
-  else miniPath.lineTo(x, y);
-});
-miniPath.closePath();
+let miniScale = 1;
+let miniOffX = 0;
+let miniOffY = 0;
+let miniPath = null;
+let startMini = { x: 0, y: 0 };
+let miniBase = null;
 
-const startMini = {
-  x: track.points[0].x * miniScale + miniOffX,
-  y: track.points[0].y * miniScale + miniOffY,
-};
+function setupMinimap() {
+  const bounds = track.bounds;
+  miniScale = Math.min(
+    (miniW - miniPad * 2) / (bounds.maxX - bounds.minX),
+    (miniH - miniPad * 2) / (bounds.maxY - bounds.minY)
+  );
+  miniOffX = (miniW - (bounds.maxX - bounds.minX) * miniScale) / 2 - bounds.minX * miniScale;
+  miniOffY = (miniH - (bounds.maxY - bounds.minY) * miniScale) / 2 - bounds.minY * miniScale;
+  miniPath = new Path2D();
+  track.points.forEach((p, i) => {
+    const x = p.x * miniScale + miniOffX;
+    const y = p.y * miniScale + miniOffY;
+    if (i === 0) miniPath.moveTo(x, y);
+    else miniPath.lineTo(x, y);
+  });
+  miniPath.closePath();
 
-// The track outline never changes, so bake it once and only redraw the
-// car markers each frame. Thick dashed strokes are surprisingly costly on
-// software-rendered canvases.
-const miniBase = document.createElement('canvas');
-miniBase.width = miniW;
-miniBase.height = miniH;
-{
+  startMini = {
+    x: track.points[0].x * miniScale + miniOffX,
+    y: track.points[0].y * miniScale + miniOffY,
+  };
+
+  // Bake the outline once per circuit; only the car markers are redrawn at
+  // runtime. Thick dashed strokes are costly on software-rendered canvases.
+  miniBase = document.createElement('canvas');
+  miniBase.width = miniW;
+  miniBase.height = miniH;
   const g = miniBase.getContext('2d');
   g.lineJoin = 'round';
   g.lineCap = 'round';
@@ -1389,6 +1817,7 @@ miniBase.height = miniH;
 }
 
 function drawMinimap() {
+  if (!miniBase) return;
   const g = miniCtx;
   g.clearRect(0, 0, miniW, miniH);
   g.drawImage(miniBase, 0, 0);
@@ -1476,6 +1905,12 @@ function frame(now) {
 resize();
 window.addEventListener('resize', resize);
 loadGarage();
+customTrackData = makeCustomTrackData(customCells);
+if (selectedLocation !== 'ridge') {
+  swapTrackForLocation(getLocation(selectedLocation));
+} else {
+  setupMinimap();
+}
 world3d.setLocation(getLocation(selectedLocation));
 unlockNewCars();
 applyPlayerSetup();
@@ -1500,11 +1935,11 @@ requestAnimationFrame(frame);
 // Debug handle used for automated visual/behaviour checks.
 window.__apex = {
   cars,
-  track,
+  get track() { return track; },
   state,
   camera,
   playerCar,
-  ramps,
+  get ramps() { return ramps; },
   startRace,
   world3d,
   garage3d,
@@ -1513,4 +1948,11 @@ window.__apex = {
   selectLocation,
   garageSave,
   recordRaceResult,
+  cycleCamera,
+  swapTrackForLocation,
+  customCells: () => customCells,
+  builderCells: () => builderCells,
+  traceBuilderLoop,
+  openBuilder,
+  buildAndRace,
 };

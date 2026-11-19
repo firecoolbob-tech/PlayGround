@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="theme-color" content="#0a1512" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a1512'/%3E%3Cpath d='M10 44 24 18h9l-7 14h12l-5 10h11L38 56H19z' fill='%233ae2ff'/%3E%3C/svg%3E" />
-<meta name="description" content="Apex Drift — a 3D arcade racing game. Four circuits, ten cars, one racing line." />
+<meta name="description" content="Apex Drift — a 3D arcade racing game. Seven circuits, thirteen cars, a track builder, and three camera views." />
 <title>Apex Drift — 3D Arcade Racing</title>
 <link rel="stylesheet" href="style.css" />
 </head>
@@ -39,6 +39,9 @@
         <canvas id="minimap" width="320" height="224"></canvas>
       </div>
       <div class="hud-actions">
+        <button id="camBtn" class="icon-btn" type="button" aria-label="Camera: CHASE" title="Camera (C)">
+          <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M4 7.5h3.2l1.5-2h6.6l1.5 2H20a1.5 1.5 0 011.5 1.5v8A1.5 1.5 0 0120 18.5H4A1.5 1.5 0 012.5 17V9A1.5 1.5 0 014 7.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+        </button>
         <button id="soundBtn" class="icon-btn" type="button" aria-label="Toggle sound" title="Sound">
           <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path class="sound-wave" d="M16 8.5a5 5 0 010 7M18.7 6a8.4 8.4 0 010 12" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round"/></svg>
         </button>
@@ -53,7 +56,7 @@
     </div>
 
     <div class="key-hints" aria-hidden="true">
-      <span><b>WASD</b> drive</span><span><b>SPACE</b> drift</span><span><b>R</b> restart</span><span><b>P</b> pause</span>
+      <span><b>WASD</b> drive</span><span><b>SPACE</b> drift</span><span><b>C</b> camera</span><span><b>R</b> restart</span><span><b>P</b> pause</span>
     </div>
   </div>
 
@@ -77,10 +80,12 @@
       <div class="title-actions">
         <button id="startBtn" class="btn-primary" type="button">START</button>
         <button id="garageBtn" class="btn-secondary" type="button">GARAGE</button>
+        <button id="builderBtn" class="btn-secondary" type="button">BUILD TRACK</button>
       </div>
       <div class="title-controls">
         <div><span class="key-group"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>Drive</div>
         <div><span class="key-group"><kbd>SPACE</kbd></span>Drift</div>
+        <div><span class="key-group"><kbd>C</kbd></span>Camera</div>
         <div><span class="key-group"><kbd>R</kbd></span>Restart</div>
       </div>
       <div class="mobile-note">Touch controls appear on phones &amp; tablets</div>
@@ -130,7 +135,7 @@
         <div>
           <div class="kicker"><span class="kicker-rule"></span>Garage</div>
           <h2 class="garage-title">CHOOSE YOUR RIDE</h2>
-          <p id="garageSub" class="garage-sub">Win races across the four circuits to unlock more cars.</p>
+          <p id="garageSub" class="garage-sub">Win races across every circuit to unlock more cars.</p>
         </div>
         <button id="garageCloseBtn" class="icon-btn garage-close" type="button" aria-label="Close garage">
           <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/></svg>
@@ -158,6 +163,42 @@
       </div>
     </div>
   </div>
+  <div id="builderScreen" class="overlay center-screen builder-screen hidden">
+    <div class="panel-card builder-card">
+      <div class="garage-head">
+        <div>
+          <div class="kicker"><span class="kicker-rule"></span>Track builder</div>
+          <h2 class="garage-title">BLUEPRINT</h2>
+          <p class="garage-sub">Paint a closed loop on the grid. Every tile needs exactly two neighbours. Mark ramp tiles, then build the blueprint into a real 3D circuit.</p>
+        </div>
+        <button id="builderCloseBtn" class="icon-btn garage-close" type="button" aria-label="Close track builder">
+          <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/></svg>
+        </button>
+      </div>
+      <div class="builder-toolbar" role="toolbar" aria-label="Builder tools">
+        <button class="build-tool active" data-build-tool="track" type="button">Track</button>
+        <button class="build-tool" data-build-tool="ramp" type="button">Ramp</button>
+        <button class="build-tool" data-build-tool="erase" type="button">Erase</button>
+        <span class="builder-spacer"></span>
+        <button id="builderPresetBtn" class="builder-small" type="button">Preset</button>
+        <button id="builderClearBtn" class="builder-small" type="button">Clear</button>
+      </div>
+      <div class="builder-stage">
+        <div id="builderGrid" class="builder-grid" role="grid" aria-label="Top-down track grid"></div>
+        <div class="builder-legend">
+          <span><i class="legend-track"></i>Track tile</span>
+          <span><i class="legend-ramp"></i>Ramp</span>
+          <span><i class="legend-start"></i>Start</span>
+        </div>
+        <div id="builderStatus" class="builder-status" role="status"></div>
+      </div>
+      <div class="builder-actions">
+        <button id="builderCancelBtn" class="btn-secondary" type="button">BACK</button>
+        <button id="builderRaceBtn" class="btn-primary" type="button">BUILD &amp; RACE</button>
+      </div>
+    </div>
+  </div>
+
   <div id="touch" class="touch" aria-label="Touch controls">
     <div class="touch-steer">
       <button class="touch-btn steer" data-act="left" type="button" aria-label="Steer left">

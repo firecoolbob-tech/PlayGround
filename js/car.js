@@ -1,5 +1,4 @@
 import { clamp, damp } from './utils.js';
-import { WORLD } from './track.js';
 
 const PX_PER_KMH = 0.42;
 
@@ -222,13 +221,20 @@ export class Car {
     this.pos.x += vx * dt;
     this.pos.y += vy * dt;
 
-    // World bounds — the forest edge acts as a soft wall.
+    // World bounds — each circuit supplies its own run-off area so small
+    // factory loops and wide canyon sweeps both work.
+    const limits = track.world || {
+      minX: 30,
+      minY: 30,
+      maxX: 2570,
+      maxY: 1620,
+    };
     const margin = 30;
     let bumped = false;
-    if (this.pos.x < margin) { this.pos.x = margin; if (vx < 0) { vx *= -0.22; bumped = true; } }
-    if (this.pos.x > WORLD.w - margin) { this.pos.x = WORLD.w - margin; if (vx > 0) { vx *= -0.22; bumped = true; } }
-    if (this.pos.y < margin) { this.pos.y = margin; if (vy < 0) { vy *= -0.22; bumped = true; } }
-    if (this.pos.y > WORLD.h - margin) { this.pos.y = WORLD.h - margin; if (vy > 0) { vy *= -0.22; bumped = true; } }
+    if (this.pos.x < limits.minX + margin) { this.pos.x = limits.minX + margin; if (vx < 0) { vx *= -0.22; bumped = true; } }
+    if (this.pos.x > limits.maxX - margin) { this.pos.x = limits.maxX - margin; if (vx > 0) { vx *= -0.22; bumped = true; } }
+    if (this.pos.y < limits.minY + margin) { this.pos.y = limits.minY + margin; if (vy < 0) { vy *= -0.22; bumped = true; } }
+    if (this.pos.y > limits.maxY - margin) { this.pos.y = limits.maxY - margin; if (vy > 0) { vy *= -0.22; bumped = true; } }
     if (bumped) this.bump = 1;
 
     // Guardrails: clamp the car to the racing surface and bounce it back
