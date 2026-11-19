@@ -13,6 +13,40 @@ export const RAMP_DEFS = [
   { index: 307, offset: -8, width: 144, length: 165, height: 38 },
 ];
 
+/**
+ * Pick ramp anchors on the straightest available parts of any circuit. This
+ * keeps launches fair across the different layouts without hand-authoring an
+ * index table for every location.
+ */
+export function autoRampDefs(track, count = 3) {
+  const N = track.N;
+  const defs = [];
+  for (let k = 0; k < count; k++) {
+    const fraction = count === 1 ? 0.5 : 0.18 + (k / (count - 1)) * 0.64;
+    const base = Math.round(N * fraction);
+    let best = base;
+    let bestCurve = Infinity;
+    for (let d = -44; d <= 44; d++) {
+      const idx = (base + d + N) % N;
+      // Keep ramps away from the start gantry and from each other.
+      if (idx < 24 || idx > N - 24) continue;
+      const curve = Math.abs(track.curvature[idx]);
+      if (curve < bestCurve) {
+        bestCurve = curve;
+        best = idx;
+      }
+    }
+    defs.push({
+      index: best,
+      offset: k % 2 === 0 ? 0 : k % 4 === 1 ? 12 : -12,
+      width: Math.min(track.width * 0.72, 158),
+      length: Math.min(track.width * 0.78, 162),
+      height: 30 + (k % 2) * 6,
+    });
+  }
+  return defs;
+}
+
 const GRAVITY = 560;
 const STEP_HEIGHT = 6;
 

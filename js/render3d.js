@@ -202,6 +202,106 @@ function makeCityGroundTexture() {
   }, { repeat: [36, 29] });
 }
 
+function makeCandyTexture() {
+  const rnd = mulberry32(3121);
+  return makeTexture(256, 256, (g, w, h) => {
+    g.fillStyle = '#fbe6f2';
+    g.fillRect(0, 0, w, h);
+
+    // Frosting swirls.
+    for (let i = 0; i < 12; i++) {
+      const x = rnd() * w;
+      const y = rnd() * h;
+      const r = 18 + rnd() * 46;
+      const grad = g.createRadialGradient(x, y, 0, x, y, r);
+      grad.addColorStop(0, rnd() < 0.5 ? 'rgba(255, 176, 220, 0.34)' : 'rgba(255, 255, 255, 0.4)');
+      grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      g.fillStyle = grad;
+      g.beginPath();
+      g.arc(x, y, r, 0, Math.PI * 2);
+      g.fill();
+    }
+
+    // Pink piping stripes.
+    g.strokeStyle = 'rgba(255, 143, 203, 0.28)';
+    g.lineWidth = 2;
+    for (let i = -1; i < 7; i++) {
+      g.beginPath();
+      for (let x = -20; x <= w + 20; x += 8) {
+        const y = i * 42 + Math.sin(x * 0.05 + i) * 7;
+        if (x === -20) g.moveTo(x, y);
+        else g.lineTo(x, y);
+      }
+      g.stroke();
+    }
+
+    // Sprinkles.
+    const palette = ['#ff6fb6', '#ffd54a', '#6fe8ff', '#a6ff7a', '#ff8f5c', '#ffffff'];
+    for (let i = 0; i < 900; i++) {
+      g.save();
+      g.translate(rnd() * w, rnd() * h);
+      g.rotate(rnd() * Math.PI);
+      g.fillStyle = palette[Math.floor(rnd() * palette.length)];
+      g.globalAlpha = 0.35 + rnd() * 0.45;
+      g.fillRect(-2.5, -0.8, 5, 1.6);
+      g.restore();
+    }
+    g.globalAlpha = 1;
+  }, { repeat: [30, 25] });
+}
+
+function makeHauntTexture() {
+  const rnd = mulberry32(6619);
+  return makeTexture(256, 256, (g, w, h) => {
+    g.fillStyle = '#2c2838';
+    g.fillRect(0, 0, w, h);
+
+    // Cracked flagstones.
+    g.strokeStyle = 'rgba(8, 7, 13, 0.48)';
+    g.lineWidth = 2;
+    for (let row = 0; row < 6; row++) {
+      const y = (row * h) / 6;
+      g.beginPath();
+      g.moveTo(0, y);
+      g.lineTo(w, y);
+      g.stroke();
+      const offset = row % 2 ? 0 : w / 10;
+      for (let col = 0; col <= 5; col++) {
+        const x = (col * w) / 5 + offset;
+        g.beginPath();
+        g.moveTo(x, y);
+        g.lineTo(x, y + h / 6);
+        g.stroke();
+      }
+    }
+
+    // Moss, damp patches and old leaves.
+    for (let i = 0; i < 18; i++) {
+      const x = rnd() * w;
+      const y = rnd() * h;
+      const r = 10 + rnd() * 38;
+      const grad = g.createRadialGradient(x, y, 0, x, y, r);
+      grad.addColorStop(0, rnd() < 0.5 ? 'rgba(87, 120, 76, 0.18)' : 'rgba(70, 56, 92, 0.22)');
+      grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      g.fillStyle = grad;
+      g.beginPath();
+      g.arc(x, y, r, 0, Math.PI * 2);
+      g.fill();
+    }
+    for (let i = 0; i < 700; i++) {
+      g.fillStyle = rnd() < 0.5 ? 'rgba(15, 12, 20, 0.3)' : 'rgba(140, 128, 162, 0.14)';
+      const s = 0.6 + rnd() * 1.9;
+      g.fillRect(rnd() * w, rnd() * h, s, s);
+    }
+    for (let i = 0; i < 40; i++) {
+      g.fillStyle = rnd() < 0.5 ? 'rgba(115, 94, 58, 0.34)' : 'rgba(74, 86, 58, 0.3)';
+      g.beginPath();
+      g.ellipse(rnd() * w, rnd() * h, 2 + rnd() * 3.4, 1 + rnd() * 2, rnd() * Math.PI, 0, Math.PI * 2);
+      g.fill();
+    }
+  }, { repeat: [32, 27] });
+}
+
 function makeWindowTexture() {
   const rnd = mulberry32(9981);
   return makeTexture(128, 256, (g, w, h) => {
@@ -1069,6 +1169,21 @@ export class Renderer3D {
       snow: makeSnowTexture(),
       sand: makeSandTexture(),
       city: makeCityGroundTexture(),
+      candy: makeCandyTexture(),
+      haunt: makeHauntTexture(),
+    };
+    this.scenery = null;
+    this.sceneryPalettes = {
+      candy: {
+        broadleaf: [0xff8fcb, 0xffd0e8, 0xff6fb6, 0xffe3f0],
+        pine: [0xff7ac0, 0xffb3e0, 0xff5cae, 0xffd9ef],
+        bush: [0xff9ad4, 0xffc4e6, 0xff6fb6, 0xffe6f6],
+      },
+      haunt: {
+        broadleaf: [0x574d68, 0x463e56, 0x635876, 0x3a3347],
+        pine: [0x3b3448, 0x4a4258, 0x322c3e, 0x554b66],
+        bush: [0x4a4356, 0x3d3648, 0x5a516e, 0x463e52],
+      },
     };
 
     const renderer = new THREE.WebGLRenderer({
@@ -1122,6 +1237,78 @@ export class Renderer3D {
       g.fillRect(0, 0, s, s);
     }, { clampEdge: true });
   }
+
+  /**
+   * Swap the live circuit without throwing away the renderer or post chain.
+   * Every track-dependent mesh is rebuilt into a fresh scene; persistent
+   * resources (ground textures, car geometry, glow sprites) are retained.
+   */
+  setTrack(track, ramps = this.ramps) {
+    if (!track) return;
+    if (track === this.track && ramps === this.ramps) return;
+
+    const oldScene = this.scene;
+    this.track = track;
+    this.ramps = ramps;
+    this.scene = new THREE.Scene();
+    this.scene.fog = new THREE.Fog(FOG_COLOR, 950, 3000);
+    this.theme = {};
+    this.scenery = null;
+    this.carModels.clear();
+    this.particleSprites = [];
+    this.particleCursor = 0;
+    this.skidLast.clear();
+    this.skidCursor = 0;
+    this.skidCount = 0;
+
+    this.buildSky();
+    this.buildLights();
+    this.buildGround();
+    this.buildTrack();
+    this.buildRamps();
+    this.buildScenery();
+    this.buildLocationDecor();
+    this.buildStart();
+    this.buildCars(this.cars);
+    this.buildSkids();
+    this.buildParticlePool();
+    this.setLocation(this.location);
+    this.camera.position.set(track.points[0].x, 120, track.points[0].y);
+    this.disposeScene(oldScene);
+  }
+
+  disposeScene(scene) {
+    if (!scene) return;
+    const keepGeometry = new Set(Object.values(CAR_GEO));
+    const keepTextures = new Set([
+      GLOW_TEX,
+      SHADOW_TEX,
+      this.smokeTexture,
+      this.dustTexture,
+      ...Object.values(this.groundMaps),
+    ]);
+    const seenMaterials = new Set();
+    scene.traverse((object) => {
+      if (object.geometry && !keepGeometry.has(object.geometry)) {
+        object.geometry.dispose();
+      }
+      const materials = Array.isArray(object.material)
+        ? object.material
+        : object.material
+          ? [object.material]
+          : [];
+      for (const material of materials) {
+        if (!material || seenMaterials.has(material)) continue;
+        seenMaterials.add(material);
+        for (const key of ['map', 'emissiveMap', 'alphaMap', 'bumpMap']) {
+          const texture = material[key];
+          if (texture && !keepTextures.has(texture)) texture.dispose();
+        }
+        material.dispose();
+      }
+    });
+  }
+
 
   /* ------------------------------ world ----------------------------- */
 
@@ -1637,6 +1824,7 @@ export class Renderer3D {
           sx: tree.r * 0.85,
           sy: tree.r * 1.25,
           sz: tree.r * 0.85,
+          tone,
           color: new THREE.Color(pineColors[Math.floor(tone * pineColors.length)]),
         });
       } else {
@@ -1647,6 +1835,7 @@ export class Renderer3D {
           sx: tree.r,
           sy: tree.r * 0.82,
           sz: tree.r,
+          tone,
           color: new THREE.Color(broadleafColors[Math.floor(tone * broadleafColors.length)]),
         });
       }
@@ -1666,6 +1855,8 @@ export class Renderer3D {
       roughness: 0.92,
       flatShading: true,
     });
+    for (const item of broadleaf) item.tone = item.tone ?? 0.5;
+    for (const item of pines) item.tone = item.tone ?? 0.5;
     const leafMat = this.theme.leaf;
     const broadleafMesh = makeInstanced(new THREE.IcosahedronGeometry(1, 1), leafMat, broadleaf);
     if (broadleafMesh) this.scene.add(broadleafMesh);
@@ -1679,12 +1870,33 @@ export class Renderer3D {
       sx: bush.r,
       sy: bush.r * 0.7,
       sz: bush.r,
+      tone: bush.tone,
       color: new THREE.Color(
         [0x357b3d, 0x2c6c36, 0x408a48, 0x34733a][Math.floor(bush.tone * 4)]
       ),
     }));
     const bushMesh = makeInstanced(new THREE.IcosahedronGeometry(1, 0), leafMat, bushItems);
     if (bushMesh) this.scene.add(bushMesh);
+
+    // Keep the foliage instances around so candy and haunted circuits can
+    // repaint them without rebuilding the whole scene.
+    this.scenery = {
+      broadleaf: {
+        mesh: broadleafMesh,
+        items: broadleaf,
+        palette: broadleafColors,
+      },
+      pine: {
+        mesh: pineMesh,
+        items: pines,
+        palette: pineColors,
+      },
+      bush: {
+        mesh: bushMesh,
+        items: bushItems,
+        palette: [0x357b3d, 0x2c6c36, 0x408a48, 0x34733a],
+      },
+    };
 
     const rockItems = rocks.map((rock) => ({
       x: rock.x,
@@ -1743,6 +1955,8 @@ export class Renderer3D {
       neon: this.buildNeonCity(),
       alpine: this.buildAlpinePeaks(),
       canyon: this.buildCanyonMesas(),
+      candy: this.buildCandyFactory(),
+      haunt: this.buildHauntedMansion(),
     };
     this.buildStars();
     this.buildCelestial();
@@ -1972,6 +2186,519 @@ export class Renderer3D {
     return group;
   }
 
+  buildCandyFactory() {
+    const track = this.track;
+    const W = track.width;
+    const bounds = track.bounds;
+    const cx = (bounds.minX + bounds.maxX) / 2;
+    const cz = (bounds.minY + bounds.maxY) / 2;
+    const rnd = mulberry32(20261);
+    const group = new THREE.Group();
+    group.visible = false;
+
+    // Striped candy-cane arches spanning the circuit make the factory
+    // location read instantly from the chase and hood cameras.
+    const stripeTexture = makeTexture(128, 64, (g, w, h) => {
+      g.fillStyle = '#fff6fb';
+      g.fillRect(0, 0, w, h);
+      g.fillStyle = '#ff4f9f';
+      for (let i = -h; i < w + h; i += 26) {
+        g.beginPath();
+        g.moveTo(i, 0);
+        g.lineTo(i + 13, 0);
+        g.lineTo(i + 13 + h, h);
+        g.lineTo(i + h, h);
+        g.closePath();
+        g.fill();
+      }
+    }, { repeat: [10, 2] });
+    const archMaterial = new THREE.MeshStandardMaterial({
+      map: stripeTexture,
+      roughness: 0.48,
+      metalness: 0.08,
+      emissive: 0x511028,
+      emissiveIntensity: 0.25,
+    });
+    const archRadius = W / 2 + 34;
+    const archGeo = new THREE.TorusGeometry(archRadius, 7.5, 8, 28, Math.PI);
+    for (let k = 0; k < 5; k++) {
+      const idx = Math.floor(((k + 1) / 6) * track.N) % track.N;
+      const p = track.points[idx];
+      const t = track.tangents[idx];
+      const arch = new THREE.Mesh(archGeo, archMaterial);
+      arch.position.set(p.x, 0, p.y);
+      arch.rotation.y = -Math.atan2(t.y, t.x) + Math.PI / 2;
+      group.add(arch);
+    }
+
+    // Candy-cane pillars.
+    const caneItems = [];
+    const caneCapItems = [];
+    for (let i = 0; i < 26; i++) {
+      const idx = Math.floor((i / 26) * track.N);
+      const p = track.points[idx];
+      const n = track.normals[idx];
+      const side = i % 2 === 0 ? 1 : -1;
+      const dist = W / 2 + 92 + rnd() * 150;
+      caneItems.push({
+        x: p.x + n.x * dist * side,
+        z: p.y + n.y * dist * side,
+        y: 46 + rnd() * 26,
+        sx: 7,
+        sy: 92 + rnd() * 52,
+        sz: 7,
+      });
+      caneCapItems.push({
+        x: p.x + n.x * dist * side,
+        z: p.y + n.y * dist * side,
+        y: 98 + rnd() * 54,
+        sx: 15,
+        sy: 7,
+        sz: 15,
+      });
+    }
+    const caneMat = new THREE.MeshStandardMaterial({ color: 0xfff4fb, roughness: 0.44 });
+    const caneStripeMat = new THREE.MeshStandardMaterial({ color: 0xff4f9f, roughness: 0.4 });
+    const caneMesh = makeInstanced(new THREE.CylinderGeometry(1, 1, 1, 10), caneMat, caneItems);
+    if (caneMesh) group.add(caneMesh);
+    const stripeMesh = makeInstanced(
+      new THREE.CylinderGeometry(1.12, 1.12, 0.16, 10),
+      caneStripeMat,
+      caneItems.map((item, index) => ({ ...item, y: item.y - item.sy / 2 + (index % 4) * (item.sy / 4) }))
+    );
+    if (stripeMesh) group.add(stripeMesh);
+    const capMesh = makeInstanced(new THREE.CylinderGeometry(1, 1, 1, 10), caneStripeMat, caneCapItems);
+    if (capMesh) group.add(capMesh);
+
+    // Lollipop grove.
+    const lollipopPalette = [0xff5fae, 0xffd34d, 0x6fe8ff, 0xa9ff7a, 0xff8b5c];
+    for (let i = 0; i < 16; i++) {
+      const idx = Math.floor(rnd() * track.N);
+      const p = track.points[idx];
+      const n = track.normals[idx];
+      const side = rnd() < 0.5 ? 1 : -1;
+      const dist = W / 2 + 150 + rnd() * 260;
+      const x = p.x + n.x * dist * side;
+      const z = p.y + n.y * dist * side;
+      const height = 46 + rnd() * 55;
+      const candy = new THREE.Group();
+      candy.position.set(x, 0, z);
+      candy.rotation.y = rnd() * TAU;
+      const stick = new THREE.Mesh(
+        new THREE.CylinderGeometry(2.6, 2.6, height, 8),
+        new THREE.MeshStandardMaterial({ color: 0xfff6ee, roughness: 0.5 })
+      );
+      stick.position.y = height / 2;
+      candy.add(stick);
+      const color = lollipopPalette[Math.floor(rnd() * lollipopPalette.length)];
+      const headMat = new THREE.MeshStandardMaterial({
+        color,
+        emissive: color,
+        emissiveIntensity: 0.12,
+        roughness: 0.34,
+        metalness: 0.08,
+      });
+      const head = new THREE.Mesh(new THREE.CylinderGeometry(18, 18, 4.4, 22), headMat);
+      head.position.y = height + 14;
+      head.rotation.x = Math.PI / 2;
+      candy.add(head);
+      const rim = new THREE.Mesh(
+        new THREE.TorusGeometry(18, 2.2, 6, 22),
+        new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 })
+      );
+      rim.position.y = height + 14;
+      candy.add(rim);
+      group.add(candy);
+    }
+
+    // Gumdrops and sugar silos.
+    const gumdrops = [];
+    const silos = [];
+    for (let i = 0; i < 24; i++) {
+      const angle = rnd() * TAU;
+      const radius = 980 + rnd() * 900;
+      gumdrops.push({
+        x: cx + Math.cos(angle) * radius,
+        z: cz + Math.sin(angle) * radius * 0.72,
+        y: 20,
+        sx: 42 + rnd() * 46,
+        sy: 40 + rnd() * 56,
+        sz: 42 + rnd() * 46,
+        rot: rnd() * TAU,
+        color: new THREE.Color(lollipopPalette[Math.floor(rnd() * lollipopPalette.length)]),
+      });
+    }
+    const gumdropMesh = makeInstanced(
+      new THREE.ConeGeometry(1, 1, 12),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.32, metalness: 0.04 }),
+      gumdrops
+    );
+    if (gumdropMesh) group.add(gumdropMesh);
+
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * TAU + 0.3;
+      silos.push({
+        x: cx + Math.cos(angle) * (1450 + rnd() * 260),
+        z: cz + Math.sin(angle) * (1100 + rnd() * 220),
+        y: 130,
+        sx: 130,
+        sy: 260,
+        sz: 130,
+      });
+    }
+    const siloMesh = makeInstanced(
+      new THREE.CylinderGeometry(1, 1, 1, 18),
+      new THREE.MeshStandardMaterial({ color: 0xffe3f0, roughness: 0.6, metalness: 0.12 }),
+      silos
+    );
+    if (siloMesh) group.add(siloMesh);
+
+    // Low factory perimeter walls.
+    const wallMat = new THREE.MeshStandardMaterial({
+      color: 0x7a2c58,
+      roughness: 0.7,
+      metalness: 0.12,
+      emissive: 0x3a0d27,
+      emissiveIntensity: 0.35,
+    });
+    const wallSpanX = bounds.maxX - bounds.minX + 1300;
+    const wallSpanZ = bounds.maxY - bounds.minY + 1100;
+    for (const [x, z, sx, sz] of [
+      [cx, bounds.minY - 470, wallSpanX, 36],
+      [cx, bounds.maxY + 470, wallSpanX, 36],
+      [bounds.minX - 560, cz, 36, wallSpanZ],
+      [bounds.maxX + 560, cz, 36, wallSpanZ],
+    ]) {
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(sx, 220, sz), wallMat);
+      wall.position.set(x, 110, z);
+      group.add(wall);
+    }
+
+    // Roof and strip lights close the factory around the circuit.
+    const ceiling = new THREE.Mesh(
+      new THREE.PlaneGeometry(wallSpanX + 240, wallSpanZ + 240),
+      new THREE.MeshStandardMaterial({
+        color: 0x3d1630,
+        roughness: 0.92,
+        side: THREE.DoubleSide,
+        emissive: 0x1b0714,
+        emissiveIntensity: 0.5,
+      })
+    );
+    ceiling.rotation.x = Math.PI / 2;
+    ceiling.position.set(cx, 980, cz);
+    group.add(ceiling);
+
+    const stripItems = [];
+    for (let row = -3; row <= 3; row++) {
+      stripItems.push({
+        x: cx,
+        z: cz + row * 310,
+        y: 962,
+        sx: Math.min(wallSpanX * 0.82, 2600),
+        sy: 6,
+        sz: 10,
+      });
+    }
+    const stripMesh = makeInstanced(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshStandardMaterial({
+        color: 0xffd3ec,
+        emissive: 0xff7ac8,
+        emissiveIntensity: 2.2,
+        roughness: 0.4,
+      }),
+      stripItems
+    );
+    if (stripMesh) group.add(stripMesh);
+
+    this.scene.add(group);
+    return group;
+  }
+
+  buildHauntedMansion() {
+    const track = this.track;
+    const W = track.width;
+    const bounds = track.bounds;
+    const cx = (bounds.minX + bounds.maxX) / 2;
+    const cz = (bounds.minY + bounds.maxY) / 2;
+    const rnd = mulberry32(13131);
+    const group = new THREE.Group();
+    group.visible = false;
+
+    const stoneMat = new THREE.MeshStandardMaterial({
+      color: 0x3b3448,
+      roughness: 0.92,
+      metalness: 0.05,
+    });
+    const darkStone = new THREE.MeshStandardMaterial({
+      color: 0x241f30,
+      roughness: 0.94,
+    });
+    const roofMat = new THREE.MeshStandardMaterial({
+      color: 0x1b1526,
+      roughness: 0.86,
+      metalness: 0.08,
+    });
+    const windowMat = new THREE.MeshStandardMaterial({
+      color: 0xd7ffd0,
+      emissive: 0x9dff7a,
+      emissiveIntensity: 1.5,
+      roughness: 0.4,
+    });
+    const amberMat = new THREE.MeshStandardMaterial({
+      color: 0xffcf8a,
+      emissive: 0xff9a3c,
+      emissiveIntensity: 1.6,
+      roughness: 0.42,
+    });
+
+    // The mansion sits in the middle of the circuit if there is room.
+    const manorSpace = track.nearest(cx, cz).dist;
+    if (manorSpace > W / 2 + 250) {
+      const manor = new THREE.Group();
+      manor.position.set(cx, 0, cz);
+      const body = new THREE.Mesh(new THREE.BoxGeometry(360, 170, 240), stoneMat);
+      body.position.y = 85;
+      manor.add(body);
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(250, 130, 4), roofMat);
+      roof.position.y = 234;
+      roof.rotation.y = Math.PI / 4;
+      manor.add(roof);
+      const wingGeo = new THREE.BoxGeometry(130, 125, 180);
+      for (const side of [-1, 1]) {
+        const wing = new THREE.Mesh(wingGeo, stoneMat);
+        wing.position.set(side * 236, 62, 18);
+        manor.add(wing);
+        const wingRoof = new THREE.Mesh(new THREE.ConeGeometry(112, 96, 4), roofMat);
+        wingRoof.position.set(side * 236, 172, 18);
+        wingRoof.rotation.y = Math.PI / 4;
+        manor.add(wingRoof);
+        const tower = new THREE.Mesh(new THREE.CylinderGeometry(54, 64, 250, 10), darkStone);
+        tower.position.set(side * 168, 125, -150);
+        manor.add(tower);
+        const towerRoof = new THREE.Mesh(new THREE.ConeGeometry(72, 150, 10), roofMat);
+        towerRoof.position.set(side * 168, 318, -150);
+        manor.add(towerRoof);
+      }
+      const door = new THREE.Mesh(new THREE.BoxGeometry(58, 88, 9), amberMat);
+      door.position.set(0, 44, 123);
+      manor.add(door);
+      for (let row = 0; row < 2; row++) {
+        for (let col = -2; col <= 2; col++) {
+          const win = new THREE.Mesh(
+            new THREE.BoxGeometry(32, 46, 6),
+            col % 2 === row ? windowMat : amberMat
+          );
+          win.position.set(col * 66, 106, 122);
+          manor.add(win);
+        }
+      }
+      // Front columns.
+      for (const side of [-1, 1]) {
+        const column = new THREE.Mesh(new THREE.CylinderGeometry(16, 19, 150, 8), stoneMat);
+        column.position.set(side * 88, 75, 146);
+        manor.add(column);
+      }
+      group.add(manor);
+    }
+
+    const away = (x, z, pad) => track.nearest(x, z).dist > W / 2 + pad;
+
+    // Dead trees.
+    const trunks = [];
+    const limbs = [];
+    let attempts = 0;
+    while (trunks.length < 30 && attempts < 400) {
+      attempts++;
+      const angle = rnd() * TAU;
+      const radius = 720 + rnd() * 900;
+      const x = cx + Math.cos(angle) * radius * 1.08;
+      const z = cz + Math.sin(angle) * radius * 0.76;
+      if (!away(x, z, 80)) continue;
+      const height = 70 + rnd() * 90;
+      trunks.push({ x, z, y: height / 2, sx: 8, sy: height, sz: 8 });
+      for (let k = 0; k < 3; k++) {
+        limbs.push({
+          x: x + (rnd() - 0.5) * 40,
+          z: z + (rnd() - 0.5) * 40,
+          y: height * (0.55 + rnd() * 0.3),
+          sx: 3.2,
+          sy: 26 + rnd() * 30,
+          sz: 3.2,
+          rot: rnd() * TAU,
+        });
+      }
+    }
+    const trunkMesh = makeInstanced(
+      new THREE.CylinderGeometry(0.6, 1, 1, 6),
+      new THREE.MeshStandardMaterial({ color: 0x2a2434, roughness: 0.95 }),
+      trunks
+    );
+    if (trunkMesh) group.add(trunkMesh);
+    const limbMesh = makeInstanced(
+      new THREE.CylinderGeometry(0.45, 0.9, 1, 5),
+      new THREE.MeshStandardMaterial({ color: 0x241f2e, roughness: 0.95 }),
+      limbs
+    );
+    if (limbMesh) group.add(limbMesh);
+
+    // Gravestones.
+    const stones = [];
+    for (let i = 0; i < 34; i++) {
+      const angle = rnd() * TAU;
+      const radius = 560 + rnd() * 720;
+      const x = cx + Math.cos(angle) * radius;
+      const z = cz + Math.sin(angle) * radius * 0.74;
+      if (!away(x, z, 55)) continue;
+      stones.push({
+        x,
+        z,
+        y: 18 + rnd() * 8,
+        sx: 18 + rnd() * 12,
+        sy: 30 + rnd() * 22,
+        sz: 6,
+        rot: (rnd() - 0.5) * 0.5,
+        color: new THREE.Color(rnd() < 0.5 ? 0x5b5368 : 0x453e52),
+      });
+    }
+    const stoneMesh = makeInstanced(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }),
+      stones
+    );
+    if (stoneMesh) group.add(stoneMesh);
+
+    // Candle posts along the circuit.
+    const poleItems = [];
+    for (let i = 0; i < 18; i++) {
+      const idx = Math.floor((i / 18) * track.N);
+      const p = track.points[idx];
+      const n = track.normals[idx];
+      const side = i % 2 === 0 ? 1 : -1;
+      const dist = W / 2 + 74;
+      poleItems.push({
+        x: p.x + n.x * dist * side,
+        z: p.y + n.y * dist * side,
+        y: 34,
+        sx: 3.2,
+        sy: 68,
+        sz: 3.2,
+      });
+    }
+    const poleMesh = makeInstanced(
+      new THREE.CylinderGeometry(1, 1.3, 1, 6),
+      new THREE.MeshStandardMaterial({ color: 0x17131f, roughness: 0.9 }),
+      poleItems
+    );
+    if (poleMesh) group.add(poleMesh);
+    const flameMaterial = new THREE.SpriteMaterial({
+      map: GLOW_TEX,
+      color: 0xa9ff86,
+      transparent: true,
+      opacity: 0.72,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    for (const pole of poleItems) {
+      const flame = new THREE.Sprite(flameMaterial);
+      flame.position.set(pole.x, 76, pole.z);
+      flame.scale.set(24, 30, 1);
+      group.add(flame);
+    }
+
+    // Mansion hall perimeter and ceiling. The circuit threads through the
+    // great hall rather than sitting outdoors.
+    const hallSpanX = bounds.maxX - bounds.minX + 1200;
+    const hallSpanZ = bounds.maxY - bounds.minY + 1000;
+    const hallWallMat = new THREE.MeshStandardMaterial({
+      color: 0x2b2438,
+      roughness: 0.9,
+      metalness: 0.06,
+      emissive: 0x090610,
+      emissiveIntensity: 0.6,
+      side: THREE.DoubleSide,
+    });
+    for (const [x, z, sx, sz] of [
+      [cx, bounds.minY - 440, hallSpanX, 30],
+      [cx, bounds.maxY + 440, hallSpanX, 30],
+      [bounds.minX - 520, cz, 30, hallSpanZ],
+      [bounds.maxX + 520, cz, 30, hallSpanZ],
+    ]) {
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(sx, 430, sz), hallWallMat);
+      wall.position.set(x, 215, z);
+      group.add(wall);
+    }
+    const hallCeiling = new THREE.Mesh(
+      new THREE.PlaneGeometry(hallSpanX + 220, hallSpanZ + 220),
+      new THREE.MeshStandardMaterial({
+        color: 0x140f1d,
+        roughness: 0.94,
+        side: THREE.DoubleSide,
+        emissive: 0x05030a,
+        emissiveIntensity: 0.7,
+      })
+    );
+    hallCeiling.rotation.x = Math.PI / 2;
+    hallCeiling.position.set(cx, 1060, cz);
+    group.add(hallCeiling);
+
+    // Chandeliers hang above the hall.
+    for (let i = 0; i < 5; i++) {
+      const chandelier = new THREE.Group();
+      chandelier.position.set(
+        cx + (rnd() - 0.5) * (bounds.maxX - bounds.minX) * 0.7,
+        760,
+        cz + (rnd() - 0.5) * (bounds.maxY - bounds.minY) * 0.7
+      );
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(34, 3.4, 6, 18),
+        new THREE.MeshStandardMaterial({
+          color: 0x5f516f,
+          emissive: 0x2b2136,
+          emissiveIntensity: 0.5,
+          roughness: 0.55,
+          metalness: 0.4,
+        })
+      );
+      ring.rotation.x = Math.PI / 2;
+      chandelier.add(ring);
+      for (let k = 0; k < 6; k++) {
+        const angle = (k / 6) * TAU;
+        const flame = new THREE.Sprite(flameMaterial);
+        flame.position.set(Math.cos(angle) * 34, 8, Math.sin(angle) * 34);
+        flame.scale.set(22, 28, 1);
+        chandelier.add(flame);
+      }
+      group.add(chandelier);
+    }
+
+    // Floating spirits.
+    const spiritMaterial = new THREE.SpriteMaterial({
+      map: GLOW_TEX,
+      color: 0xb8ffdc,
+      transparent: true,
+      opacity: 0.28,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    for (let i = 0; i < 14; i++) {
+      const angle = rnd() * TAU;
+      const radius = 260 + rnd() * 900;
+      const spirit = new THREE.Sprite(spiritMaterial);
+      spirit.position.set(
+        cx + Math.cos(angle) * radius,
+        40 + rnd() * 90,
+        cz + Math.sin(angle) * radius * 0.8
+      );
+      spirit.scale.set(48 + rnd() * 40, 70 + rnd() * 60, 1);
+      group.add(spirit);
+    }
+
+    this.scene.add(group);
+    return group;
+  }
+
   buildStars() {
     const bounds = this.track.bounds;
     const cx = (bounds.minX + bounds.maxX) / 2;
@@ -2026,6 +2753,32 @@ export class Renderer3D {
     );
     this.celestial.frustumCulled = false;
     this.scene.add(this.celestial);
+  }
+
+  /**
+   * Repaint instanced foliage for themed venues. Candyland gets frosting
+   * pinks, the mansion grounds go grey-violet, and every other circuit uses
+   * its own tint with the original forest palette.
+   */
+  tintScenery(loc) {
+    if (!this.scenery) return;
+    const special =
+      loc.id === 'candy' || loc.id === 'haunt'
+        ? this.sceneryPalettes[loc.id]
+        : null;
+    for (const [key, entry] of Object.entries(this.scenery)) {
+      if (!entry.mesh || !entry.items.length) continue;
+      const palette = special ? special[key] : entry.palette;
+      entry.items.forEach((item, index) => {
+        const tone = Number.isFinite(item.tone) ? item.tone : 0.5;
+        const pick = palette[Math.floor(tone * palette.length) % palette.length];
+        entry.mesh.setColorAt(index, new THREE.Color(pick));
+      });
+      if (entry.mesh.instanceColor) entry.mesh.instanceColor.needsUpdate = true;
+    }
+    if (this.theme.leaf) {
+      this.theme.leaf.color.set(special ? 0xffffff : loc.leafTint);
+    }
   }
 
   setLocation(idOrLocation) {
@@ -2098,6 +2851,7 @@ export class Renderer3D {
     t.trunk.color.set(loc.trunkTint);
     t.rock.color.set(loc.rockTint);
     t.tire.color.set(loc.night ? 0x0d1118 : 0x171b1e);
+    this.tintScenery(loc);
 
     for (const [key, group] of Object.entries(this.decor)) {
       if (group) group.visible = key === loc.props;
@@ -2402,6 +3156,7 @@ export class Renderer3D {
   updateCamera(playerCar, state, camera) {
     const cam = this.camera;
     const track = this.track;
+    cam.up.set(0, 1, 0);
 
     if (state.mode === 'title') {
       const near = track.nearest(camera.x, camera.y);
@@ -2426,13 +3181,59 @@ export class Renderer3D {
     }
 
     const speedRatio = clamp(playerCar.speed / playerCar.maxSpeed, 0, 1);
-    const back = 158 + speedRatio * 38;
-    const height = 92 + speedRatio * 10;
     const cos = Math.cos(playerCar.angle);
     const sin = Math.sin(playerCar.angle);
     const focusX = camera.x;
     const focusY = camera.y;
     const carY = playerCar.y || 0;
+    const mode = state.cameraMode || 'chase';
+
+    if (mode === 'top') {
+      // North-up overhead view. The car stays centred and rotates beneath
+      // the camera, which makes the new grid-built circuits easy to read.
+      const height = Math.max(560, track.width * 3.6) + carY;
+      cam.up.set(0, 0, -1);
+      cam.position.set(focusX, height, focusY + 0.01);
+      if (state.shake > 0.001) {
+        const shake = state.shake * 4;
+        cam.position.x += (Math.random() - 0.5) * shake;
+        cam.position.z += (Math.random() - 0.5) * shake;
+      }
+      cam.lookAt(focusX, carY, focusY);
+      const targetFov = 42 + speedRatio * 4;
+      cam.fov += (targetFov - cam.fov) * 0.1;
+      cam.updateProjectionMatrix();
+      return;
+    }
+
+    if (mode === 'hood') {
+      // Mounted just ahead of the nose: the road leads the view and no body
+      // geometry blocks it, even at speed.
+      const lift = 21 + carY * 0.9;
+      cam.position.set(
+        playerCar.pos.x + cos * 28,
+        lift,
+        playerCar.pos.y + sin * 28
+      );
+      if (state.shake > 0.001) {
+        const shake = state.shake * 5;
+        cam.position.x += (Math.random() - 0.5) * shake;
+        cam.position.y += (Math.random() - 0.5) * shake * 0.5;
+        cam.position.z += (Math.random() - 0.5) * shake;
+      }
+      cam.lookAt(
+        playerCar.pos.x + cos * 150,
+        12 + carY + (playerCar.pitch || 0) * 24,
+        playerCar.pos.y + sin * 150
+      );
+      const targetFov = 68 + speedRatio * 7;
+      cam.fov += (targetFov - cam.fov) * 0.12;
+      cam.updateProjectionMatrix();
+      return;
+    }
+
+    const back = 158 + speedRatio * 38;
+    const height = 92 + speedRatio * 10;
 
     cam.position.set(
       focusX - cos * back,

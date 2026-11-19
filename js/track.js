@@ -1,39 +1,79 @@
 import { TAU, clamp, mod, wrapAngle } from './utils.js';
 
+// Fallback world bounds. Each Track also exposes `world`, which is derived
+// from its own geometry so circuits of different sizes still have room for
+// their run-off areas.
 export const WORLD = { w: 2600, h: 1650 };
 
 const SAMPLE_COUNT = 480;
 const TRACK_WIDTH = 208;
 
+const DEFAULT_HARMONICS = [
+  [2, 0.118, 0.6, 0],
+  [3, 0.062, -1.15, 0],
+  [5, 0.03, 0.3, 1],
+  [7, 0.018, 1.7, 0],
+];
+
+function chaikin(points, iterations = 1) {
+  let out = points;
+  for (let pass = 0; pass < iterations; pass++) {
+    const next = [];
+    const n = out.length;
+    for (let i = 0; i < n; i++) {
+      const a = out[i];
+      const b = out[(i + 1) % n];
+      next.push(
+        { x: a.x * 0.75 + b.x * 0.25, y: a.y * 0.75 + b.y * 0.25 },
+        { x: a.x * 0.25 + b.x * 0.75, y: a.y * 0.25 + b.y * 0.75 }
+      );
+    }
+    out = next;
+  }
+  return out;
+}
+
 export class Track {
-  constructor() {
-    this.width = TRACK_WIDTH;
-    this.N = SAMPLE_COUNT;
+  constructor(layout = {}) {
+    this.layout = layout || {};
+    this.width = this.layout.width || TRACK_WIDTH;
+    this.N = this.layout.samples || SAMPLE_COUNT;
     this.build();
   }
 
   build() {
-    // A closed loop built from a modulated ellipse: varied corner radii, no
-    // self-intersections, and a natural rhythm of slow and fast bends.
+    const layout = this.layout;
+    const cx = Number.isFinite(layout.cx) ? layout.cx : WORLD.w / 2;
+    const cy = Number.isFinite(layout.cy) ? layout.cy : WORLD.h / 2;
     const raw = [];
-    const cx = WORLD.w / 2;
-    const cy = WORLD.h / 2;
-    const rx = 880;
-    const ry = 520;
-    const rawCount = 2400;
-    for (let i = 0; i < rawCount; i++) {
-      const th = (i / rawCount) * TAU;
-      const r =
-        1 +
-        0.118 * Math.sin(2 * th + 0.6) +
-        0.062 * Math.sin(3 * th - 1.15) +
-        0.03 * Math.cos(5 * th + 0.3) +
-        0.018 * Math.sin(7 * th + 1.7);
-      raw.push({ x: cx + Math.cos(th) * rx * r, y: cy + Math.sin(th) * ry * r });
+
+    if (Array.isArray(layout.points) && layout.points.length >= 3) {
+      // Builder circuits arrive as a closed list of cell centres. Chaikin
+      // smoothing turns the blocky path into racing corners before the
+      // regular resample pass.
+      let points = layout.points.map((p) => ({ x: p.x, y: p.y }));
+      if (layout.chaikin) points = chaikin(points, layout.chaikin);
+      raw.push(...points);
+    } else {
+      // A closed loop built from a modulated ellipse: varied corner radii, no
+      // self-intersections, and a natural rhythm of slow and fast bends.
+      const rx = Number.isFinite(layout.rx) ? layout.rx : 880;
+      const ry = Number.isFinite(layout.ry) ? layout.ry : 520;
+      const harmonics = Array.isArray(layout.harmonics) ? layout.harmonics : DEFAULT_HARMONICS;
+      const rawCount = layout.rawCount || 2400;
+      for (let i = 0; i < rawCount; i++) {
+        const th = (i / rawCount) * TAU;
+        let r = 1;
+        for (const [freq, amp, phase, cos] of harmonics) {
+          r += amp * (cos ? Math.cos(freq * th + phase) : Math.sin(freq * th + phase));
+        }
+        raw.push({ x: cx + Math.cos(th) * rx * r, y: cy + Math.sin(th) * ry * r });
+      }
     }
 
     let pts = this.resample(raw, this.N);
-    for (let pass = 0; pass < 2; pass++) pts = this.smooth(pts);
+    const smoothPasses = Number.isFinite(layout.smoothPasses) ? layout.smoothPasses : 2;
+    for (let pass = 0; pass < smoothPasses; pass++) pts = this.smooth(pts);
 
     const start = this.straightestIndex(pts, 46);
     this.points = pts.slice(start).concat(pts.slice(0, start));
@@ -79,7 +119,7 @@ export class Track {
     }
     this.curvature = curvature;
 
-    const maxLat = 1750;
+    const maxLat = layout.maxLat || 1750;
     const brakeDecel = 1500;
     const topSpeed = 600;
     const profile = curvature.map((k) =>
@@ -94,7 +134,7 @@ export class Track {
     }
     this.speedProfile = profile;
 
-    // Bounds for the minimap.
+    // Bounds for the minimap and camera framing.
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const p of this.points) {
       minX = Math.min(minX, p.x);
@@ -103,6 +143,12 @@ export class Track {
       maxY = Math.max(maxY, p.y);
     }
     this.bounds = { minX, minY, maxX, maxY };
+    this.world = {
+      minX: minX - 900,
+      minY: minY - 900,
+      maxX: maxX + 900,
+      maxY: maxY + 900,
+    };
 
     this.startAngle = Math.atan2(this.tangents[0].y, this.tangents[0].x);
   }
