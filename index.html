@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#070a12" />
+<meta name="description" content="RC RUSH — a fast, mobile-first RC racing game with 12 circuits, random tracks and dynamic weather." />
+<title>RC RUSH — Micro Racing League</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23070a12'/%3E%3Cpath d='M8 21l3-8 5-3 6 2 2 6-2 4H8z' fill='%23ff4d2e'/%3E%3Ccircle cx='11' cy='22' r='2.4' fill='%2335e6ff'/%3E%3Ccircle cx='22' cy='22' r='2.4' fill='%2335e6ff'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ── SVG sprite ─────────────────────────────────────────────── -->
+<svg class="svg-defs" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="carBody" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="var(--car-color, #ff4d2e)" />
+      <stop offset="0.55" stop-color="var(--car-color, #ff4d2e)" />
+      <stop offset="1" stop-color="var(--car-dark, #8f1208)" />
+    </linearGradient>
+    <linearGradient id="carGlass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d6feff" stop-opacity=".92" />
+      <stop offset=".45" stop-color="#6dd8ee" stop-opacity=".8" />
+      <stop offset="1" stop-color="#112434" stop-opacity=".95" />
+    </linearGradient>
+    <linearGradient id="carMetal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#59616f" />
+      <stop offset="1" stop-color="#171b23" />
+    </linearGradient>
+    <radialGradient id="carGlow">
+      <stop offset="0" stop-color="var(--car-accent, #35e6ff)" stop-opacity=".55" />
+      <stop offset="1" stop-color="var(--car-accent, #35e6ff)" stop-opacity="0" />
+    </radialGradient>
+
+    <symbol id="car-art" viewBox="0 0 620 450">
+      <ellipse cx="310" cy="397" rx="238" ry="35" fill="#000" opacity=".55" />
+      <ellipse cx="310" cy="392" rx="205" ry="26" fill="url(#carGlow)" />
+      <!-- rear wheels -->
+      <g>
+        <rect x="82" y="242" width="92" height="150" rx="30" fill="#0c0e14" />
+        <rect x="92" y="252" width="72" height="130" rx="24" fill="#1c2029" />
+        <rect x="100" y="262" width="56" height="110" rx="20" fill="url(#carMetal)" opacity=".55" />
+        <path d="M104 282h48M104 304h48M104 326h48M104 348h48" stroke="#000" stroke-opacity=".5" stroke-width="6" />
+        <rect x="446" y="242" width="92" height="150" rx="30" fill="#0c0e14" />
+        <rect x="456" y="252" width="72" height="130" rx="24" fill="#1c2029" />
+        <rect x="464" y="262" width="56" height="110" rx="20" fill="url(#carMetal)" opacity=".55" />
+        <path d="M468 282h48M468 304h48M468 326h48M468 348h48" stroke="#000" stroke-opacity=".5" stroke-width="6" />
+      </g>
+      <!-- rear wing -->
+      <g>
+        <rect x="146" y="176" width="328" height="26" rx="9" fill="#11141c" stroke="#39404f" stroke-width="2" />
+        <rect x="158" y="181" width="304" height="8" rx="4" fill="var(--car-accent, #35e6ff)" opacity=".9" />
+        <rect x="188" y="200" width="18" height="42" fill="#171b24" />
+        <rect x="414" y="200" width="18" height="42" fill="#171b24" />
+        <path d="M150 190h318l10 22H140z" fill="#000" opacity=".18" />
+      </g>
+      <!-- chassis / body -->
+      <path d="M140 342 Q132 300 160 262 L196 206 Q214 178 250 170 L370 170 Q406 178 424 206 L460 262 Q488 300 480 342 Q478 366 452 368 L168 368 Q142 366 140 342Z"
+            fill="url(#carBody)" stroke="#2b0b06" stroke-width="3" />
+      <!-- side skirts -->
+      <path d="M136 330 Q130 360 156 373 L206 379 L200 348Z" fill="#151922" />
+      <path d="M484 330 Q490 360 464 373 L414 379 L420 348Z" fill="#151922" />
+      <!-- cockpit -->
+      <path d="M236 182 Q252 152 310 148 Q368 152 384 182 L400 244 Q356 266 310 266 Q264 266 220 244Z"
+            fill="url(#carGlass)" stroke="#071018" stroke-width="4" />
+      <path d="M246 190 Q266 166 310 162 Q354 166 374 190 L380 208 Q350 220 310 220 Q270 220 240 208Z" fill="#bff9ff" opacity=".18" />
+      <path d="M310 162v58" stroke="#071018" stroke-width="3" opacity=".45" />
+      <!-- hood vents -->
+      <path d="M214 268 Q250 282 310 282 Q370 282 406 268" fill="none" stroke="#000" stroke-opacity=".35" stroke-width="5" />
+      <path d="M238 292h144l-10 22h-124z" fill="#000" opacity=".18" />
+      <!-- tail lights -->
+      <g>
+        <rect x="178" y="318" width="78" height="16" rx="7" fill="#ff2b1a" />
+        <rect x="364" y="318" width="78" height="16" rx="7" fill="#ff2b1a" />
+        <rect x="178" y="318" width="78" height="16" rx="7" fill="#ff8d75" opacity=".5" />
+        <rect x="364" y="318" width="78" height="16" rx="7" fill="#ff8d75" opacity=".5" />
+      </g>
+      <!-- number / decal -->
+      <path d="M268 300h84l-8 28h-68z" fill="#0c0f16" opacity=".85" />
+      <text x="310" y="321" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-size="21" fill="#fff">07</text>
+      <!-- exhausts -->
+      <g>
+        <rect x="226" y="350" width="34" height="18" rx="8" fill="#0a0c11" />
+        <rect x="360" y="350" width="34" height="18" rx="8" fill="#0a0c11" />
+        <ellipse cx="243" cy="359" rx="8" ry="5" fill="var(--car-accent, #35e6ff)" opacity=".9" />
+        <ellipse cx="377" cy="359" rx="8" ry="5" fill="var(--car-accent, #35e6ff)" opacity=".9" />
+      </g>
+      <!-- antenna -->
+      <path d="M420 176 Q448 120 470 92" fill="none" stroke="#0b0d12" stroke-width="5" stroke-linecap="round" />
+      <circle cx="470" cy="90" r="8" fill="var(--car-accent, #35e6ff)" />
+      <circle cx="470" cy="90" r="15" fill="var(--car-accent, #35e6ff)" opacity=".22" />
+      <!-- highlights -->
+      <path d="M164 268 Q190 218 230 200" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="7" stroke-linecap="round" />
+      <path d="M456 268 Q430 218 390 200" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="5" stroke-linecap="round" />
+    </symbol>
+
+    <symbol id="i-sound" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8.5c1.3 1 2 2.1 2 3.5s-.7 2.5-2 3.5M18.7 5.8C20.7 7.3 22 9.5 22 12s-1.3 4.7-3.3 6.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-muted" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 9l6 6m0-6l-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1.5" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1.5" fill="currentColor"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z" fill="currentColor"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 4l-8 8 8 8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-map" viewBox="0 0 24 24"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2V6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 4v14M15 6v14" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+    <symbol id="i-car" viewBox="0 0 24 24"><path d="M3 14l2-5 3-2h8l3 2 2 5v4h-3v-2H6v2H3v-4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="7.5" cy="15" r="1.5" fill="currentColor"/><circle cx="16.5" cy="15" r="1.5" fill="currentColor"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.8l1.1 2.4 2.6-.5 1.4 2.3 2.5.8-.2 2.7 1.9 1.9-1.3 2.3.9 2.5-2.3 1.4-.5 2.6-2.6.2-1.7 2-2.3-1.3-2.5.8-1.4-2.2-2.6-.5-.2-2.7-1.9-1.8L4.2 11l-.9-2.5 2.2-1.4.5-2.6 2.7-.2 1.6-2z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" opacity=".8"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9.6 9.2a2.6 2.6 0 0 1 5.1.8c0 1.8-2.7 2-2.7 3.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="17.2" r="1.1" fill="currentColor"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13.5 2L4 14h6.5L9 22l10-13h-6.5L13.5 2z" fill="currentColor"/></symbol>
+    <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0V4z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 5H4v2a4 4 0 0 0 4 4M16 5h4v2a4 4 0 0 1-4 4M12 13v4M8 21h8M9 17h6v4H9z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M14.6 9.2c-.6-.7-1.5-1-2.6-1-1.6 0-2.6.8-2.6 2 0 2.8 5.4 1.2 5.4 4.1 0 1.3-1.1 2.2-2.8 2.2-1.2 0-2.2-.4-2.9-1.2M12 6.5v11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-weather-clear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2" fill="currentColor"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-weather-rain" viewBox="0 0 24 24"><path d="M7 16a4 4 0 0 1-.5-8 5.5 5.5 0 0 1 10.6 1.2A3.4 3.4 0 0 1 17 16H7z" fill="currentColor"/><path d="M8 18.5l-1 2.5M12 18.5l-1 2.5M16 18.5l-1 2.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-weather-storm" viewBox="0 0 24 24"><path d="M7 14a4 4 0 0 1-.5-8 5.5 5.5 0 0 1 10.6 1.2A3.4 3.4 0 0 1 17 14H7z" fill="currentColor"/><path d="M12.5 14l-3.5 5h3l-1.5 4 5-6h-3.2l1.2-3z" fill="currentColor"/></symbol>
+    <symbol id="i-weather-snow" viewBox="0 0 24 24"><path d="M12 3v18M4.2 7.5l15.6 9M19.8 7.5l-15.6 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M9.5 4.5L12 6l2.5-1.5M9.5 19.5L12 18l2.5 1.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-weather-fog" viewBox="0 0 24 24"><path d="M3 8h13M6 12h15M3 16h12M8 20h11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-weather-ash" viewBox="0 0 24 24"><path d="M4 6h9M9 11h11M3 16h9M12 20h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" opacity=".8"/><circle cx="6" cy="19" r="1.3" fill="currentColor"/><circle cx="18" cy="7" r="1.6" fill="currentColor"/><circle cx="14" cy="14" r="1" fill="currentColor"/></symbol>
+    <symbol id="i-weather-dust" viewBox="0 0 24 24"><path d="M3 7h11c2 0 2-3 0-3M3 12h15c2.5 0 2.5 3.5 0 3.5M3 17h9c2 0 2 3 0 3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+    <symbol id="i-weather-solar" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.4" fill="currentColor"/><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 3"/><path d="M12 1.5v2M12 20.5v2M1.5 12h2M20.5 12h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  </defs>
+</svg>
+
+<div id="app">
+  <!-- ambient background for menus -->
+  <div class="ambient" aria-hidden="true">
+    <div class="ambient-grid"></div>
+    <div class="ambient-glow glow-a"></div>
+    <div class="ambient-glow glow-b"></div>
+    <div class="ambient-scan"></div>
+  </div>
+
+  <!-- ══ TITLE ═════════════════════════════════════════════════ -->
+  <section id="screen-title" class="screen is-active" data-screen="title">
+    <header class="title-top">
+      <div class="brand-pill"><span class="live-dot"></span> SEASON 07 <span class="sep">/</span> MICRO RACING LEAGUE</div>
+      <button class="icon-btn" id="btn-sound-title" aria-label="Toggle sound" data-sound-toggle>
+        <svg class="icon"><use href="#i-sound" /></svg>
+      </button>
+    </header>
+
+    <div class="title-hero">
+      <div class="title-copy">
+        <div class="kicker"><span></span> TINY CARS // MASSIVE SPEED</div>
+        <h1 class="logo"><span class="logo-rc">RC</span><span class="logo-rush">RUSH</span></h1>
+        <p class="tagline">Twelve circuits. Random layouts.<br class="br-mobile" /> Weather that fights back.</p>
+        <div class="title-actions">
+          <button id="btn-start" class="btn btn-primary btn-xl">
+            <span>START</span>
+            <svg class="icon"><use href="#i-arrow" /></svg>
+          </button>
+          <button id="btn-title-how" class="btn btn-ghost">HOW TO PLAY</button>
+        </div>
+        <div class="title-stats">
+          <div><b>12</b><span>CIRCUITS</span></div>
+          <div><b>∞</b><span>LAYOUTS</span></div>
+          <div><b>8</b><span>WEATHER FX</span></div>
+          <div><b>3</b><span>LAPS</span></div>
+        </div>
+      </div>
+
+      <div class="title-art">
+        <div class="speed-ring ring-1"></div>
+        <div class="speed-ring ring-2"></div>
+        <div class="title-car">
+          <svg viewBox="0 0 620 450" class="car-svg"><use href="#car-art" /></svg>
+        </div>
+        <div class="title-art-label"><span class="dot"></span> LIVE WEATHER · RANDOM GRID</div>
+      </div>
+    </div>
+
+    <footer class="title-footer">
+      <div class="footer-marquee">
+        <span>NEON ROOFTOPS</span><i>◆</i><span>FROST PEAK</span><i>◆</i><span>MAGMA WORKS</span><i>◆</i><span>ORBITAL RING</span><i>◆</i><span>BAYOU BLACKOUT</span><i>◆</i><span>TOY TURF</span><i>◆</i>
+      </div>
+      <div class="build-tag">BUILD 0.7.2 · MOBILE EDITION</div>
+    </footer>
+  </section>
+
+  <!-- ══ MENU ══════════════════════════════════════════════════ -->
+  <section id="screen-menu" class="screen" data-screen="menu">
+    <header class="menu-header">
+      <div class="menu-brand">
+        <span class="mini-logo">RC<span>RUSH</span></span>
+        <span class="brand-pill small"><span class="live-dot"></span> SEASON 07</span>
+      </div>
+      <div class="header-right">
+        <div class="coin-pill"><svg class="icon"><use href="#i-coin" /></svg><b id="menu-coins">1,240</b></div>
+        <button class="icon-btn" id="btn-sound-menu" aria-label="Toggle sound" data-sound-toggle><svg class="icon"><use href="#i-sound" /></svg></button>
+      </div>
+    </header>
+
+    <div class="menu-body">
+      <div class="menu-main">
+        <div class="menu-intro">
+          <div class="kicker"><span></span> DRIVER CONSOLE</div>
+          <h2>READY TO<br /><em>LAUNCH?</em></h2>
+          <p>Pick a circuit, grab a micro machine and chase the perfect line.</p>
+        </div>
+
+        <button id="btn-quick-race" class="play-tile">
+          <span class="play-tile-copy">
+            <small>QUICK RACE</small>
+            <strong id="menu-circuit-name">NEON ROOFTOPS</strong>
+            <span class="play-tile-meta" id="menu-circuit-meta">RAIN · MEDIUM · RANDOM LAYOUT</span>
+          </span>
+          <span class="play-tile-go"><svg class="icon"><use href="#i-play" /></svg></span>
+        </button>
+
+        <div class="menu-tiles">
+          <button class="menu-tile" data-nav="maps">
+            <svg class="icon tile-icon"><use href="#i-map" /></svg>
+            <span><b>CIRCUITS</b><small>12 locations</small></span>
+            <svg class="icon tile-chev"><use href="#i-chev" /></svg>
+          </button>
+          <button class="menu-tile" data-nav="garage">
+            <svg class="icon tile-icon"><use href="#i-car" /></svg>
+            <span><b>GARAGE</b><small>4 machines</small></span>
+            <svg class="icon tile-chev"><use href="#i-chev" /></svg>
+          </button>
+          <button class="menu-tile" id="btn-menu-how">
+            <svg class="icon tile-icon"><use href="#i-help" /></svg>
+            <span><b>HOW TO PLAY</b><small>60 second briefing</small></span>
+            <svg class="icon tile-chev"><use href="#i-chev" /></svg>
+          </button>
+          <button class="menu-tile" id="btn-menu-settings">
+            <svg class="icon tile-icon"><use href="#i-settings" /></svg>
+            <span><b>SETTINGS</b><small>Audio &amp; records</small></span>
+            <svg class="icon tile-chev"><use href="#i-chev" /></svg>
+          </button>
+        </div>
+      </div>
+
+      <aside class="menu-side">
+        <div class="panel car-panel">
+          <div class="panel-head">
+            <span>YOUR MACHINE</span>
+            <button class="text-btn" data-nav="garage">CHANGE <svg class="icon"><use href="#i-chev" /></svg></button>
+          </div>
+          <div class="car-panel-art">
+            <div class="car-halo"></div>
+            <svg viewBox="0 0 620 450" class="car-svg"><use href="#car-art" /></svg>
+          </div>
+          <div class="car-panel-name"><b id="menu-car-name">STINGER GT</b><span id="menu-car-class">ALL-ROUNDER</span></div>
+          <div class="stat-bars" id="menu-car-stats"></div>
+        </div>
+
+        <div class="panel record-panel">
+          <div class="panel-head"><span>TRACK RECORD</span><svg class="icon accent"><use href="#i-trophy" /></svg></div>
+          <div class="record-row">
+            <div class="record-time" id="menu-best-time">--:--.--</div>
+            <div class="record-meta"><b id="menu-best-map">NO RECORD YET</b><span>PERSONAL BEST</span></div>
+          </div>
+          <div class="record-stripes"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+      </aside>
+    </div>
+
+    <footer class="menu-footer">
+      <span><span class="live-dot"></span> SERVER: ONLINE</span>
+      <span class="desktop-hint">DESKTOP: ARROWS TO STEER · SPACE TO BOOST</span>
+      <span id="menu-version">v0.7.2</span>
+    </footer>
+  </section>
+
+  <!-- ══ MAP SELECT ════════════════════════════════════════════ -->
+  <section id="screen-maps" class="screen" data-screen="maps">
+    <header class="sub-header">
+      <button class="icon-btn back-btn" data-nav="menu" aria-label="Back"><svg class="icon"><use href="#i-back" /></svg></button>
+      <div class="sub-title">
+        <div class="kicker"><span></span> 12 LOCATIONS</div>
+        <h2>SELECT CIRCUIT</h2>
+      </div>
+      <div class="header-right">
+        <span class="random-chip"><svg class="icon"><use href="#i-bolt" /></svg> NEW LAYOUT EVERY RACE</span>
+        <div class="coin-pill"><svg class="icon"><use href="#i-coin" /></svg><b class="coin-value">1,240</b></div>
+      </div>
+    </header>
+
+    <div class="maps-scroll">
+      <div class="map-grid" id="map-grid"></div>
+      <div class="maps-note">
+        <svg class="icon"><use href="#i-bolt" /></svg>
+        Every race rebuilds the circuit from a fresh seed. Learn the corners, not the map.
+      </div>
+    </div>
+
+    <footer class="map-footer">
+      <div class="map-footer-info">
+        <div class="map-footer-thumb" id="map-footer-thumb"></div>
+        <div>
+          <small>SELECTED CIRCUIT</small>
+          <b id="map-footer-name">NEON ROOFTOPS</b>
+          <span id="map-footer-meta">RAIN · ASPHALT · MEDIUM</span>
+        </div>
+      </div>
+      <button id="btn-race" class="btn btn-primary btn-race">
+        <span>RACE</span>
+        <svg class="icon"><use href="#i-arrow" /></svg>
+      </button>
+    </footer>
+  </section>
+
+  <!-- ══ GARAGE ════════════════════════════════════════════════ -->
+  <section id="screen-garage" class="screen" data-screen="garage">
+    <header class="sub-header">
+      <button class="icon-btn back-btn" data-nav="menu" aria-label="Back"><svg class="icon"><use href="#i-back" /></svg></button>
+      <div class="sub-title">
+        <div class="kicker"><span></span> MICRO MACHINES</div>
+        <h2>THE GARAGE</h2>
+      </div>
+      <div class="header-right">
+        <div class="coin-pill"><svg class="icon"><use href="#i-coin" /></svg><b class="coin-value">1,240</b></div>
+      </div>
+    </header>
+    <div class="garage-scroll">
+      <div class="garage-grid" id="garage-grid"></div>
+      <div class="garage-tip"><svg class="icon"><use href="#i-bolt" /></svg> Tip: light cars rotate faster. Heavy cars hold the line in the wet.</div>
+    </div>
+  </section>
+
+  <!-- ══ RACE ══════════════════════════════════════════════════ -->
+  <section id="screen-race" class="screen race-screen" data-screen="race">
+    <canvas id="game" aria-label="RC racing game"></canvas>
+
+    <div class="hud" id="hud">
+      <div class="hud-top">
+        <div class="hud-block lap-block">
+          <small>LAP</small>
+          <div class="hud-lap"><b id="hud-lap">1</b><span>/3</span></div>
+          <div class="lap-dots" id="lap-dots"><i class="on"></i><i></i><i></i></div>
+        </div>
+        <div class="hud-block position-block">
+          <small>POSITION</small>
+          <div class="hud-position"><b id="hud-pos">4</b><span>/4</span></div>
+        </div>
+        <div class="hud-timer">
+          <div class="hud-time" id="hud-time">00:00.00</div>
+          <div class="hud-laptime"><span>LAP</span> <b id="hud-laptime">00:00.00</b></div>
+        </div>
+        <div class="hud-weather" id="hud-weather">
+          <svg class="icon weather-icon"><use href="#i-weather-clear" /></svg>
+          <div><small>WEATHER</small><b id="hud-weather-label">CLEAR</b></div>
+        </div>
+        <button class="icon-btn pause-btn" id="btn-pause" aria-label="Pause"><svg class="icon"><use href="#i-pause" /></svg></button>
+      </div>
+
+      <div class="hud-minimap panel-glass">
+        <canvas id="minimap" width="220" height="220"></canvas>
+        <div class="minimap-label" id="minimap-label">NEON ROOFTOPS</div>
+      </div>
+
+      <div class="hud-speed">
+        <div class="speed-number"><b id="hud-speed">0</b><span>KM/H</span></div>
+        <div class="speed-bar"><i id="speed-fill"></i></div>
+      </div>
+
+      <div class="hud-boost">
+        <div class="boost-head"><span>NITRO</span><b id="boost-pct">100%</b></div>
+        <div class="boost-track"><i id="boost-fill"></i><em></em><em></em><em></em></div>
+      </div>
+
+      <div class="hud-progress"><div class="progress-track"><i id="race-progress"></i></div><span id="progress-label">LAP 1 / 3</span></div>
+
+      <div class="drift-badge" id="drift-badge">DRIFT <b>+NITRO</b></div>
+      <div class="offroad-warn" id="offroad-warn">OFF TRACK</div>
+    </div>
+
+    <div class="race-banner" id="race-banner"><small>WEATHER UPDATE</small><b id="race-banner-text">RAIN INCOMING</b></div>
+    <div class="countdown" id="countdown"><span>3</span></div>
+    <div class="race-flash" id="race-flash"></div>
+
+    <div class="controls" id="controls">
+      <div class="steer-pad">
+        <button class="ctrl-btn steer-btn" data-action="left" aria-label="Steer left">
+          <svg class="icon"><use href="#i-back" /></svg>
+        </button>
+        <button class="ctrl-btn steer-btn" data-action="right" aria-label="Steer right">
+          <svg class="icon" style="transform:rotate(180deg)"><use href="#i-back" /></svg>
+        </button>
+      </div>
+      <div class="pedal-pad">
+        <button class="ctrl-btn brake-btn" data-action="brake" aria-label="Brake"><span>BRAKE</span></button>
+        <button class="ctrl-btn boost-btn" data-action="boost" aria-label="Nitro boost">
+          <svg class="icon"><use href="#i-bolt" /></svg><span>NITRO</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ RESULTS ═══════════════════════════════════════════════ -->
+  <section id="screen-results" class="screen" data-screen="results">
+    <div class="results-wrap">
+      <div class="results-head">
+        <div class="kicker"><span></span> RACE COMPLETE</div>
+        <div class="result-rank" id="result-rank">1<span>ST</span></div>
+        <h2 id="result-title">CLEAN SWEEP.</h2>
+        <p id="result-sub">You owned the rooftop. The weather never stood a chance.</p>
+      </div>
+
+      <div class="results-stats">
+        <div><small>TOTAL TIME</small><b id="result-time">01:24.62</b></div>
+        <div><small>BEST LAP</small><b id="result-best-lap">00:26.91</b></div>
+        <div><small>TOP SPEED</small><b id="result-top-speed">238<em>KM/H</em></b></div>
+        <div><small>REWARD</small><b class="gold" id="result-coins">+320</b></div>
+      </div>
+
+      <div class="panel standings-panel">
+        <div class="panel-head"><span>FINAL STANDINGS</span><span id="result-weather">RAIN</span></div>
+        <div id="standings-list" class="standings-list"></div>
+      </div>
+
+      <div class="results-actions">
+        <button id="btn-race-again" class="btn btn-primary"><span>RACE AGAIN</span><svg class="icon"><use href="#i-bolt" /></svg></button>
+        <button id="btn-results-maps" class="btn btn-ghost">CHANGE CIRCUIT</button>
+        <button id="btn-results-menu" class="btn btn-ghost">MENU</button>
+      </div>
+      <div class="results-hint" id="results-hint">New random layout generated for the next race.</div>
+    </div>
+  </section>
+
+  <div id="modal-root" class="modal-root" aria-live="polite"></div>
+  <div id="toast" class="toast"></div>
+</div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
