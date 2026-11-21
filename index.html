@@ -80,9 +80,26 @@
       </div>
       <div class="title-actions">
         <button id="startBtn" class="btn-primary" type="button">START</button>
+        <button id="quickPlayBtn" class="btn-secondary" type="button">QUICK PLAY</button>
+        <button id="levelsBtn" class="btn-secondary" type="button">LEVELS (1–50)</button>
         <button id="garageBtn" class="btn-secondary" type="button">GARAGE</button>
         <button id="builderBtn" class="btn-secondary" type="button">BUILD TRACK</button>
         <button id="hazardBtn" class="btn-toggle" type="button" aria-pressed="false">Hazards OFF</button>
+      </div>
+
+      <div id="quickPlayPanel" class="mode-panel hidden" aria-label="Quick Play options">
+        <div class="mode-grid">
+          <label>Track layout<select id="quickTrack"><option value="oval">Starter Oval</option><option value="bridge">Figure-8 Bridge</option><option value="stunt">Stunt Circuit</option><option value="curves">Winding S-Curves</option><option value="random">Random Track</option></select></label>
+          <label>Terrain<select id="quickTerrain"><option value="ridge">Sunset Ridge</option><option value="neon">Neon Bay</option><option value="alpine">Alpine Night</option><option value="canyon">Canyon Dawn</option><option value="candy">Candyland</option></select></label>
+          <label>Time<select id="quickTime"><option value="day">Day</option><option value="sunset">Sunset</option><option value="night">Night</option></select></label>
+          <label>Laps<select id="quickLaps"><option>1</option><option selected>2</option><option>3</option></select></label>
+          <label>Stake<select id="quickStake"><option>$0</option><option>$50</option><option>$150</option><option>$300</option></select></label>
+        </div>
+        <div class="mode-actions"><button id="quickBackBtn" class="btn-secondary" type="button">BACK</button><button id="quickStartBtn" class="btn-primary" type="button">RACE NOW</button></div>
+      </div>
+
+      <div id="levelsPanel" class="mode-panel levels-panel hidden" aria-label="Campaign level select">
+        <div id="levelWorlds" class="level-worlds"></div>
       </div>
       <div class="title-controls">
         <div><span class="key-group"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>Drive</div>

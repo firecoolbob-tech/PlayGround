@@ -8,7 +8,7 @@ import { Ramps, autoRampDefs } from './ramps.js';
 import { TrackFeatures, FEATURE_TYPES, FEATURE_INFO } from './features.js';
 import { LOCATIONS, getLocation } from './locations.js';
 
-const LAPS = 3;
+let RACE_LAPS = 3;
 const STEP = 1 / 120;
 
 /* ------------------------------------------------------------------ */
@@ -85,7 +85,7 @@ const gaugeCtx = gaugeCanvas.getContext('2d');
 const miniCanvas = document.getElementById('minimap');
 const miniCtx = miniCanvas.getContext('2d');
 
-lapTotalEl.textContent = String(LAPS);
+lapTotalEl.textContent = String(RACE_LAPS);
 
 /* ------------------------------------------------------------------ */
 /* Track layouts                                                       */
@@ -623,6 +623,8 @@ const garageSave = {
   custom: [],
   upgrades: {},
   explosive: false,
+  highestCampaignLevel: 1,
+  clearedCampaignLevels: [],
 };
 
 const UPGRADE_MAX = 3;
@@ -660,6 +662,69 @@ function buyUpgrade(id, key) {
 }
 
 let selectedLocation = 'ridge';
+let activeRaceMode = 'standard';
+let activeCampaignLevel = null;
+
+const WORLDS = [
+  { name: 'World 1 · Sidewalk Streets', start: 1, end: 12, locations: ['ridge','candy','neon'], times: ['day','sunset'] },
+  { name: 'World 2 · Parkland & Dunes', start: 13, end: 25, locations: ['ridge','canyon','candy','neon'], times: ['day','sunset','night'] },
+  { name: 'World 3 · Rooftop Skyline', start: 26, end: 37, locations: ['neon','candy','ridge','alpine'], times: ['sunset','night'] },
+  { name: 'World 4 · Apex Championship', start: 38, end: 50, locations: ['alpine','neon','canyon','candy','ridge'], times: ['night','sunset','day'] },
+];
+
+function campaignLocation(level) {
+  const world = WORLDS.find((w) => level >= w.start && level <= w.end);
+  return world.locations[(level - world.start) % world.locations.length];
+}
+
+function campaignLayout(level) {
+  const presets = ['oval','curves','bridge','stunt','random'];
+  return presets[(level * 7 + level % 5) % presets.length];
+}
+
+let activeRaceStake = 0;
+
+function layoutLocation(baseLoc, layout, seed = 1) {
+  const layoutPresets = {
+    oval: { rx: 880, ry: 520, width: 208, rampCount: 3 },
+    bridge: { rx: 780, ry: 590, width: 188, rampCount: 5 },
+    stunt: { rx: 820, ry: 470, width: 176, rampCount: 7 },
+    curves: { rx: 960, ry: 430, width: 168, rampCount: 4 },
+    random: { rx: 720 + (seed * 83) % 300, ry: 420 + (seed * 47) % 180, width: 180, rampCount: 3 + seed % 5 },
+  };
+  const preset = layoutPresets[layout] || layoutPresets.oval;
+  const varied = {
+    rx: preset.rx * (0.94 + ((seed % 4) * 0.025)),
+    ry: preset.ry * (0.94 + (((seed + 2) % 4) * 0.025)),
+    width: preset.width,
+  };
+  return { ...baseLoc, id: baseLoc.id, layout: varied, rampCount: preset.rampCount };
+}
+
+function configureTrackLayout(locationId, layout, seed = 1) {
+  const base = getLocation(locationId);
+  const loc = layoutLocation(base, layout, seed);
+  selectedLocation = locationId;
+  swapTrackForLocation(loc);
+  world3d.setLocation(loc);
+}
+
+function campaignLaps(level) { return level >= 38 ? 3 : level >= 26 ? 2 + (level % 2) : 2; }
+
+function renderLevelSelect() {
+  const el = document.getElementById('levelWorlds');
+  if (!el) return;
+  el.innerHTML = WORLDS.map((world) => {
+    let buttons = '';
+    for (let level = world.start; level <= world.end; level++) {
+      const cleared = garageSave.clearedCampaignLevels.includes(level);
+      const unlocked = level <= garageSave.highestCampaignLevel;
+      const status = cleared ? '★ Cleared' : unlocked ? 'Open' : '🔒 Locked';
+      buttons += `<button class="level-btn ${cleared ? 'cleared' : unlocked ? 'open' : 'locked'}" data-level="${level}" ${unlocked ? '' : 'disabled'} title="Level ${level}: ${status}">${level}<br><small>${status}</small></button>`;
+    }
+    return `<section class="level-world"><h3>${world.name}</h3><div class="level-grid">${buttons}</div></section>`;
+  }).join('');
+}
 
 const garage3d = new Garage3D(garageCanvas);
 
@@ -706,6 +771,11 @@ function loadGarage() {
         garageSave.wins = Math.max(0, Number(data.wins) || 0);
         garageSave.credits = Math.max(0, Number(data.credits) || 0);
         garageSave.explosive = Boolean(data.explosive);
+        garageSave.highestCampaignLevel = Math.max(1, Math.min(50, Number(data.highestCampaignLevel) || 1));
+        if (Array.isArray(data.clearedCampaignLevels)) {
+          garageSave.clearedCampaignLevels = data.clearedCampaignLevels
+            .map((n) => Number(n)).filter((n) => Number.isInteger(n) && n >= 1 && n <= 50);
+        }
         if (data.upgrades && typeof data.upgrades === 'object') {
           for (const spec of PLAYER_CARS) {
             const saved = data.upgrades[spec.id];
@@ -885,7 +955,7 @@ function applyLocationUI() {
   const loc = getLocation(selectedLocation);
   titleKicker.textContent = `3D arcade racing · ${loc.tag}`;
   titleTagline.textContent = loc.blurb;
-  titleFoot.textContent = `${loc.name} · 3 LAPS · 4 DRIVERS`;
+  titleFoot.textContent = `${loc.name} · ${RACE_LAPS} LAP${RACE_LAPS === 1 ? '' : 'S'} · 4 DRIVERS`;
   renderTrackList();
 }
 
@@ -1149,9 +1219,22 @@ function recordRaceResult(pos) {
     garageSave.credits += 90;
   }
   const unlocked = unlockNewCars();
+  if (activeRaceMode === 'quick' && activeRaceStake > 0) {
+    garageSave.credits -= activeRaceStake;
+    if (pos === 1) garageSave.credits += activeRaceStake * 2;
+  }
+  if (pos === 1 && activeRaceMode === 'campaign' && activeCampaignLevel) {
+    const level = activeCampaignLevel;
+    if (!garageSave.clearedCampaignLevels.includes(level)) garageSave.clearedCampaignLevels.push(level);
+    if (level >= garageSave.highestCampaignLevel && level < 50) {
+      garageSave.highestCampaignLevel = level + 1;
+    }
+    garageSave.credits += 150 + level * 8;
+  }
   saveGarage();
   renderGarage();
   renderTrackList();
+  renderLevelSelect();
   return unlocked;
 }
 
@@ -1398,8 +1481,9 @@ function startRace() {
   state.countdown = 3.0;
   state.lastCount = 3;
   state.attract = track.length * 0.32;
+  lapTotalEl.textContent = String(RACE_LAPS);
   hud.classList.add('live');
-  showBanner(`${loc.name} · 3 LAPS`, 2.4);
+  showBanner(`${loc.name} · ${RACE_LAPS} LAP${RACE_LAPS === 1 ? '' : 'S'}`, 2.4);
   showCountdown('3');
   audio.countdown(3);
 }
@@ -1610,6 +1694,62 @@ trackListEl.addEventListener('click', (event) => {
   const card = event.target.closest('[data-track]');
   if (card) selectLocation(card.dataset.track);
 });
+
+const quickPlayBtn = document.getElementById('quickPlayBtn');
+const levelsBtn = document.getElementById('levelsBtn');
+const quickPlayPanel = document.getElementById('quickPlayPanel');
+const levelsPanel = document.getElementById('levelsPanel');
+
+quickPlayBtn?.addEventListener('click', () => {
+  quickPlayPanel.classList.toggle('hidden');
+  levelsPanel.classList.add('hidden');
+});
+document.getElementById('quickBackBtn')?.addEventListener('click', () => quickPlayPanel.classList.add('hidden'));
+levelsBtn?.addEventListener('click', () => {
+  renderLevelSelect();
+  levelsPanel.classList.toggle('hidden');
+  quickPlayPanel.classList.add('hidden');
+});
+
+document.getElementById('quickStartBtn')?.addEventListener('click', () => {
+  const layoutSelect = document.getElementById('quickTrack');
+  const terrainSelect = document.getElementById('quickTerrain');
+  const timeSelect = document.getElementById('quickTime');
+  const lapsSelect = document.getElementById('quickLaps');
+  const stakeSelect = document.getElementById('quickStake');
+  const layout = layoutSelect?.value === 'random' ? ['oval','bridge','stunt','curves'][Math.floor(Math.random() * 4)] : (layoutSelect?.value || 'oval');
+  let locationId = terrainSelect?.value || 'ridge';
+  if (!LOCATIONS.some((loc) => loc.id === locationId)) locationId = 'ridge';
+  activeRaceMode = 'quick';
+  activeCampaignLevel = null;
+  RACE_LAPS = Number(lapsSelect?.value) || 3;
+  activeRaceStake = Number(String(stakeSelect?.value || '$0').replace(/[^0-9]/g, ''));
+  configureTrackLayout(locationId, layout, Math.floor(Math.random() * 100));
+  const loc = getLocation(locationId);
+  if (timeSelect?.value === 'night') loc.night = true;
+  if (timeSelect?.value === 'day') loc.night = false;
+  quickPlayPanel.classList.add('hidden');
+  startRace();
+});
+
+levelsPanel?.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-level]');
+  if (!button || button.disabled) return;
+  const level = Number(button.dataset.level);
+  if (level > garageSave.highestCampaignLevel) return;
+  activeRaceMode = 'campaign';
+  activeCampaignLevel = level;
+  RACE_LAPS = campaignLaps(level);
+  activeRaceStake = 0;
+  const world = WORLDS.find((w) => level >= w.start && level <= w.end);
+  const locationId = campaignLocation(level);
+  const time = world.times[(level - world.start) % world.times.length];
+  configureTrackLayout(locationId, campaignLayout(level), level);
+  const loc = getLocation(locationId);
+  loc.night = time === 'night';
+  levelsPanel.classList.add('hidden');
+  startRace();
+});
 garageScreen.addEventListener('click', (event) => {
   if (event.target === garageScreen) closeGarage();
 });
@@ -1726,12 +1866,12 @@ function updateProgress() {
         if (car.bestLap === null || lapTime < car.bestLap) car.bestLap = lapTime;
       }
       car.lapStart = state.raceTime;
-      if (car.isPlayer && car.laps < LAPS) {
-        if (car.laps === LAPS - 1) showBanner('FINAL LAP', 2.4);
-        else showBanner(`LAP ${car.laps + 1} / ${LAPS}`, 1.5);
+      if (car.isPlayer && car.laps < RACE_LAPS) {
+        if (car.laps === RACE_LAPS - 1) showBanner('FINAL LAP', 2.4);
+        else showBanner(`LAP ${car.laps + 1} / ${RACE_LAPS}`, 1.5);
         audio.beep(720, 0.1, 'triangle', 0.05);
       }
-      if (car.laps >= LAPS) {
+      if (car.laps >= RACE_LAPS) {
         finishCar(car);
         break;
       }
@@ -2080,7 +2220,7 @@ function updateHud(dt, force = false) {
   if (!force && state.hudAccum < 0.06) return;
   state.hudAccum = 0;
 
-  const lap = clamp(playerCar.laps + 1, 1, LAPS);
+  const lap = clamp(playerCar.laps + 1, 1, RACE_LAPS);
   setText(lapNowEl, String(lap));
   setText(posNowEl, String(playerPosition()));
 
