@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#101611" />
+  <title>DIRT CIRCUIT — Stock Car Showdown</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="game-shell">
+    <canvas id="game" aria-label="Top down dirt stock car race"></canvas>
+    <div class="vignette"></div>
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Dirt Circuit home"><span class="brand-mark">DC</span><span>DIRT<span class="brand-light">CIRCUIT</span></span></a>
+      <div class="event-label"><i></i> OPEN TRACK SERIES <b>·</b> ROUND 04</div>
+      <button class="sound-button" id="soundBtn" aria-label="Toggle sound"><span class="sound-icon">◖))</span><span>SOUND ON</span></button>
+    </header>
+    <section class="race-hud" id="raceHud" aria-live="polite">
+      <div class="hud-card position-card"><span class="hud-kicker">POSITION</span><div><strong id="position">06</strong><small> / 12</small></div><span class="place-change" id="placeChange">GRID START</span></div>
+      <div class="hud-card lap-card"><span class="hud-kicker">LAP</span><div><strong id="lap">01</strong><small> / 03</small></div><div class="lap-progress"><i id="lapProgress"></i></div></div>
+      <div class="race-clock"><span class="clock-dot"></span><span id="timer">00:00.0</span><small>RACE TIME</small></div>
+      <div class="speed-card"><div class="speed-readout"><strong id="speed">000</strong><span>MPH</span></div><div class="speed-bar"><i id="speedBar"></i></div><span class="surface-label" id="surfaceLabel">DIRT / GRIP 84%</span></div>
+    </section>
+    <div class="track-label" id="trackLabel"><span class="track-label-dot"></span><span>RED ROCK OVAL</span><small>DIRT</small></div>
+    <div class="countdown" id="countdown" aria-live="assertive"></div>
+    <div class="controls-hint" id="controlsHint"><span class="keycap">W</span><span class="keycap">A</span><span class="keycap">S</span><span class="keycap">D</span><span>DRIVE</span><b>·</b><span class="keycap keycap-wide">SPACE</span><span>HANDBRAKE</span></div>
+    <div class="touch-controls" id="touchControls">
+      <div class="touch-steer"><button data-control="left" aria-label="Steer left">◀</button><button data-control="right" aria-label="Steer right">▶</button></div>
+      <div class="touch-pedals"><button data-control="brake" aria-label="Brake">BRAKE</button><button data-control="gas" aria-label="Accelerate">GAS</button></div>
+    </div>
+    <section class="overlay menu-overlay" id="menuOverlay">
+      <div class="menu-content">
+        <div class="eyebrow"><span class="eyebrow-line"></span> BUILT TO BUMP. BORN TO RACE.</div>
+        <h1>DIRT<br><span>CIRCUIT</span></h1>
+        <p class="hero-copy">Twelve cars. Three laps. One way through.</p>
+        <div class="track-pick-label">CHOOSE YOUR CIRCUIT <span>01 — 02</span></div>
+        <div class="track-options">
+          <button class="track-option selected" data-track="dirt">
+            <span class="track-thumb dirt-thumb"><i></i></span><span class="track-info"><b>RED ROCK OVAL</b><small>PACKED DIRT · FAST &amp; LOOSE</small></span><span class="checkmark">✓</span>
+          </button>
+          <button class="track-option" data-track="mud">
+            <span class="track-thumb mud-thumb"><i></i></span><span class="track-info"><b>BLACKWATER BOWL</b><small>DEEP MUD · HEAVY &amp; WILD</small></span><span class="checkmark">✓</span>
+          </button>
+        </div>
+        <button class="start-button" id="startButton"><span>START YOUR ENGINE</span><b>↗</b></button>
+        <div class="menu-foot"><span>12-CAR STOCK CAR SCRAMBLE</span><span>WASD / ARROWS TO DRIVE</span></div>
+      </div>
+      <div class="menu-stats"><div><strong>12</strong><span>DRIVERS</span></div><div><strong>03</strong><span>LAPS</span></div><div><strong>01</strong><span>WINNER</span></div></div>
+    </section>
+    <section class="overlay result-overlay hidden" id="resultOverlay">
+      <div class="result-card"><div class="eyebrow"><span class="eyebrow-line"></span> CHECKERED FLAG</div><h2 id="resultTitle">RACE COMPLETE</h2><p id="resultCopy">You left it all on the track.</p><div class="result-stats"><div><span>FINISH</span><b id="resultPosition">06 / 12</b></div><div><span>TIME</span><b id="resultTime">00:00.0</b></div><div><span>BEST LAP</span><b id="bestLap">00:00.0</b></div></div><button class="start-button" id="againButton"><span>RACE AGAIN</span><b>↗</b></button><button class="back-button" id="menuButton">CHANGE CIRCUIT</button></div>
+    </section>
+    <div class="toast" id="toast"></div>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>
