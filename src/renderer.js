@@ -121,78 +121,106 @@ export class Renderer {
     const w = this.w, h = this.h;
     const loc = this.location;
     const wp = race.weather.params();
-    const horizon = h * 0.5;
     const ratio = race.speedRatio || 0;
-    const fogColor = mix(loc.fog, wp.tint, wp.tintAlpha * 0.62);
-    this.wet = (wp.id === 'rain' || wp.id === 'storm') ? 1 : 0;
-
-    const steer = race.input ? race.input.steer : 0;
-    const carW = clamp(Math.min(w * 0.34, h * 0.30), 118, 232);
-    const carBase = h - clamp(h * 0.16, 96, 152);
-    const carX = w * 0.5 + steer * w * 0.016;
-    const carRot = steer * 0.075 + (race.curveVisual || 0) * 0.02;
-
-    this.bgScroll += race.speed * dt * 0.012 + steer * dt * 22;
-    this._updateSmoke(race, dt, carX, carBase, carW, now);
-    this._updateParticles(race, dt, wp, ratio, now);
-
-    const shake = race.shake || 0;
-    const shx = Math.sin(now * 61) * shake * 9 + Math.sin(now * 23) * shake * 4;
-    const shy = Math.cos(now * 53) * shake * 7 + Math.cos(now * 31) * shake * 3;
 
     ctx.save();
-    ctx.translate(shx, shy);
+    ctx.fillStyle = loc.ground || '#24351f';
+    ctx.fillRect(0, 0, w, h);
 
-    this._drawSky(race, wp, now, horizon, fogColor);
-    this._drawBackdrop(race, horizon);
-    this._drawGround(horizon, fogColor);
+    // Top-down view: keep the road centered on the player and rotate it into
+    // the direction of travel. The existing segment/AI distances remain the
+    // source of truth, so the race simulation is unchanged.
+    const path = race.track.minimap;
+    const progress = ((race.trackPos / race.track.length) * (path.length - 1));
+    const i = Math.floor(progress);
+    const t = progress - i;
+    const p1 = path[i % path.length];
+    const p2 = path[(i + 1) % path.length];
+    const px = mix(p1.x, p2.x, t);
+    const py = mix(p1.y, p2.y, t);
 
-    const depth = 0.9 - (race.boosting ? 0.055 : 0) - ratio * 0.006;
-    const playerZ = CAMERA_HEIGHT * depth;
-    const pos = race.trackPos;
-    const playerSeg = race.track.segments[Math.floor(((pos + playerZ) % race.track.length) / race.track.segmentLength) % race.track.total];
-    const playerPct = ((pos + playerZ) % race.track.segmentLength) / race.track.segmentLength;
-    const playerY = interpolate(playerSeg.p1.world.y, playerSeg.p2.world.y, playerPct);
+    const cx = w * 0.5;
+    const cy = h * 0.56;
+    const scale = Math.min(w, h) * 1.16;
 
-    const { projected, sprites } = this._drawRoad(race, wp, now, depth, playerY, fogColor, horizon);
+    let heading = 0;
+    if (i + 2 < path.length) {
+      const ahead = path[Math.min(path.length - 1, i + 2)];
+      heading = Math.atan2(ahead.y - p1.y, ahead.x - p1.x);
+    }
+
+    ctx.translate(cx, cy);
+    ctx.rotate(-heading + Math.PI / 2);
+    ctx.translate(-px * scale, -py * scale);
+
+    // scenery grid
+    ctx.globalAlpha = 0.18;
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1;
+    const grid = 54;
+    const left = px * scale - w * 1.5;
+    const top = py * scale - h * 1.5;
+    ctx.beginPath();
+    for (let gx = -((left % grid)); gx < w * 3; gx += grid) {
+      ctx.moveTo(gx + left - w, top - h); ctx.lineTo(gx + left - w, top + h * 3);
+    }
+    for (let gy = -((top % grid)); gy < h * 3; gy += grid) {
+      ctx.moveTo(left - w, gy + top - h); ctx.lineTo(left + w * 3, gy + top - h);
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // road
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    path.forEach((p, n) => {
+      const x = p.x * scale, y = p.y * scale;
+      if (n === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    ctx.strokeStyle = '#252a31';
+    ctx.lineWidth = Math.max(34, scale * 0.11);
+    ctx.stroke();
+    ctx.strokeStyle = '#4a5058';
+    ctx.lineWidth = Math.max(24, scale * 0.075);
+    ctx.stroke();
+
+    // edge lines and lane markings
+    ctx.setLineDash([scale * 0.018, scale * 0.018]);
+    ctx.lineDashOffset = -(race.trackPos / race.track.segmentLength) * scale * 0.018;
+    ctx.strokeStyle = 'rgba(255,255,255,.72)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.setLineDash([]);
 
     // opponents
     for (const ai of race.ai) {
-      const idx = Math.floor((ai.distance % race.track.length) / race.track.segmentLength) % race.track.total;
-      const proj = projected.get(idx);
-      if (!proj) continue;
-      const unit = proj.p1.scale * h * 0.5;
-      const cw = unit * 940;
-      if (cw < 3 || cw > 600) continue;
-      sprites.push({
-        n: proj.n,
-        kind: 'car',
-        ai,
-        fog: proj.fog,
-        x: proj.p1.x + ai.x * proj.p1.w,
-        y: proj.p1.y,
-        w: cw
-      });
+      const ap = (ai.distance % race.track.length) / race.track.length;
+      const aiIndex = ap * (path.length - 1);
+      const aiI = Math.floor(aiIndex);
+      const aiT = aiIndex - aiI;
+      const a1 = path[aiI % path.length];
+      const a2 = path[(aiI + 1) % path.length];
+      const ax = mix(a1.x, a2.x, aiT) * scale;
+      const ay = mix(a1.y, a2.y, aiT) * scale;
+      drawOpponent(ctx, ax, ay, Math.max(18, scale * 0.035), ai, 0, now);
     }
 
-    sprites.sort((a, b) => b.n - a.n);
-    for (const s of sprites) {
-      if (s.kind === 'prop') {
-        drawProp(ctx, s.prop, s.x, s.y, s.unit, loc, s.fog, fogColor, now, s.roadPx);
-      } else {
-        drawOpponent(ctx, s.x, s.y, s.w, s.ai, s.fog, now);
-      }
-    }
-
-    this._drawSmoke();
-    this._drawPlayer(race, carX, carBase, carW, carRot, now);
-    this._drawFog(wp, horizon, fogColor);
-    this._drawParticles(wp, now);
-    this._drawLightning(race, wp);
-    this._drawSpeedLines(ratio, race.boosting, now);
-
+    // player at center after the track transform
     ctx.restore();
 
+    const steer = race.input ? race.input.steer : 0;
+    const carW = clamp(Math.min(w * 0.16, h * 0.18), 38, 76);
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(steer * 0.12);
+    this._drawPlayer(race, 0, 0, carW, steer * 0.075, now);
+    ctx.restore();
+
+    // Weather tint and speed effects remain lightweight in top-down mode.
+    ctx.fillStyle = rgba(wp.tint, wp.tintAlpha * 0.28);
+    ctx.fillRect(0, 0, w, h);
     this._drawVignette(race, ratio);
   }
 
