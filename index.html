@@ -1,78 +1,636 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#07111d">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#06111d">
+<meta name="description" content="Pitlane — an idle racing, tuning, card-collecting championship game with 21 glossy tracks.">
 <title>Pitlane — Idle Racing Club</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2363f0c1'/%3E%3Cpath d='M14 42 32 12l18 30-18-8z' fill='%23071622'/%3E%3C/svg%3E">
 <style>
-:root{color-scheme:dark;--bg:#07111d;--panel:#0d1b2a;--line:#1d3043;--muted:#8da3b8;--mint:#63f0c1;--gold:#ffca6a;--cyan:#68d9ff}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 68% -10%,#15304a 0,transparent 42%),var(--bg);color:#eaf3fb;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif}button{font:inherit;cursor:pointer}button:disabled{opacity:.42;cursor:not-allowed}.shell{max-width:1440px;margin:auto;padding:20px 26px}.topbar{height:56px;display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}.brand{display:flex;align-items:center;gap:11px;font-weight:850;font-size:19px;letter-spacing:-.04em}.brandmark{width:37px;height:37px;border-radius:12px;background:linear-gradient(145deg,#76f3cd,#20a9ac);display:grid;place-items:center;color:#071b23;box-shadow:0 6px 26px #45e6bc42}.brand small{display:block;color:#8195a8;font-size:9px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;margin-top:1px}.pills{display:flex;gap:10px}.pill,.iconbtn{background:#0d1b2a;border:1px solid #203448;border-radius:12px;padding:8px 13px;color:#dceaf5;font-size:12px;font-weight:700;display:flex;align-items:center;gap:8px}.pill b{font-size:13px}.pill.cash b{color:var(--mint)}.pill.trophy b{color:var(--gold)}.profile{width:36px;height:36px;border-radius:50%;background:#213b4d;display:grid;place-items:center;color:#8cebd0;font-size:13px;font-weight:800;border:1px solid #3a5b6d}.layout{display:grid;grid-template-columns:minmax(0,1fr) 315px;gap:18px}.maincol,.sidecol{min-width:0}.hero{height:390px;border:1px solid #263d51;border-radius:20px;overflow:hidden;position:relative;background:#102234;box-shadow:0 20px 65px #0005}.hero canvas{width:100%;height:100%;display:block}.scene-top{position:absolute;left:20px;top:17px;display:flex;gap:8px;align-items:center}.live{border-radius:8px;background:#d94f5c1f;color:#ff8790;border:1px solid #d94f5c5c;padding:6px 9px;font-size:9px;letter-spacing:.12em;font-weight:900}.trackname{font-size:12px;font-weight:750;color:#e3eff7;text-shadow:0 2px 6px #000}.scene-controls{position:absolute;right:17px;top:15px;display:flex;gap:6px}.scene-controls button{border:1px solid #ffffff24;background:#0a1828b8;color:#dcebf7;border-radius:8px;padding:7px 10px;font-size:10px;font-weight:800;backdrop-filter:blur(8px)}.scene-controls button.active{background:#59e8bd;color:#06241e;border-color:#59e8bd}.race-bottom{position:absolute;inset:auto 0 0;padding:62px 20px 17px;background:linear-gradient(0deg,#07111df2,transparent);display:flex;align-items:end;justify-content:space-between}.race-title h1{font-size:28px;line-height:1;margin:0 0 8px;letter-spacing:-.04em}.race-title p{margin:0;color:#a6bac9;font-size:11px}.race-title strong{color:var(--mint)}.lapbox{text-align:right}.lapbox span{display:block;font-size:9px;letter-spacing:.14em;color:#9eb2c2;font-weight:800}.lapbox b{font-size:20px}.speed-row{display:flex;gap:5px;margin-top:7px;justify-content:flex-end}.speed-row button{background:#15283a;border:1px solid #2d4559;border-radius:6px;padding:5px 9px;color:#c5d5e0;font-size:10px;font-weight:800}.speed-row button.active{background:#c9ffe9;color:#09241c;border-color:#c9ffe9}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}.stat{padding:13px 15px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(145deg,#0f2030,#0a1724)}.stat .label{font-size:9px;text-transform:uppercase;letter-spacing:.13em;color:#7890a4;font-weight:800}.stat strong{font-size:18px;display:block;margin-top:4px;letter-spacing:-.03em}.stat small{font-size:10px;color:#7f9caf}.mint{color:var(--mint)}.gold{color:var(--gold)}.section-head{display:flex;justify-content:space-between;align-items:center;margin:20px 1px 10px}.section-head h2{margin:0;font-size:15px;letter-spacing:-.02em}.section-head span{font-size:10px;color:#849caf}.tabs{display:flex;gap:6px;overflow:auto;padding:3px 0 8px}.tab{white-space:nowrap;border:1px solid transparent;background:transparent;color:#8197a9;font-size:11px;font-weight:750;padding:9px 13px;border-radius:9px}.tab.active{color:#bcffe7;background:#143328;border-color:#1d5545}.panel{background:#0c1926;border:1px solid #1c3041;border-radius:16px;padding:16px}.sidecol .panel{margin-bottom:13px}.panel-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px}.panel-title h3{margin:0;font-size:13px}.panel-title span{font-size:9px;color:#7f95a8}.progress{height:5px;background:#1a2c3c;border-radius:9px;overflow:hidden}.progress i{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,#35bb9d,#83f7cf);width:40%}.champ-card{padding:13px;border-radius:12px;background:linear-gradient(110deg,#182b3a,#122331);border:1px solid #263c4e;margin-bottom:8px}.champ-card.active{border-color:#47d9ae77;background:linear-gradient(110deg,#15352e,#112934)}.champ-head{display:flex;justify-content:space-between;align-items:center}.champ-head b{font-size:11px}.badge{font-size:8px;font-weight:900;letter-spacing:.07em;padding:4px 6px;border-radius:5px;background:#1f3547;color:#9eb1c0}.badge.open{background:#123d32;color:#80ebc5}.champ-card p{font-size:9px;color:#8ea4b6;margin:7px 0 10px}.btn{border:0;border-radius:8px;padding:9px 12px;background:linear-gradient(120deg,#73efc3,#38cfa5);color:#06241c;font-size:10px;font-weight:900}.btn.secondary{border:1px solid #2b4355;background:#16293a;color:#c5d7e3}.btn.tiny{padding:7px 10px}.btn.goldbtn{background:linear-gradient(120deg,#ffd989,#eea842);color:#2c200b}.smallrow{display:flex;align-items:center;justify-content:space-between;gap:10px}.muted{color:#8299ab;font-size:10px}.subtle{font-size:9px;color:#71889b}.row{display:flex;gap:8px;align-items:center}.divider{height:1px;background:#1c3041;margin:13px 0}.view{display:none}.view.active{display:block}.upgrade-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.upgrade-card{background:#102131;border:1px solid #20394c;border-radius:13px;padding:13px}.upgrade-card h4{margin:0 0 4px;font-size:12px}.upgrade-card p{margin:0 0 9px;font-size:9px;color:#8199ab}.upgrade-actions{display:flex;gap:5px;align-items:center}.upgrade-actions .btn{flex:1;padding:8px 4px}.pack-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.pack-card{border:1px solid #243b4e;background:linear-gradient(145deg,#15283a,#0e1c2a);border-radius:14px;padding:14px;text-align:center;position:relative;overflow:hidden}.pack-icon{height:73px;width:62px;margin:2px auto 10px;border-radius:10px 10px 14px 14px;display:grid;place-items:center;font-size:27px;background:linear-gradient(145deg,var(--pack1),var(--pack2));box-shadow:0 10px 28px color-mix(in srgb,var(--pack2),transparent 65%),inset 0 1px 2px #ffffff90;transform:skewY(-4deg)}.pack-card h3{font-size:11px;margin:0 0 4px}.pack-card p{margin:0 0 10px;color:#8298aa;font-size:9px}.pack-card .row{justify-content:center;flex-wrap:wrap}.world-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.world-card{min-height:91px;border:1px solid #23394b;border-radius:12px;padding:11px;background:linear-gradient(145deg,#122538,#0c1925);position:relative;overflow:hidden}.world-card::after{content:"";position:absolute;right:-20px;bottom:-38px;width:100px;height:75px;border-radius:50%;background:var(--world);filter:blur(22px);opacity:.2}.world-card h4{margin:7px 0 4px;font-size:10px;position:relative;z-index:1}.world-card span{font-size:8px;color:#8499aa;position:relative;z-index:1}.world-card button{position:absolute;right:8px;top:8px;border:0;background:#112130b9;color:#c2d2de;border-radius:6px;padding:4px 6px;font-size:8px;z-index:2}.world-card.locked{opacity:.52;filter:saturate(.6)}.garage-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.car-card{border:1px solid #22384a;background:#102131;border-radius:13px;padding:11px;position:relative}.car-art{height:68px;border-radius:9px;background:linear-gradient(145deg,#1d3445,#0d1c29);display:grid;place-items:center;margin-bottom:9px;font-size:30px;position:relative;overflow:hidden}.car-art::after{content:"";position:absolute;bottom:7px;width:70px;height:10px;background:#9eead550;filter:blur(7px);border-radius:50%}.car-card h4{font-size:10px;margin:0 0 4px}.car-card p{font-size:8px;color:#8298aa;margin:0 0 7px}.car-card .star{position:absolute;top:7px;right:8px;color:#ffce6b;font-size:10px}.rarity{font-size:8px;color:#8ca3b5}.toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,25px);opacity:0;pointer-events:none;background:#d8fff1;color:#0b3025;padding:11px 16px;border-radius:10px;font-size:11px;font-weight:800;z-index:30;box-shadow:0 12px 40px #0008;transition:.25s}.toast.show{opacity:1;transform:translate(-50%,0)}.modal{position:fixed;inset:0;display:none;place-items:center;background:#030a10c9;backdrop-filter:blur(10px);z-index:20;padding:18px}.modal.show{display:grid}.modal-card{width:min(440px,100%);background:linear-gradient(145deg,#172b3b,#0b1722);border:1px solid #426078;border-radius:20px;padding:25px;text-align:center;box-shadow:0 30px 100px #000a}.modal-card h2{font-size:24px;margin:0 0 8px}.reveal-card{margin:20px auto;padding:24px;border:1px solid #48977f;border-radius:15px;background:linear-gradient(135deg,#164331,#10283a);animation:pop .5s ease both}.reveal-card .emoji{font-size:50px}.reveal-card strong{display:block;font-size:18px;margin-top:8px}@keyframes pop{from{transform:scale(.55) rotate(-8deg);opacity:0}to{transform:scale(1);opacity:1}}.footer{margin-top:16px;color:#60788a;font-size:9px;text-align:center}@media(max-width:980px){.layout{grid-template-columns:1fr}.sidecol{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.sidecol .panel{margin-bottom:0}.hero{height:350px}}@media(max-width:620px){.shell{padding:12px}.topbar{margin-bottom:12px}.pills{gap:5px}.pill{padding:7px 8px;font-size:10px}.pill span{display:none}.layout{gap:12px}.hero{height:330px}.scene-controls{top:52px;left:14px;right:auto}.race-bottom{padding:55px 14px 14px}.race-title h1{font-size:22px}.stats{grid-template-columns:repeat(2,1fr);gap:7px}.stat{padding:10px}.stat strong{font-size:16px}.sidecol{grid-template-columns:1fr}.upgrade-grid{grid-template-columns:1fr}.pack-grid{grid-template-columns:repeat(2,1fr)}.world-grid{grid-template-columns:repeat(2,1fr)}.garage-grid{grid-template-columns:repeat(2,1fr)}}
+:root{color-scheme:dark;--bg:#06111d;--panel:#0b1a29;--panel2:#0f2233;--line:#1c3346;--line2:#2a4a60;--text:#eaf5fc;--muted:#8ba4b8;--dim:#60798c;--mint:#63f0c1;--gold:#ffca6a;--pink:#ff7aa8;--cyan:#68d9ff;--violet:#b48cff;--danger:#ff7b86;--r:16px}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 70% -10%,#153a52 0,transparent 45%),radial-gradient(ellipse at 0 100%,#0e2a2a 0,transparent 40%),var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}button:disabled{opacity:.45;cursor:not-allowed}button:focus-visible,a:focus-visible{outline:2px solid var(--mint);outline-offset:2px}h1,h2,h3,h4,p{margin:0}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.shell{max-width:1440px;margin:0 auto;padding:22px 26px 44px}.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap}.brand{display:flex;align-items:center;gap:12px;font-weight:900;font-size:20px;letter-spacing:-.045em}.brandmark{width:40px;height:40px;border-radius:13px;background:linear-gradient(145deg,#7af7d0,#1da6a8);display:grid;place-items:center;color:#061b23;box-shadow:0 8px 30px #45e6bc45;font-size:18px}.brand small{display:block;color:#8195a8;font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;font-weight:800;margin-top:2px}.pills{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.pill{background:#0b1a29;border:1px solid #20394d;border-radius:12px;padding:8px 12px;color:#dceaf5;font-size:11px;font-weight:750;display:flex;align-items:center;gap:7px;white-space:nowrap}.pill b{font-size:12.5px;letter-spacing:-.02em}.pill.cash b{color:var(--mint)}.pill.trophy b{color:var(--gold)}.pill.wrench b{color:var(--violet)}.profile{width:38px;height:38px;border-radius:50%;background:#213b4d;display:grid;place-items:center;color:#8cebd0;font-size:16px;border:1px solid #3a5b6d}.iconbtn{width:38px;height:38px;border:1px solid #20394d;border-radius:12px;background:#0b1a29;display:grid;place-items:center;font-size:14px;color:#b9cbda}.iconbtn.on{color:#06241e;background:var(--mint);border-color:var(--mint)}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:18px;align-items:start}.maincol,.sidecol{min-width:0}.hero{position:relative;height:400px;border:1px solid #29465b;border-radius:22px;overflow:hidden;background:#0a1a2a;box-shadow:0 24px 70px #0006}.hero canvas{width:100%;height:100%;display:block}.scene-top{position:absolute;left:18px;top:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;max-width:60%}.live{border-radius:8px;background:#d94f5c22;color:#ff9aa2;border:1px solid #d94f5c66;padding:6px 9px;font-size:8.5px;letter-spacing:.13em;font-weight:900;display:flex;align-items:center;gap:5px;backdrop-filter:blur(8px)}.live i{width:5px;height:5px;border-radius:50%;background:#ff7b86;box-shadow:0 0 8px #ff7b86;animation:pulse 1.4s infinite}.track-chip{font-size:11px;font-weight:800;color:#e5f2fa;text-shadow:0 2px 8px #000;background:#07152285;border:1px solid #ffffff1c;border-radius:8px;padding:6px 9px;backdrop-filter:blur(8px)}.scene-controls{position:absolute;right:15px;top:13px;display:flex;gap:6px}.scene-controls button{border:1px solid #ffffff26;background:#081725c4;color:#dcebf7;border-radius:8px;padding:7px 10px;font-size:9px;font-weight:900;letter-spacing:.04em;backdrop-filter:blur(8px)}.scene-controls button.on{background:var(--mint);color:#06241e;border-color:var(--mint)}.race-bottom{position:absolute;inset:auto 0 0;padding:22px 18px 16px;background:linear-gradient(0deg,#05111cf5 5%,#05111c99 50%,transparent);display:flex;align-items:flex-end;justify-content:space-between;gap:16px}.eyebrow{font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:#a9c1d2;font-weight:800;margin-bottom:4px}.race-title h1{font-size:clamp(23px,3.4vw,34px);line-height:1.02;letter-spacing:-.045em;margin:0 0 7px;text-shadow:0 4px 18px #0008}.race-title p{margin:0;color:#a6bac9;font-size:11px;font-weight:600}.race-title p b{color:var(--mint)}.lapbox{text-align:right;flex:0 0 auto}.lapbox>span{display:block;font-size:8px;letter-spacing:.16em;color:#9eb2c2;font-weight:900}.lapbox>b{font-size:22px;line-height:1.1}.speed-row{display:flex;gap:4px;margin-top:7px;justify-content:flex-end}.speed-row button{background:#15283a;border:1px solid #2d4559;border-radius:6px;padding:5px 9px;color:#c5d5e0;font-size:9px;font-weight:850}.speed-row button.on{background:#c9ffe9;color:#09241c;border-color:#c9ffe9}.hero-champ{position:absolute;left:50%;top:15px;transform:translateX(-50%);display:none;align-items:center;gap:7px;background:#081725d9;border:1px solid #ffca6a66;color:#ffe6b0;border-radius:8px;padding:6px 10px;font-size:9px;font-weight:850;backdrop-filter:blur(8px);white-space:nowrap}.hero-champ b{color:#fff}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}.stat{padding:13px 15px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(145deg,#0e2032,#091624);min-width:0}.stat .label{font-size:8px;text-transform:uppercase;letter-spacing:.14em;color:#7890a4;font-weight:900}.stat strong{font-size:17px;display:block;margin-top:5px;letter-spacing:-.035em;white-space:nowrap}.stat strong small{font-size:10px;color:#7f9caf;font-weight:600}.stat>small{font-size:9px;color:#7f9caf;white-space:nowrap}.mint{color:var(--mint)}.gold{color:var(--gold)}.violet{color:var(--violet)}.progress{height:5px;background:#16293a;border-radius:9px;overflow:hidden;margin-top:8px}.progress i{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,#35bb9d,#83f7cf);width:0;transition:width .25s linear}.progress.goldbar i{background:linear-gradient(90deg,#e0a53d,#ffe3a0)}
+.tabs{display:flex;gap:5px;overflow:auto;padding:3px 0 9px;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}.tab{white-space:nowrap;border:1px solid transparent;background:transparent;color:#8197a9;font-size:10.5px;font-weight:800;padding:9px 12px;border-radius:9px}.tab:hover{color:#c7d9e6;background:#0c1c2b}.tab.on{color:#bcffe7;background:#123126;border-color:#1e5746}.panel{background:linear-gradient(160deg,#0c1b2a,#091522);border:1px solid #1c3346;border-radius:var(--r);padding:16px;margin-bottom:12px}.panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:13px}.panel-head h2{font-size:14px;letter-spacing:-.02em}.panel-head p{font-size:9.5px;color:var(--muted);margin-top:4px;line-height:1.45}.tag{align-self:flex-start;font-size:7.5px;font-weight:900;letter-spacing:.1em;padding:5px 7px;border-radius:5px;background:#12362c;color:#82ecc6;border:1px solid #1d5a45;white-space:nowrap}.badge{font-size:7.5px;font-weight:900;letter-spacing:.07em;padding:4px 6px;border-radius:5px;background:#1f3547;color:#9eb1c0;white-space:nowrap}.badge.open{background:#123d32;color:#80ebc5}.badge.ready{background:#17384b;color:#8bd9ff}.badge.won{background:#392f12;color:#ffd985}.badge.live{background:#3a1620;color:#ff9aa2}
+.btn{border:0;border-radius:8px;padding:9px 12px;background:linear-gradient(120deg,#73efc3,#38cfa5);color:#06241c;font-size:10px;font-weight:900;letter-spacing:.01em;box-shadow:0 6px 16px #2ec39b22;transition:transform .12s,filter .12s}.btn:hover{filter:brightness(1.07);transform:translateY(-1px)}.btn:active{transform:translateY(0)}.btn.small{padding:7px 10px;font-size:9px}.btn.wide{width:100%;padding:12px}.btn.secondary{border:1px solid #2b4355;background:#142738;color:#c5d7e3;box-shadow:none}.btn.goldbtn{background:linear-gradient(120deg,#ffd989,#eea842);color:#2c200b}.btn.ghost{background:transparent;border:1px solid #2b4355;color:#a9bdcc;box-shadow:none}.btn.danger{background:#3a1d26;color:#ff9aa2;border:1px solid #6b2c3b;box-shadow:none}.row{display:flex;gap:8px;align-items:center}.between{justify-content:space-between}.wrap{flex-wrap:wrap}.muted{color:var(--muted);font-size:10px}.subtle{font-size:9px;color:#71889b}.divider{height:1px;background:#1c3041;margin:13px 0}.grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.grid-4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.session-grid{display:grid;grid-template-columns:1.25fr 1fr;gap:12px;align-items:center;background:#0a1725;border:1px solid #1a3042;border-radius:12px;padding:12px;margin-bottom:12px}.session-world{display:flex;gap:11px;align-items:center;min-width:0}.big-emoji{width:48px;height:48px;border-radius:12px;background:#11293a;display:grid;place-items:center;font-size:23px;flex:0 0 auto;border:1px solid #244357}.session-world b{font-size:12px}.session-world p{font-size:9px;color:var(--muted);margin-top:4px}.session-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.session-metrics div{background:#0d2030;border:1px solid #1c3548;border-radius:8px;padding:8px}.session-metrics span{display:block;font-size:7.5px;color:#7f98ab;text-transform:uppercase;letter-spacing:.07em;font-weight:800}.session-metrics b{font-size:11px;display:block;margin-top:3px;white-space:nowrap}
+.ladder{display:grid;gap:8px}.ladder-card{display:flex;gap:11px;padding:12px;border-radius:12px;background:linear-gradient(110deg,#132536,#0e1d2b);border:1px solid #223b4d}.ladder-card.ready{border-color:#3dd3a777;background:linear-gradient(110deg,#14332c,#0f2630)}.ladder-card.live{border-color:#ffca6a77}.ladder-card.locked{opacity:.62;filter:saturate(.7)}.ladder-card.cleared{border-color:#6b5828;background:linear-gradient(110deg,#2a2413,#151f27)}.ladder-num{width:30px;height:30px;border-radius:9px;background:#0b1b29;border:1px solid #2a475b;display:grid;place-items:center;font-size:10px;font-weight:900;color:#8fa9ba;flex:0 0 auto}.ladder-body{min-width:0;flex:1}.ladder-body h3{font-size:11px;margin-bottom:4px}.ladder-body p{font-size:8.5px;color:#8ea4b6;line-height:1.45}.ladder-actions{display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap}.champ-active{border:1px solid #ffca6a55;background:linear-gradient(145deg,#2b2413,#111d29);border-radius:13px;padding:14px;margin-bottom:12px}.champ-active h3{font-size:12px;color:#ffe4a6}.champ-active .subtle{margin-top:3px}.champ-bars{display:grid;gap:8px;margin-top:12px}.champ-bar-row{display:grid;grid-template-columns:64px 1fr 42px;gap:8px;align-items:center;font-size:8px;color:#9db1c0;font-weight:850}.champ-bar-row .bar{height:7px;border-radius:8px;background:#0b1723;overflow:hidden;border:1px solid #23384a}.champ-bar-row .bar i{display:block;height:100%;width:0;border-radius:8px;transition:width .2s linear}.champ-bar-row.player .bar i{background:linear-gradient(90deg,#31c49d,#8dfbd2)}.champ-bar-row.rival .bar i{background:linear-gradient(90deg,#d65b6c,#ff9aa2)}
+.upgrade-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.upgrade-card{background:linear-gradient(145deg,#102333,#0c1a28);border:1px solid #20394c;border-radius:13px;padding:13px}.up-ico{width:31px;height:31px;border-radius:9px;background:#162f42;border:1px solid #284a60;display:grid;place-items:center;font-size:14px}.upgrade-card h3{font-size:11.5px;margin:10px 0 3px}.upgrade-card p{font-size:8.5px;color:#8199ab;line-height:1.4}.effect{font-size:8.5px;color:#7fe9c6;font-weight:800;margin-top:8px}.cost{font-size:10px;font-weight:850;color:#d9e8f2}.upgrade-card .btn{white-space:nowrap}
+.pack-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.pack-card{border:1px solid #243b4e;background:linear-gradient(145deg,#13283a,#0c1a27);border-radius:15px;padding:14px;position:relative;overflow:hidden}.pack-card::after{content:"";position:absolute;right:-45px;top:-45px;width:120px;height:120px;border-radius:50%;background:var(--p1);filter:blur(40px);opacity:.18;pointer-events:none}.pack-top{display:flex;gap:11px;align-items:center;margin-bottom:10px}.pack-icon{height:64px;width:54px;border-radius:9px 9px 13px 13px;display:grid;place-items:center;font-size:25px;background:linear-gradient(145deg,var(--p1),var(--p2));box-shadow:0 10px 28px color-mix(in srgb,var(--p2),transparent 60%),inset 0 1px 2px #ffffff90;transform:skewY(-4deg);flex:0 0 auto}.pack-top h3{font-size:11.5px}.pack-top p{font-size:8.5px;color:#8da3b5;margin-top:4px;line-height:1.4}.odds{display:flex;height:6px;border-radius:6px;overflow:hidden;background:#0a1621;margin:10px 0 7px}.odds i{display:block;height:100%}.odds-legend{display:flex;gap:8px;flex-wrap:wrap;font-size:7.5px;color:#849aac;margin-bottom:10px}.odds-legend span{display:flex;align-items:center;gap:3px}.odds-legend b{width:5px;height:5px;border-radius:50%;display:inline-block}.pack-actions{display:flex;gap:6px;flex-wrap:wrap}.pack-actions .btn{flex:1;min-width:76px}
+.garage-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.car-card{border:1px solid #22384a;background:linear-gradient(145deg,#102131,#0b1824);border-radius:13px;padding:10px;position:relative;min-width:0}.car-card.equipped{border-color:#58e6bb88;box-shadow:0 0 0 1px #58e6bb22 inset}.car-card.locked{opacity:.52;filter:saturate(.35)}.car-art{height:66px;border-radius:9px;background:radial-gradient(ellipse at 50% 85%,#68e9c02e,transparent 55%),linear-gradient(145deg,#1d3445,#0d1c29);display:grid;place-items:center;margin-bottom:8px;font-size:29px;position:relative;overflow:hidden}.car-art::after{content:"";position:absolute;bottom:6px;width:64px;height:9px;background:#9eead540;filter:blur(7px);border-radius:50%}.car-card h3{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.car-card p{font-size:8px;color:#8298aa;margin:3px 0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.star-row{color:#ffce6b;font-size:9px;letter-spacing:1px;margin-bottom:5px}.mini-stats{display:flex;gap:6px;font-size:7.5px;color:#8ba4b8;margin-bottom:6px}.mini-stats b{color:#cfe1ee}.car-foot{display:flex;justify-content:space-between;align-items:center;gap:4px}.rarity{font-size:8px;color:#8ca3b5;font-weight:750}.rarity.r-Rare{color:#69bfff}.rarity.r-Epic{color:#d86dff}.rarity.r-Legendary{color:#ffce67}.rarity.r-Uncommon{color:#8ee6c4}.rarity.r-Mythic{color:#ff9df5}.merge-note{font-size:7.5px;color:#6f8799;margin-top:5px}
+.skin-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.skin-card{border:1px solid #22384a;background:#0e1e2c;border-radius:12px;padding:10px;min-width:0}.skin-card.active{border-color:#58e6bb88}.swatch{height:34px;border-radius:8px;background:linear-gradient(135deg,var(--sw),#0a1520 85%);box-shadow:inset 0 1px 2px #ffffff70;margin-bottom:8px}.skin-card h4{font-size:9.5px}.skin-card p{font-size:8px;color:#8298aa;margin:3px 0 7px}.skin-card .btn{width:100%}
+.world-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.world-card{min-height:105px;border:1px solid #23394b;border-radius:12px;padding:11px;background:linear-gradient(145deg,#122538,#0b1824);position:relative;overflow:hidden;min-width:0}.world-card::before{content:"";position:absolute;right:-24px;bottom:-42px;width:110px;height:90px;border-radius:50%;background:var(--acc);filter:blur(26px);opacity:.25;pointer-events:none}.world-card.active{border-color:var(--acc);box-shadow:0 0 0 1px color-mix(in srgb,var(--acc),transparent 65%) inset}.world-card.locked{opacity:.66}.world-emoji{font-size:20px;position:relative;z-index:1}.world-card h4{margin:7px 0 3px;font-size:10px;position:relative;z-index:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.world-card p{font-size:7.5px;color:#8499aa;position:relative;z-index:1;line-height:1.35;min-height:20px}.world-foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px;position:relative;z-index:1;gap:4px}.world-mult{font-size:7.5px;color:var(--acc);font-weight:850}.world-card .btn{padding:5px 7px;font-size:8px;white-space:nowrap}
+.sidecol{display:grid;gap:12px;position:sticky;top:14px}.sidecol .panel{margin-bottom:0;padding:14px}.side-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}.side-title h3{font-size:12px}.side-title span{font-size:8px;color:#7f95a8;font-weight:750}.side-row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:9.5px;margin-top:8px}.side-row:first-of-type{margin-top:0}.side-row b{font-size:10.5px}.side-ladder{display:grid;gap:5px}.side-tier{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:7px 8px;border-radius:8px;background:#0b1a28;border:1px solid #1c3243;font-size:8.5px}.side-tier.ready{border-color:#2f7f67;background:#102d26}.side-tier.won{border-color:#675326;background:#292313}.side-tier button{padding:4px 6px;font-size:7.5px}.footer{margin-top:16px;color:#60788a;font-size:8.5px;text-align:center;line-height:1.6}
+.modal{position:fixed;inset:0;display:none;place-items:center;background:#02080ec9;backdrop-filter:blur(10px);z-index:50;padding:18px}.modal.show{display:grid}.modal-card{width:min(460px,100%);background:linear-gradient(145deg,#172d3d,#09141f);border:1px solid #45647a;border-radius:20px;padding:24px;text-align:center;box-shadow:0 30px 100px #000b;position:relative;overflow:hidden;max-height:92vh;overflow-y:auto}.modal-eyebrow{font-size:8px;letter-spacing:.18em;color:#8fb0c2;font-weight:900;text-transform:uppercase}.modal-card h2{font-size:23px;margin:8px 0 6px;letter-spacing:-.04em}.modal-card>p{font-size:10px;color:#9db2c2;line-height:1.55;margin-bottom:14px}.reveal-stage{position:relative;margin:17px auto;display:grid;place-items:center;min-height:238px}.reveal-glow{position:absolute;width:210px;height:210px;border-radius:50%;filter:blur(44px);opacity:.38}.reveal-card{position:relative;width:196px;padding:20px 15px;border:1px solid #48977f;border-radius:15px;background:linear-gradient(145deg,#174333,#0d2538);animation:reveal .45s cubic-bezier(.2,.9,.3,1.15) both}.reveal-card.r-Rare{border-color:#4d97d6;background:linear-gradient(145deg,#17334d,#0d2038)}.reveal-card.r-Epic{border-color:#b45fe0;background:linear-gradient(145deg,#38204d,#181733)}.reveal-card.r-Legendary{border-color:#ffca6a;background:linear-gradient(145deg,#4d3a16,#2b1f16)}.reveal-glow.r-Rare{background:#4d97d6}.reveal-glow.r-Epic{background:#b45fe0}.reveal-glow.r-Legendary{background:#ffca6a}.reveal-emoji{font-size:52px;line-height:1.1;filter:drop-shadow(0 10px 18px #0008)}.reveal-card h2{font-size:18px;margin:9px 0 3px}.reveal-card p{font-size:9px;color:#a5b8c8}.reveal-badge{position:absolute;left:9px;top:9px;font-size:7px;font-weight:900;letter-spacing:.06em;background:#07131dcc;border:1px solid #ffffff33;border-radius:4px;padding:3px 5px;color:#d9fff2}.reveal-stars{color:#ffce6b;font-size:12px;letter-spacing:2px;margin:9px 0 4px}.reveal-card small{font-size:7.5px;color:#8da4b5}.modal-progress{font-size:8px;letter-spacing:.13em;color:#7e99ab;font-weight:850;margin-bottom:12px}.reward-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:14px 0}.reward-grid div{background:#0b1a27;border:1px solid #21394b;border-radius:9px;padding:9px}.reward-grid span{display:block;font-size:7.5px;color:#7e97aa;text-transform:uppercase;letter-spacing:.07em;font-weight:800}.reward-grid b{display:block;font-size:12px;margin-top:3px}.reward-row{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;font-size:10px;font-weight:850;margin:12px 0;color:#d9e9f4}.win-trophy{font-size:52px;line-height:1.1;filter:drop-shadow(0 10px 20px #ffca6a55);animation:bob 1.8s ease-in-out infinite}.confetti{position:absolute;top:-14px;width:7px;height:12px;border-radius:2px;animation:fall 1.9s linear forwards;pointer-events:none;z-index:3}@keyframes fall{to{transform:translateY(540px) rotate(560deg);opacity:0}}@keyframes reveal{from{transform:scale(.55) rotate(-7deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,22px);opacity:0;pointer-events:none;background:#d8fff1;color:#0b3025;padding:11px 15px;border-radius:10px;font-size:10.5px;font-weight:850;z-index:80;box-shadow:0 14px 50px #0009;transition:.24s;max-width:min(460px,90vw);text-align:center}.toast.show{opacity:1;transform:translate(-50%,0)}.toast.error{background:#ffd9dd;color:#3b1118}.toast.gold{background:#ffe8b3;color:#332506}.toast.info{background:#d8f3ff;color:#082a3a}
+@media(max-width:1050px){.layout{grid-template-columns:1fr}.sidecol{position:static;grid-template-columns:repeat(2,1fr)}.sidecol .panel{margin-bottom:0}.hero{height:370px}}
+@media(max-width:720px){.shell{padding:12px 12px 32px}.topbar{margin-bottom:12px;gap:10px}.brand{font-size:17px}.brandmark{width:34px;height:34px}.pills{gap:5px}.pill{padding:7px 8px;font-size:9.5px}.pill .pill-label{display:none}.pill b{font-size:11px}.profile{display:none}.hero{height:320px;border-radius:17px}.scene-top{left:11px;top:10px;max-width:58%}.track-chip{font-size:9px;padding:5px 7px}.scene-controls{right:10px;top:9px;flex-direction:column}.scene-controls button{font-size:8px;padding:6px 7px}.race-bottom{padding:20px 13px 12px}.race-title p{font-size:9.5px}.lapbox>b{font-size:18px}.stats{grid-template-columns:repeat(2,1fr);gap:7px}.stat{padding:10px}.stat strong{font-size:15px}.tabs{gap:3px}.tab{font-size:9.5px;padding:8px 9px}.panel{padding:13px}.grid-3,.world-grid,.garage-grid,.skin-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-4{grid-template-columns:repeat(2,minmax(0,1fr))}.upgrade-grid{grid-template-columns:1fr}.pack-grid{grid-template-columns:1fr}.session-grid{grid-template-columns:1fr}.session-metrics{grid-template-columns:repeat(3,1fr)}.sidecol{grid-template-columns:1fr}.hero-champ{top:auto;bottom:120px;font-size:8px;padding:5px 8px}.champ-bar-row{grid-template-columns:54px 1fr 36px}.modal-card{padding:18px}.reveal-stage{min-height:210px}.reveal-card{width:178px}}
+@media(max-width:400px){.pills .pill:nth-child(3){display:none}.world-grid,.garage-grid{grid-template-columns:1fr}.session-metrics{grid-template-columns:1fr 1fr}.stat strong{font-size:13.5px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 </style>
 </head>
-<body><div id="app"></div><script>
-const worlds=[['Metro City','🌆','#29b7d1','Wet asphalt · skyline'],['Neon Cyberway','🌐','#db48ff','Holograms · neon grid'],['Desert Canyon','🏜️','#f3a64b','Sun-baked highway'],['Alpine Snow','🏔️','#b8e3ff','Icy curves · pines'],['Frozen Lake','🧊','#80d7ff','Mirror ice · snow spray'],['Tropical Coast','🌴','#31d4b0','Ocean boardwalk'],['Volcanic Ridge','🌋','#ff633d','Obsidian · lava rivers'],['Industrial Port','🏗️','#e0a455','Steel docks · containers'],['Jungle Temple','🌿','#56ce83','Mossy ruins'],['Moon Crater','🌙','#a4a8d1','Low gravity · lunar dust'],['Candy Kingdom','🍭','#ff80c8','Sugar road · pastel'],['Golden Vault','👑','#ffce67','Gilded marble'],['Sunset Highway','🌅','#ff995e','Coastal golden hour'],['Rainy Expressway','🌧️','#67bff0','Heavy rain · puddles'],['Cherry Blossom Touge','🌸','#ff9ebd','Hairpins · falling petals'],['Crystal Cavern','💎','#70ffe0','Bioluminescent crystals'],['Autumn Forest','🍂','#dd8b43','Leaf-covered country road'],['Mars Colony','🔴','#f17c55','Red dust · solar arrays'],['Skyway Cloudbridge','☁️','#8ad8ff','Glass road above clouds'],['Haunted Hollow','🎃','#a388d4','Misty cobblestone'],['Prism Void','🌈','#d688ff','Iridescent rainbow road']];
-const tiers=[{name:'Rookie Cup',laps:3,req:0,reward:40,trophies:12},{name:'Street League',laps:4,req:1,reward:140,trophies:32},{name:'Pro Grand Prix',laps:5,req:2,reward:480,trophies:85},{name:'Elite Tour',laps:6,req:3,reward:1600,trophies:220},{name:'World Apex Championship',laps:8,req:4,reward:6000,trophies:650}];
-const cars=[['Comet S','Compact Coupe','🚙','Common'],['V8 Raptor','Muscle GT','🏎️','Rare'],['Crown Interceptor','Police Interceptor','🚓','Rare'],['Trail Boss','Pickup Truck','🛻','Common'],['Sidewinder','Drift Van','🚐','Epic'],['Pocket Rocket','RC Buggy','🏁','Common'],['Dune Raider','Off-Roader','🚜','Rare'],['Aurelia GT','Mid-Engine Supercar','🏎️','Epic'],['Apex F1','Formula Racer','🏎️','Legendary'],['Retro Nova','Classic Coupe','🚗','Common'],['Nightshift','Street Racer','🚘','Rare'],['Volt Runner','Electric Hypercar','⚡','Epic'],['Rally Fox','Rally Hatchback','🚗','Rare'],['Roadster 88','Open Roadster','🚘','Rare'],['Titan Hauler','Heavy Truck','🚚','Epic'],['Skyline X','Hypercar','🏎️','Legendary'],['Rookie Kart','Track Kart','🏎️','Common'],['Phantom GT','Luxury Coupe','🚘','Epic']];
-const packDefs=[{name:'Standard Pack',icon:'📦',colors:['#55d8ac','#176e6e'],cost:140,trophies:0,weights:[65,25,9,1]},{name:'Pro Pack',icon:'🎴',colors:['#55b8ff','#3648ab'],cost:850,trophies:0,weights:[35,40,21,4]},{name:'Neon Pack',icon:'💠',colors:['#e860ff','#693fd7'],cost:2400,trophies:22,weights:[15,35,38,12]},{name:'Legendary Pack',icon:'👑',colors:['#ffce67','#dc6545'],cost:0,trophies:90,weights:[4,16,42,38]}];
-const statDefs=[['speed','Top Speed','Higher cruising speed'],['accel','Acceleration','Faster lap pace'],['grip','Cornering Grip','More drift efficiency'],['nitro','Nitro Boost','Bigger burst bonus'],['payout','Race Payout','More cash per lap']];
-const fresh=()=>({cash:650,trophies:0,xp:0,level:1,laps:0,world:0,car:0,upgrades:{speed:0,accel:0,grip:0,nitro:0,payout:0},collection:{0:1},skins:0,prestige:0,unlockedTier:0,won:[],worlds:[0],speedMult:1,follow:true,sound:true,last:Date.now(),champ:null});
-let state;try{state={...fresh(),...JSON.parse(localStorage.getItem('pitlane-save')||'{}')};state.upgrades={...fresh().upgrades,...state.upgrades};state.collection=state.collection||{0:1};state.worlds=state.worlds||[0];}catch{state=fresh()}
-let tab='race',buyMode=1,ctx=null,toastTimer,champTimer=0,sceneTime=0,lastTick=Date.now();
-const $=s=>document.querySelector(s),fmt=n=>Math.floor(n).toLocaleString(),save=()=>{state.last=Date.now();localStorage.setItem('pitlane-save',JSON.stringify(state))};
-function notify(msg){const el=$('#toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2300)}
-function sound(type='tap'){if(!state.sound)return;try{ctx=ctx||new(window.AudioContext||window.webkitAudioContext)();const osc=ctx.createOscillator(),gain=ctx.createGain();osc.connect(gain);gain.connect(ctx.destination);const now=ctx.currentTime,notes={tap:[440,.05],upgrade:[660,.13],pack:[520,.23],lap:[740,.1],win:[880,.4]};osc.frequency.setValueAtTime(notes[type][0],now);osc.frequency.exponentialRampToValueAtTime(notes[type][0]*1.45,now+notes[type][1]);osc.type=type==='win'?'triangle':'sine';gain.gain.setValueAtTime(.055,now);gain.gain.exponentialRampToValueAtTime(.001,now+notes[type][1]);osc.start(now);osc.stop(now+notes[type][1])}catch{}}
-const rate=()=> (1+state.upgrades.payout*.16)*(1+state.prestige*.18)*(1+state.car*.018)*(1+Math.max(0,state.skins)*.02);
-const lapSeconds=()=>Math.max(8,30-state.upgrades.speed*1.1-state.upgrades.accel*.9-state.upgrades.grip*.45-state.upgrades.nitro*.3);
-function addXp(n){state.xp+=n;while(state.xp>=state.level*100){state.xp-=state.level*100;state.level++;state.cash+=120;notify('Level up! +$120 bonus')}}
-function render(){const car=cars[state.car]||cars[0],world=worlds[state.world]||worlds[0],xpPct=state.xp/(state.level*100)*100;const unlock=i=>i<=state.unlockedTier;const nav=[['race','Race'],['upgrades','Upgrades'],['packs','Card Packs'],['garage','Garage'],['worlds','21 Worlds']];
-$('#app').innerHTML=`<div class="shell"><header class="topbar"><div class="brand"><div class="brandmark">◈</div><div>PITLANE<small>idle racing club</small></div></div><div class="pills"><div class="pill cash">◉ <span>Cash</span><b id="cashBalance">$${fmt(state.cash)}</b></div><div class="pill trophy">✦ <span>Trophies</span><b id="trophyBalance">${fmt(state.trophies)}</b></div><div class="pill">✧ <span>Level</span><b>${state.level}</b></div><div class="profile">${car[0][0]}</div></div></header>
-<div class="layout"><main class="maincol"><section class="hero"><canvas id="raceCanvas"></canvas><div class="scene-top"><span class="live">● LIVE RACE</span><span class="trackname">${world[1]} &nbsp; ${world[0]}</span></div><div class="scene-controls"><button data-action="camera" class="${state.follow?'active':''}">${state.follow?'◉ FOLLOW':'▧ FULL TRACK'}</button><button data-action="sound" class="${state.sound?'active':''}">${state.sound?'♫ SOUND':'♫ MUTED'}</button></div><div class="race-bottom"><div class="race-title"><h1>${car[0]}</h1><p>${car[1]} <span style="color:#617e91"> · </span><strong>+${fmt(16*rate()/lapSeconds())}/sec</strong></p></div><div class="lapbox"><span>COMPLETED LAPS</span><b id="lapCount">${fmt(state.laps)}</b><div class="speed-row">${[1,2,4].map(v=>`<button data-speed="${v}" class="${state.speedMult===v?'active':''}">${v}×</button>`).join('')}</div></div></div></section>
-<div class="stats"><div class="stat"><div class="label">Cash / lap</div><strong class="mint">$${fmt(16*rate())}</strong><small>payout x${rate().toFixed(2)}</small></div><div class="stat"><div class="label">Lap time</div><strong>${lapSeconds().toFixed(1)}s</strong><small>auto racing</small></div><div class="stat"><div class="label">Experience</div><strong>${fmt(state.xp)} <small> / ${state.level*100} XP</small></strong><div class="progress"><i style="width:${xpPct}%"></i></div></div><div class="stat"><div class="label">Pit crew</div><strong class="gold">${state.prestige} ✦</strong><small>permanent bonus</small></div></div>
-<div class="tabs">${nav.map(([key,label])=>`<button class="tab ${tab===key?'active':''}" data-tab="${key}">${label}</button>`).join('')}</div><div class="panel view ${tab==='race'?'active':''}" id="view-race"><div class="section-head" style="margin-top:0"><h2>Track session</h2><span>AFK earnings are always on</span></div><div class="smallrow"><div><b style="font-size:12px">${world[0]} • ${world[3]}</b><div class="muted" style="margin-top:5px">${fmt(16*rate())} cash and 3 XP each completed lap</div></div><button class="btn secondary" data-tab="worlds">Change world →</button></div><div class="divider"></div><div class="smallrow"><div><b style="font-size:11px">Pit Crew Prestige</b><div class="muted" style="margin-top:4px">Reset cash and upgrades for permanent wrench bonuses.</div></div><button class="btn goldbtn" data-action="prestige" ${state.unlockedTier<3?'disabled':''}>Prestige</button></div><div class="subtle" style="margin-top:9px">${state.unlockedTier<3?'Unlock Elite Tour to prestige.':'Available! Your collection and worlds are preserved.'}</div></div>
-<div class="panel view ${tab==='upgrades'?'active':''}" id="view-upgrades"><div class="section-head" style="margin-top:0"><h2>Performance upgrades</h2><span>Buy ${buyMode} at a time</span></div><div class="smallrow" style="margin-bottom:13px"><span class="muted">Upgrade your ride to shave seconds off every lap.</span><div class="row"><button class="btn tiny ${buyMode===1?'':'secondary'}" data-buy="1">×1</button><button class="btn tiny ${buyMode===10?'':'secondary'}" data-buy="10">×10</button></div></div><div class="upgrade-grid">${statDefs.map(([key,name,desc],i)=>{const lv=state.upgrades[key],cost=upgradeCost(key,buyMode);return `<article class="upgrade-card"><div class="smallrow"><h4>${['⚡','🚀','〰️','🔥','💰'][i]} ${name}</h4><span class="badge">LV ${lv}</span></div><p>${desc} · +${key==='payout'?'16%':'3%'} per level</p><div class="upgrade-actions"><span class="subtle">$${fmt(cost)}</span><button class="btn tiny" data-upgrade="${key}">UPGRADE</button></div></article>`}).join('')}</div></div>
-<div class="panel view ${tab==='packs'?'active':''}" id="view-packs"><div class="section-head" style="margin-top:0"><h2>Card pack shop</h2><span>18 cars to collect</span></div><div class="pack-grid">${packDefs.map((p,i)=>`<article class="pack-card" style="--pack1:${p.colors[0]};--pack2:${p.colors[1]}"><div class="pack-icon">${p.icon}</div><h3>${p.name}</h3><p>${i===0?'1 card · starter odds':i===1?'2 cards · better odds':i===2?'3 cards · neon odds':'4 cards · legendary odds'}</p><div class="row"><button class="btn tiny" data-pack="${i}" data-currency="cash" ${p.cost===0?'disabled':''}>$${fmt(p.cost)}</button>${p.trophies?`<button class="btn tiny goldbtn" data-pack="${i}" data-currency="trophy">${p.trophies} ✦</button>`:''}</div></article>`).join('')}</div><div class="subtle" style="margin-top:11px">Duplicates add card shards. Collect 3 copies to star-up and equip your best ride in Garage.</div></div>
-<div class="panel view ${tab==='garage'?'active':''}" id="view-garage"><div class="section-head" style="margin-top:0"><h2>Your garage</h2><span>${Object.keys(state.collection).length} / ${cars.length} discovered</span></div><div class="garage-grid">${cars.map((c,i)=>{const count=state.collection[i]||0,stars=Math.max(0,Math.floor(count/3));return `<article class="car-card"><span class="star">${stars?'★'.repeat(Math.min(3,stars)):'☆'}</span><div class="car-art">${c[2]}</div><h4>${c[0]} ${state.car===i?'✓':''}</h4><p>${c[1]}</p><div class="smallrow"><span class="rarity">${c[3]} · ×${count}</span>${count?`<button class="btn tiny" data-equip="${i}">${state.car===i?'EQUIPPED':'EQUIP'}</button>`:'<span class="badge">LOCKED</span>'}</div></article>`}).join('')}</div><div class="divider"></div><div class="smallrow"><div><b style="font-size:11px">Paint & skin packs</b><div class="muted">${state.skins} finishes owned · metallic, pearl, prism</div></div><button class="btn secondary" data-action="skin">Buy skin · $${fmt(600*Math.pow(2,state.skins))}</button></div></div>
-<div class="panel view ${tab==='worlds'?'active':''}" id="view-worlds"><div class="section-head" style="margin-top:0"><h2>World select</h2><span>${state.worlds.length} / 21 unlocked</span></div><div class="world-grid">${worlds.map((w,i)=>{const open=state.worlds.includes(i);const price=i===0?0:250*Math.pow(1.7,i);return `<article class="world-card ${open?'':'locked'}" style="--world:${w[2]}"><button data-world="${i}" ${open?'':'data-cost="'+Math.floor(price)+'"'}>${open?(i===state.world?'RACING':'SELECT'):'$'+fmt(price)}</button><h4>${w[1]} ${w[0]}</h4><span>${w[3]}</span></article>`}).join('')}</div></div>
-<div class="footer">Your pit crew saves automatically · Offline earnings accrue for up to 12 hours</div></main>
-<aside class="sidecol"><section class="panel"><div class="panel-title"><h3>Championship ladder</h3><span>${state.won.length}/5 WON</span></div>${tiers.map((t,i)=>`<div class="champ-card ${i===state.unlockedTier?'active':''}"><div class="champ-head"><b>${t.name}</b><span class="badge ${unlock(i)?'open':''}">${state.won.includes(i)?'CLEARED':unlock(i)?'READY':'LOCKED'}</span></div><p>${t.laps} laps · ${fmt(t.trophies)} trophies · $${fmt(t.reward)}</p>${unlock(i)&&!state.won.includes(i)?`<button class="btn tiny" data-champ="${i}">${state.champ===i?'RACE IN PROGRESS':'ENTER RACE →'}</button>`:state.won.includes(i)?'<span class="subtle">Championship complete</span>':`<span class="subtle">Win ${tiers[i-1]?.name||'previous cup'} to unlock</span>`}</div>`).join('')}</section>
-<section class="panel"><div class="panel-title"><h3>Race rewards</h3><span>LIVE</span></div><div class="smallrow"><span class="muted">Cash per second</span><b class="mint">$${(16*rate()/lapSeconds()).toFixed(1)}</b></div><div class="divider"></div><div class="smallrow"><span class="muted">Cash per lap</span><b>$${fmt(16*rate())}</b></div><div class="smallrow" style="margin-top:9px"><span class="muted">Next lap</span><b id="countdown">${lapSeconds().toFixed(1)}s</b></div><div class="progress" style="margin-top:8px"><i id="lapProgress" style="width:0%"></i></div></section>
-<section class="panel"><div class="panel-title"><h3>Garage snapshot</h3><span>CAR ${String(state.car+1).padStart(2,'0')}</span></div><div class="smallrow"><span>${car[2]} &nbsp; ${car[0]}</span><button class="btn secondary tiny" data-tab="garage">VIEW</button></div><div class="divider"></div><div class="smallrow"><span class="muted">Collection</span><b>${Object.keys(state.collection).length} / ${cars.length}</b></div><div class="smallrow" style="margin-top:8px"><span class="muted">Paint finishes</span><b>${state.skins}</b></div></section></aside></div></div><div id="toast" class="toast"></div><div class="modal" id="modal"><div class="modal-card" id="modalCard"></div></div>`;
-startScene();}
-function upgradeCost(key,n=1){let base={speed:70,accel:85,grip:95,nitro:130,payout:180}[key],lv=state.upgrades[key],sum=0;for(let i=0;i<n;i++)sum+=base*Math.pow(1.55,lv+i);return Math.floor(sum)}
-function handleClick(e){const b=e.target.closest('button');if(!b)return;const a=b.dataset;
-if(a.tab){tab=a.tab;render();return}if(a.speed){state.speedMult=+a.speed;save();sound();render();return}if(a.buy){buyMode=+a.buy;render();return}if(a.action==='camera'){state.follow=!state.follow;save();sound();render();return}if(a.action==='sound'){state.sound=!state.sound;save();sound('tap');render();return}
-if(a.upgrade){const cost=upgradeCost(a.upgrade,buyMode);if(state.cash<cost)return notify('Not enough cash for that upgrade.');state.cash-=cost;state.upgrades[a.upgrade]+=buyMode;addXp(buyMode*8);sound('upgrade');notify(`${a.upgrade[0].toUpperCase()+a.upgrade.slice(1)} upgraded to level ${state.upgrades[a.upgrade]}`);save();render();return}
-if(a.champ!==undefined){const i=+a.champ;if(state.champ===i){notify('Your race is already underway!');return}if(i>state.unlockedTier)return;state.champ=i;champTimer=0;notify(`${tiers[i].name} started — beat the rival!`);sound('tap');save();render();return}
-if(a.pack!==undefined){const p=packDefs[+a.pack],currency=a.currency;if(currency==='cash'&&state.cash<p.cost)return notify('Not enough cash.');if(currency==='trophy'&&state.trophies<p.trophies)return notify('Not enough trophies.');if(currency==='cash')state.cash-=p.cost;else state.trophies-=p.trophies;const amount=+a.pack+1;let pulls=[];for(let n=0;n<amount;n++){const r=Math.random()*100,w=p.weights;let rarity=r<w[0]?'Common':r<w[0]+w[1]?'Rare':r<w[0]+w[1]+w[2]?'Epic':'Legendary';const pool=cars.map((c,i)=>({c,i})).filter(x=>x.c[3]===rarity);if(!pool.length)pool=cars.map((c,i)=>({c,i}));const got=pool[Math.floor(Math.random()*pool.length)];state.collection[got.i]=(state.collection[got.i]||0)+1;pulls.push({...got,rarity})}addXp(20*amount);sound('pack');save();showPack(pulls);return}
-if(a.equip!==undefined){const i=+a.equip;if((state.collection[i]||0)<1)return;state.car=i;notify(`${cars[i][0]} equipped`);sound();save();render();return}
-if(a.world!==undefined){const i=+a.world;if(state.worlds.includes(i)){state.world=i;notify(`${worlds[i][0]} selected`);save();render();return}const cost=+a.cost;if(state.cash<cost)return notify('Not enough cash to unlock this world.');state.cash-=cost;state.worlds.push(i);state.world=i;notify(`${worlds[i][0]} unlocked!`);sound('upgrade');save();render();return}
-if(a.action==='skin'){const cost=600*Math.pow(2,state.skins);if(state.cash<cost)return notify('Not enough cash for a new finish.');state.cash-=cost;state.skins++;sound('upgrade');notify(['Metallic','Pearl clear-coat','Prism chrome','Aurora'][Math.min(3,state.skins-1)]+' finish unlocked!');save();render();return}
-if(a.action==='prestige'){if(state.unlockedTier<3)return notify('Reach Elite Tour first.');if(!confirm('Reset cash, trophies and upgrades for a permanent Golden Wrench? Cars, worlds, and wins stay.'))return;state.prestige++;state.cash=250;state.trophies=0;state.upgrades={speed:0,accel:0,grip:0,nitro:0,payout:0};state.unlockedTier=0;state.won=[];state.champ=null;notify(`Prestige complete! Golden Wrench ${state.prestige} earned.`);sound('win');save();render();return}
+<body>
+<div id="app" class="app"></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<div id="modal" class="modal" aria-hidden="true"></div>
+<script>
+'use strict';
+const CARS=[
+ {name:'Comet S',cls:'Compact Coupe',emoji:'🚙',rarity:'Common',speed:2,payout:2,color:'#57e0b7'},
+ {name:'Trail Boss',cls:'Pickup Truck',emoji:'🛻',rarity:'Common',speed:2,payout:3,color:'#e6a15c'},
+ {name:'Pocket Rocket',cls:'RC Buggy',emoji:'🏁',rarity:'Common',speed:3,payout:2,color:'#ffd166'},
+ {name:'Retro Nova',cls:'Classic Coupe',emoji:'🚗',rarity:'Common',speed:3,payout:3,color:'#f28f6b'},
+ {name:'Rookie Kart',cls:'Track Kart',emoji:'🏎️',rarity:'Common',speed:3,payout:2,color:'#8fd6ff'},
+ {name:'V8 Raptor',cls:'Muscle GT',emoji:'🏎️',rarity:'Rare',speed:5,payout:5,color:'#ff7a59'},
+ {name:'Crown Interceptor',cls:'Police Interceptor',emoji:'🚓',rarity:'Rare',speed:5,payout:4,color:'#6fb8ff'},
+ {name:'Dune Raider',cls:'Off-Roader',emoji:'🚜',rarity:'Rare',speed:4,payout:5,color:'#d7b26a'},
+ {name:'Nightshift',cls:'Street Racer',emoji:'🚘',rarity:'Rare',speed:5,payout:5,color:'#b388ff'},
+ {name:'Rally Fox',cls:'Rally Hatchback',emoji:'🚗',rarity:'Rare',speed:4,payout:4,color:'#ff9f43'},
+ {name:'Roadster 88',cls:'Open Roadster',emoji:'🚘',rarity:'Rare',speed:5,payout:4,color:'#ff6b9d'},
+ {name:'Sidewinder',cls:'Drift Van',emoji:'🚐',rarity:'Epic',speed:7,payout:6,color:'#4dd6c1'},
+ {name:'Aurelia GT',cls:'Mid-Engine Supercar',emoji:'🏎️',rarity:'Epic',speed:7,payout:7,color:'#ffca6a'},
+ {name:'Volt Runner',cls:'Electric Hypercar',emoji:'⚡',rarity:'Epic',speed:8,payout:6,color:'#63d9ff'},
+ {name:'Titan Hauler',cls:'Heavy Truck',emoji:'🚚',rarity:'Epic',speed:6,payout:8,color:'#c7a06a'},
+ {name:'Phantom GT',cls:'Luxury Coupe',emoji:'🚘',rarity:'Epic',speed:7,payout:7,color:'#c39bff'},
+ {name:'Apex F1',cls:'Formula Racer',emoji:'🏎️',rarity:'Legendary',speed:9,payout:8,color:'#ff5d73'},
+ {name:'Skyline X',cls:'Hypercar',emoji:'🏎️',rarity:'Legendary',speed:9,payout:9,color:'#8affd6'}
+];
+const WORLDS=[
+ {name:'Metro City',emoji:'🌆',accent:'#35c6e0',desc:'Wet asphalt under a neon skyline',type:'city',sky:['#071624','#0d2b3c'],road:'#24343c'},
+ {name:'Neon Cyberway',emoji:'🌐',accent:'#db48ff',desc:'Holograms and a glowing grid',type:'cyber',sky:['#0a0a20','#241044'],road:'#1b1730'},
+ {name:'Desert Canyon',emoji:'🏜️',accent:'#f3a64b',desc:'Sun-baked highway through mesas',type:'desert',sky:['#2a1710','#6b3a1e'],road:'#5a4a3a'},
+ {name:'Alpine Snow',emoji:'🏔️',accent:'#b8e3ff',desc:'Icy curves and pine forests',type:'alpine',sky:['#0b1c2e','#274a63'],road:'#3b4b57'},
+ {name:'Frozen Lake',emoji:'🧊',accent:'#80d7ff',desc:'Mirror ice with snow spray',type:'ice',sky:['#081927','#31566e'],road:'#47606e'},
+ {name:'Tropical Coast',emoji:'🌴',accent:'#31d4b0',desc:'Oceanfront boardwalks and a lighthouse',type:'coast',sky:['#0b2634','#1d6b72'],road:'#354b4b'},
+ {name:'Volcanic Ridge',emoji:'🌋',accent:'#ff633d',desc:'Obsidian roads above lava rivers',type:'volcano',sky:['#1d0b0a','#4a1712'],road:'#2b2222'},
+ {name:'Industrial Port',emoji:'🏗️',accent:'#e0a455',desc:'Steel docks and cargo containers',type:'port',sky:['#101d28','#314452'],road:'#343e42'},
+ {name:'Jungle Temple',emoji:'🌿',accent:'#56ce83',desc:'Mossy stone roads through ruins',type:'jungle',sky:['#081c15','#1e4a30'],road:'#36443a'},
+ {name:'Moon Crater',emoji:'🌙',accent:'#a4a8d1',desc:'Low-gravity lunar dust and domes',type:'moon',sky:['#080a18','#1b1e38'],road:'#40434f'},
+ {name:'Candy Kingdom',emoji:'🍭',accent:'#ff80c8',desc:'Glossy sugar roads and pastel hills',type:'candy',sky:['#2a1128','#6f2b55'],road:'#4b3a47'},
+ {name:'Golden Vault',emoji:'👑',accent:'#ffce67',desc:'Gilded marble under spotlights',type:'gold',sky:['#1c1607','#4a3814'],road:'#4b4130'},
+ {name:'Sunset Highway',emoji:'🌅',accent:'#ff995e',desc:'Warm golden-hour coastal freeway',type:'sunset',sky:['#2b1426','#8a3c3a'],road:'#4a3a3a'},
+ {name:'Rainy Expressway',emoji:'🌧️',accent:'#67bff0',desc:'Heavy rain, deep puddles, bright reflections',type:'rain',sky:['#080f1a','#23364a'],road:'#2c3942'},
+ {name:'Cherry Blossom Touge',emoji:'🌸',accent:'#ff9ebd',desc:'Mountain hairpins under falling petals',type:'blossom',sky:['#21152a','#583650'],road:'#413a43'},
+ {name:'Crystal Cavern',emoji:'💎',accent:'#70ffe0',desc:'Bioluminescent crystals on wet stone',type:'crystal',sky:['#06141c','#103a44'],road:'#2a3d42'},
+ {name:'Autumn Forest',emoji:'🍂',accent:'#dd8b43',desc:'Red and gold leaves on country roads',type:'autumn',sky:['#1d140d','#4e3220'],road:'#3e352c'},
+ {name:'Mars Colony',emoji:'🔴',accent:'#f17c55',desc:'Red-dust canyons and solar arrays',type:'mars',sky:['#210b0a','#5c2318'],road:'#4a2f2a'},
+ {name:'Skyway Cloudbridge',emoji:'☁️',accent:'#8ad8ff',desc:'A glass road floating above the clouds',type:'sky',sky:['#10233b','#4f7fa6'],road:'#425563'},
+ {name:'Haunted Hollow',emoji:'🎃',accent:'#a388d4',desc:'Misty cobblestone lit by lanterns',type:'haunted',sky:['#0d0b18','#2a2441'],road:'#34323c'},
+ {name:'Prism Void',emoji:'🌈',accent:'#d688ff',desc:'An iridescent track across the void',type:'prism',sky:['#0d0a20','#2a1a48'],road:'#302c48'}
+];
+const TIERS=[
+ {name:'Rookie Cup',laps:3,reward:150,trophies:15,rivalLap:31},
+ {name:'Street League',laps:4,reward:600,trophies:40,rivalLap:27.2},
+ {name:'Pro Grand Prix',laps:5,reward:2200,trophies:95,rivalLap:23.8},
+ {name:'Elite Tour',laps:6,reward:7500,trophies:240,rivalLap:20.8},
+ {name:'World Apex Championship',laps:8,reward:24000,trophies:600,rivalLap:18.2}
+];
+const PACKS=[
+ {name:'Standard Pack',icon:'📦',cards:1,cash:200,trophies:8,weights:[62,27,9,2],colors:['#55d8ac','#176e6e'],blurb:'A reliable starter pull.'},
+ {name:'Pro Pack',icon:'🎴',cards:2,cash:1000,trophies:22,weights:[38,38,20,4],colors:['#55b8ff','#3648ab'],blurb:'Two cards with better odds.'},
+ {name:'Neon Pack',icon:'💠',cards:3,cash:4000,trophies:55,weights:[16,34,38,12],colors:['#e860ff','#693fd7'],blurb:'Three cards under neon lights.'},
+ {name:'Legendary Pack',icon:'👑',cards:4,cash:15000,trophies:140,weights:[4,16,42,38],colors:['#ffce67','#dc6545'],blurb:'Four cards and a real shot at gold.'}
+];
+const UPGRADES=[
+ {key:'speed',name:'Top Speed',icon:'⚡',desc:'Lower every lap time.',base:80,growth:1.5,effect:'−0.85s lap'},
+ {key:'accel',name:'Acceleration',icon:'🚀',desc:'Launch harder out of corners.',base:95,growth:1.52,effect:'−0.65s lap'},
+ {key:'grip',name:'Cornering Grip',icon:'〰️',desc:'Carry more speed through bends.',base:110,growth:1.54,effect:'−0.38s lap'},
+ {key:'nitro',name:'Nitro Boost',icon:'🔥',desc:'Shorter bursts, faster laps.',base:140,growth:1.56,effect:'−0.22s lap'},
+ {key:'payout',name:'Race Payout',icon:'💰',desc:'More cash from every lap.',base:180,growth:1.58,effect:'+15% payout'}
+];
+const SKINS=[
+ {id:'metallic',name:'Metallic Flake',rarity:'Uncommon',price:750,color:'#c3d3e2',bonus:.02},
+ {id:'pearl',name:'Pearl Clear-Coat',rarity:'Rare',price:3000,color:'#f2e8ff',bonus:.04},
+ {id:'chrome',name:'Liquid Chrome',rarity:'Epic',price:12000,color:'#cfe9ff',bonus:.06},
+ {id:'aurora',name:'Aurora Shift',rarity:'Epic',price:45000,color:'#7dffd4',bonus:.08},
+ {id:'holo',name:'Holographic',rarity:'Legendary',price:150000,color:'#ff9df5',bonus:.11},
+ {id:'prism',name:'Prismatic Void',rarity:'Mythic',price:500000,color:'#d9a6ff',bonus:.15}
+];
+const TABS=[['race','🏁 Race'],['champ','🏆 Championships'],['upgrades','🔧 Upgrades'],['packs','🎴 Card Packs'],['garage','🚗 Garage'],['worlds','🌍 21 Worlds']];
+const RARITIES=['Common','Rare','Epic','Legendary'];
+const MAX_LEVEL=40;
+const SAVE_KEY='pitlane-save-v2';
+const OLD_KEY='pitlane-save';
+
+function freshState(){return {version:2,cash:650,trophies:0,xp:0,level:1,laps:0,world:0,car:0,upgrades:{speed:0,accel:0,grip:0,nitro:0,payout:0},collection:{0:1},skins:[],skin:null,prestige:0,unlockedTier:0,won:[],worlds:[0],speedMult:1,follow:true,sound:true,last:Date.now(),champ:null,packsOpened:0,totalEarned:0};}
+function num(v,def,min=0,max=1e15){const n=Number(v);return Number.isFinite(n)?Math.min(max,Math.max(min,n)):def}
+function loadState(){
+ let raw=null;try{raw=localStorage.getItem(SAVE_KEY)||localStorage.getItem(OLD_KEY)}catch{}
+ let p={};try{p=JSON.parse(raw||'{}')}catch{}
+ const s={...freshState(),...(p&&typeof p==='object'?p:{})};
+ const parsedCash=Number(p.cash);
+ s.cash=(Number.isFinite(parsedCash)&&parsedCash>=0)?Math.min(1e15,parsedCash):650;
+ s.trophies=Math.floor(num(s.trophies,0,0,1e9));
+ s.xp=Math.floor(num(s.xp,0,0,1e12));
+ s.level=Math.floor(num(s.level,1,1,10000));
+ s.laps=Math.floor(num(s.laps,0,0,1e12));
+ s.world=Math.floor(num(s.world,0,0,WORLDS.length-1));
+ s.car=Math.floor(num(s.car,0,0,CARS.length-1));
+ s.prestige=Math.floor(num(s.prestige,0,0,999));
+ s.unlockedTier=Math.floor(num(s.unlockedTier,0,0,TIERS.length-1));
+ s.speedMult=[1,2,4].includes(Number(s.speedMult))?Number(s.speedMult):1;
+ s.follow=s.follow!==false;s.sound=s.sound!==false;
+ s.last=num(s.last,Date.now(),0,Date.now()+60000);
+ s.packsOpened=Math.floor(num(s.packsOpened,0,0,1e9));
+ s.totalEarned=num(s.totalEarned,0,0,1e15);
+ s.upgrades={...freshState().upgrades,...(p.upgrades||{})};
+ UPGRADES.forEach(u=>{s.upgrades[u.key]=Math.floor(num(s.upgrades[u.key],0,0,MAX_LEVEL))});
+ const col={};
+ if(p.collection&&typeof p.collection==='object')Object.entries(p.collection).forEach(([k,v])=>{const i=Number(k);const n=Math.floor(num(v,0,0,9999));if(Number.isInteger(i)&&i>=0&&i<CARS.length&&n>0)col[i]=n});
+ if(!col[0])col[0]=1;
+ s.collection=col;
+ if(!col[s.car])s.car=Number(Object.keys(col)[0])||0;
+ let ws=Array.isArray(p.worlds)?p.worlds.map(Number).filter(i=>Number.isInteger(i)&&i>=0&&i<WORLDS.length):[0];
+ if(!ws.includes(0))ws.push(0);
+ if(Number.isInteger(s.world)&&!ws.includes(s.world))ws.push(s.world);
+ s.worlds=[...new Set(ws)].sort((a,b)=>a-b);
+ s.won=Array.isArray(p.won)?[...new Set(p.won.map(Number).filter(i=>Number.isInteger(i)&&i>=0&&i<TIERS.length))]:[];
+ s.unlockedTier=Math.max(s.unlockedTier,...s.won.map(i=>Math.min(TIERS.length-1,i+1)));
+ if(typeof p.skins==='number')s.skins=SKINS.slice(0,Math.min(SKINS.length,Math.floor(p.skins))).map(x=>x.id);
+ else if(Array.isArray(p.skins))s.skins=[...new Set(p.skins.filter(id=>SKINS.some(x=>x.id===id)))];
+ else s.skins=[];
+ s.skin=s.skins.includes(p.skin)?p.skin:(s.skins[0]||null);
+ if(p.champ&&typeof p.champ==='object'){
+  const c=p.champ,ti=Number(c.tier),el=Number(c.elapsed),pt=Number(c.playerTotal),rt=Number(c.rivalTotal);
+  s.champ=(Number.isInteger(ti)&&ti>=0&&ti<TIERS.length&&Number.isFinite(el)&&el>=0&&Number.isFinite(pt)&&pt>0&&Number.isFinite(rt)&&rt>0)?{tier:ti,elapsed:el,playerTotal:pt,rivalTotal:rt,won:!!c.won,rivalLap:num(c.rivalLap,TIERS[ti].rivalLap,0,999)}:null;
+ }else s.champ=null;
+ return s;
 }
-function showPack(pulls){const modal=$('#modal'),card=$('#modalCard');let index=0;const reveal=()=>{const p=pulls[index];card.innerHTML=`<div class="subtle">CARD ${index+1} OF ${pulls.length}</div><h2>Pack opened!</h2><div class="reveal-card" style="border-color:${p.rarity==='Legendary'?'#ffce67':p.rarity==='Epic'?'#d86dff':p.rarity==='Rare'?'#69bfff':'#55d8ac'}"><div class="emoji">${p.c[2]}</div><strong>${p.c[0]}</strong><span class="rarity">${p.rarity} · ${p.c[1]}</span></div><div class="row" style="justify-content:center"><button class="btn" id="nextReveal">${index<pulls.length-1?'NEXT CARD →':'COLLECT CARDS'}</button></div>`;$('#nextReveal').onclick=()=>{if(index<pulls.length-1){index++;reveal()}else{modal.classList.remove('show');render()}}};modal.classList.add('show');reveal()}
-$('#app').addEventListener('click',handleClick);$('#app').addEventListener('click',e=>{if(e.target.id==='modal')$('#modal').classList.remove('show')});
-function startScene(){if(window.sceneRAF)cancelAnimationFrame(window.sceneRAF);const canvas=$('#raceCanvas'),g=canvas.getContext('2d');let w=0,h=0;function resize(){const r=canvas.getBoundingClientRect();const d=Math.min(2,devicePixelRatio||1);w=r.width;h=r.height;canvas.width=w*d;canvas.height=h*d;g.setTransform(d,0,0,d,0,0)}resize();window.addEventListener('resize',resize,{once:true});const world=worlds[state.world],seed=state.world+4;function frame(ts){if(!canvas.isConnected)return;sceneTime=ts/1000;const t=sceneTime,colors=['#081423','#0b1528','#302116','#142333','#142a3b','#102a34','#211513','#16232d','#0d241a','#101326','#301930','#2b2110','#39241e','#101c2a','#291729','#0b2630','#251a19','#301b17','#1c3240','#171527','#1b1832'];const sky=colors[state.world]||'#101d2c';g.clearRect(0,0,w,h);let grad=g.createLinearGradient(0,0,0,h);grad.addColorStop(0,sky);grad.addColorStop(.58,world[2]+'33');grad.addColorStop(1,'#0c1820');g.fillStyle=grad;g.fillRect(0,0,w,h);
-// distant skyline / terrain silhouettes
-const horizon=h*.43;g.fillStyle='#06101b99';for(let i=0;i<20;i++){const bw=(w/14)*(0.55+(i*7%5)*.11),x=(i*w/14-(t*4%w)+w)%w,bh=(.12+(Math.sin(i*17+seed)*.5+.5)*.23)*h;g.fillRect(x,horizon-bh,bw,bh);if(state.world===0||state.world===1||state.world===7){g.fillStyle=world[2]+'33';for(let yy=horizon-bh+8;yy<horizon-6;yy+=12)for(let xx=x+5;xx<x+bw-4;xx+=10)g.fillRect(xx,yy,3,4);g.fillStyle='#06101b99'}}
-// glow horizon
-const glow=g.createRadialGradient(w*.56,horizon,2,w*.56,horizon,w*.52);glow.addColorStop(0,world[2]+'44');glow.addColorStop(1,'transparent');g.fillStyle=glow;g.fillRect(0,horizon-100,w,h*.5);
-// road, reflected ribbon perspective
-const cx=w*.52,top=h*.46,bottom=h*1.03,topWidth=w*.18,bottomWidth=w*(state.follow?.62:.82);g.beginPath();g.moveTo(cx-topWidth/2,top);g.lineTo(cx+topWidth/2,top);g.lineTo(cx+bottomWidth/2,bottom);g.lineTo(cx-bottomWidth/2,bottom);g.closePath();let road=g.createLinearGradient(0,top,0,bottom);road.addColorStop(0,'#1c3441');road.addColorStop(.5,state.world===4||state.world===18?'#46515b':'#25343a');road.addColorStop(1,'#101820');g.fillStyle=road;g.fill();g.strokeStyle=world[2]+'88';g.lineWidth=2;g.stroke();
-// edge highlights, racing lane
-for(let side of [-1,1]){g.beginPath();g.moveTo(cx+side*topWidth*.43,top);g.lineTo(cx+side*bottomWidth*.43,bottom);g.strokeStyle=world[2]+'b0';g.lineWidth=2;g.shadowColor=world[2];g.shadowBlur=12;g.stroke();g.shadowBlur=0}
-const perspective=(y)=>topWidth/2+(bottomWidth-topWidth)/2*((y-top)/(bottom-top));g.save();g.beginPath();g.moveTo(cx-topWidth/2,top);g.lineTo(cx+topWidth/2,top);g.lineTo(cx+bottomWidth/2,bottom);g.lineTo(cx-bottomWidth/2,bottom);g.clip();for(let i=0;i<13;i++){let p=((i/13+t*.23*state.speedMult)%1),y=top+p*(bottom-top),ww=perspective(y);g.fillStyle=i%2?'#ffffff1d':world[2]+'25';g.fillRect(cx-ww*.46,y,ww*.92,Math.max(1,p*2))}for(let i=0;i<7;i++){let p=((i/7+t*.17*state.speedMult)%1),y=top+p*(bottom-top),ww=perspective(y);g.setLineDash([12*p+2,18*p+4]);g.strokeStyle='#d3ecdf88';g.lineWidth=Math.max(1,p*2);g.beginPath();g.moveTo(cx,y);g.lineTo(cx,y+16*p);g.stroke()}g.setLineDash([]);
-// reflective neon/sun glints & rain
-for(let i=0;i<16;i++){const p=((i*.121+t*.09)%1),x=cx+(Math.sin(i*13+seed)*.35)*perspective(top+p*(bottom-top)),y=top+p*(bottom-top);g.fillStyle=i%2?world[2]+'33':'#ffffff33';g.beginPath();g.ellipse(x,y,2+p*10,1+p*2,.1,0,Math.PI*2);g.fill()}if([0,1,13,20].includes(state.world)){g.strokeStyle='#d3efff30';for(let i=0;i<55;i++){let x=(i*67+t*95)%w,y=(i*31+t*180)%h;g.beginPath();g.moveTo(x,y);g.lineTo(x-3,y+10);g.stroke()}}
-g.restore();
-// tiny scenery lamps / palms / crystals
-for(let i=0;i<8;i++){const side=i%2?1:-1,p=(i/8+.15)%1,y=horizon+p*(h-horizon),dist=perspective(y),x=cx+side*(dist*.64+12),size=4+p*15;g.fillStyle=world[2]+'88';g.shadowColor=world[2];g.shadowBlur=10;g.beginPath();g.arc(x,y-size*.5,size*.35,0,Math.PI*2);g.fill();g.shadowBlur=0;g.strokeStyle='#263a42';g.lineWidth=Math.max(1,size*.18);g.beginPath();g.moveTo(x,y);g.lineTo(x,y-size);g.stroke()}
-// AI and player cars, drifting path around the ribbon
-function drawCar(x,y,s,color,angle=0,emoji=''){g.save();g.translate(x,y);g.rotate(angle);g.fillStyle='#0009';g.beginPath();g.ellipse(0,s*.31,s*.75,s*.2,0,0,Math.PI*2);g.fill();g.shadowColor=color;g.shadowBlur=13;g.fillStyle=color;g.beginPath();g.roundRect(-s*.55,-s*.55,s*1.1,s*.92,s*.18);g.fill();g.shadowBlur=0;g.fillStyle='#c9f3ffb0';g.beginPath();g.roundRect(-s*.32,-s*.42,s*.64,s*.32,s*.11);g.fill();g.fillStyle='#fff7bc';g.fillRect(-s*.42,s*.2,s*.19,s*.1);g.fillRect(s*.23,s*.2,s*.19,s*.1);g.restore()}
-for(let i=0;i<3;i++){let p=((t*(.09+i*.009)*state.speedMult+i*.31)%1),y=top+p*(h*.62),width=perspective(y),x=cx+Math.sin(t*.65+i*2.7)*width*.19;drawCar(x,y,5+p*18,['#ffbd67','#50b9fa','#bc7cff'][i],Math.sin(t*2+i)*.08)}let playerP=(window.lapClock||0)/lapSeconds(),py=top+.25*(h*.56)+playerP*(h*.44),pw=perspective(py),px=cx+Math.sin(t*.85)*pw*.2;drawCar(px,py,12+playerP*15,['#53e6bd','#ff6395','#ffc95e','#63bbff'][state.car%4],Math.sin(t*2.3)*.12);window.sceneRAF=requestAnimationFrame(frame)}window.sceneRAF=requestAnimationFrame(frame)}
-function gameTick(now){const dt=Math.min(.25,(now-lastTick)/1000);lastTick=now;const scaled=dt*state.speedMult;window.lapClock=(window.lapClock||0)+scaled;state.cash+=scaled*16*rate()/lapSeconds();if(window.lapClock>=lapSeconds()){window.lapClock-=lapSeconds();state.laps++;state.cash+=16*rate();addXp(3);sound('lap');if(state.laps%10===0)state.trophies++;save();const num=$('#view-race .muted');if(num)num.textContent=`${fmt(16*rate())} cash and 3 XP each completed lap`}
-const cd=$('#countdown'),prog=$('#lapProgress');if(cd)cd.textContent=Math.max(0,lapSeconds()-(window.lapClock||0)).toFixed(1)+'s';if(prog)prog.style.width=((window.lapClock||0)/lapSeconds()*100)+'%';
-if(state.champ!==null){champTimer+=scaled;const tier=tiers[state.champ],player=tier.laps*lapSeconds(),rival=tier.laps*Math.max(11,lapSeconds()*(1.15-state.champ*.035));if(champTimer>=Math.min(player,rival)){if(player<=rival){state.cash+=tier.reward;state.trophies+=tier.trophies*(1+state.prestige*.15);state.won.push(state.champ);state.unlockedTier=Math.max(state.unlockedTier,Math.min(4,state.champ+1));state.collection[(state.champ*3+7)%cars.length]=(state.collection[(state.champ*3+7)%cars.length]||0)+1;addXp(tier.trophies);notify(`🏆 ${tier.name} won! Bonus pack & $${fmt(tier.reward)}!`);sound('win')}else{notify('Rival took the win. Upgrade your ride and race again.');sound('tap')}state.champ=null;champTimer=0;save();render()}}
-const cashEl=$('#cashBalance'),trophyEl=$('#trophyBalance'),lapEl=$('#lapCount');if(cashEl)cashEl.textContent='$'+fmt(state.cash);if(trophyEl)trophyEl.textContent=fmt(state.trophies);if(lapEl)lapEl.textContent=fmt(state.laps);if(now%3000<250)save();requestAnimationFrame(gameTick)}
-// Catch up a maximum of 12 hours from the saved timestamp.
-{const away=Math.min(12*3600,Math.max(0,(Date.now()-(state.last||Date.now()))/1000));if(away>8){const earned=away/lapSeconds()*16*rate();state.cash+=earned;state.laps+=Math.floor(away/lapSeconds());addXp(Math.floor(away*0.18));setTimeout(()=>notify(`Welcome back! Your crew earned $${fmt(earned)} while you were away.`),350)}}
-render();requestAnimationFrame(gameTick);
-</script></body></html>
+let state=loadState();
+let tab='race',buyMode=1,lapClock=0,saveTimer=0,toastTimer=null,audioCtx=null,drawWarned=false;
+const $=(s,r=document)=>r.querySelector(s);
+const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
+const fmt=n=>Math.floor(Math.max(0,Number(n)||0)).toLocaleString('en-US');
+function short(n){n=Math.max(0,Number(n)||0);if(n>=1e12)return (n/1e12).toFixed(2)+'T';if(n>=1e9)return (n/1e9).toFixed(2)+'B';if(n>=1e6)return (n/1e6).toFixed(2)+'M';if(n>=1e4)return (n/1e3).toFixed(1)+'K';return fmt(n)}
+const cash=n=>'$'+short(n);
+function cashRate(n){n=Math.max(0,Number(n)||0);if(n<10)return '$'+n.toFixed(2);if(n<1000)return '$'+n.toFixed(1);return cash(n)}
+function rgba(hex,a){const n=parseInt(hex.slice(1),16);return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`}
+function shade(hex,amt){const n=parseInt(hex.slice(1),16);let r=(n>>16)&255,g=(n>>8)&255,b=n&255;const f=v=>Math.round(amt>0?v+(255-v)*amt:v*(1+amt));return `rgb(${f(r)},${f(g)},${f(b)})`}
+const worldCost=i=>i<=0?0:Math.round(300*Math.pow(1.55,i-1));
+const worldMult=(i=state.world)=>1+i*.07;
+const xpNeeded=()=>state.level*100;
+function carStars(i){return Math.min(5,Math.floor((state.collection[i]||0)/3))}
+function activeSkin(){return SKINS.find(s=>s.id===state.skin)||null}
+function lapTime(){
+ const car=CARS[state.car]||CARS[0],u=state.upgrades,st=carStars(state.car);
+ return Math.max(6.5,30-car.speed*.55-u.speed*.85-u.accel*.65-u.grip*.38-u.nitro*.22-st*.25);
+}
+function payoutMult(){const u=state.upgrades,sk=activeSkin();return (1+u.payout*.15)*(1+state.prestige*.2)*(1+carStars(state.car)*.06)*(1+(sk?sk.bonus:0))}
+function cashPerLap(){const car=CARS[state.car]||CARS[0];return (20+car.payout*2.2)*payoutMult()*worldMult()}
+function perSecond(){return cashPerLap()/lapTime()}
+function upgradeCost(key,n=1){const u=UPGRADES.find(x=>x.key===key);let total=0,start=state.upgrades[key]||0;for(let i=0;i<n;i++)total+=u.base*Math.pow(u.growth,start+i);return Math.floor(total)}
+function packOdds(p){let[c,r,e,l]=p.weights;const luck=Math.min(24,state.prestige*3);c=Math.max(2,c-luck);e+=luck*.6;l+=luck*.4;const t=c+r+e+l;return [c/t*100,r/t*100,e/t*100,l/t*100]}
+function rollRarity(p){const w=packOdds(p),roll=Math.random()*100;let acc=0;for(let i=0;i<w.length;i++){acc+=w[i];if(roll<acc)return RARITIES[i]}return 'Legendary'}
+function randomCarOfRarity(rarity){const pool=CARS.map((c,i)=>({c,i})).filter(x=>x.c.rarity===rarity);const use=pool.length?pool:CARS.map((c,i)=>({c,i}));return use[Math.floor(Math.random()*use.length)].i}
+function grantCard(index,rarity){const before=state.collection[index]||0,sb=Math.floor(before/3);state.collection[index]=before+1;const sa=Math.floor((before+1)/3);return {index,rarity,isNew:before===0,starUp:sa>sb,count:before+1,stars:sa}}
+function bonusRarity(tier){return ['Rare','Epic','Epic','Legendary','Legendary'][tier]||'Legendary'}
+const scene={canvas:null,ctx:null,w:0,h:0,dpr:1};
+function wrap(v,m){return ((v%m)+m)%m}
+function rr(g,x,y,w,h,r){r=Math.max(0,Math.min(r,Math.abs(w)/2,Math.abs(h)/2));g.beginPath();if(g.roundRect){g.roundRect(x,y,w,h,r);return}g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath()}
+function drawScene(t){
+ const c=document.getElementById('raceCanvas');if(!c)return;
+ if(c!==scene.canvas){scene.canvas=c;scene.ctx=c.getContext('2d');scene.w=0;scene.h=0}
+ const rect=c.getBoundingClientRect(),dpr=Math.min(2,window.devicePixelRatio||1);
+ const w=Math.max(1,Math.round(rect.width)),h=Math.max(1,Math.round(rect.height));
+ if(scene.w!==w||scene.h!==h||scene.dpr!==dpr){c.width=Math.round(w*dpr);c.height=Math.round(h*dpr);scene.w=w;scene.h=h;scene.dpr=dpr;scene.ctx.setTransform(dpr,0,0,dpr,0,0)}
+ const g=scene.ctx;g.clearRect(0,0,w,h);
+ const world=WORLDS[state.world]||WORLDS[0];
+ drawSky(g,w,h,world,t);drawScenery(g,w,h,world,t);
+ if(state.follow)drawFollow(g,w,h,world,t);else drawTopDown(g,w,h,world,t);
+}
+function drawSky(g,w,h,world,t){
+ const grad=g.createLinearGradient(0,0,0,h);grad.addColorStop(0,world.sky[0]);grad.addColorStop(.62,world.sky[1]);grad.addColorStop(1,'#050d14');g.fillStyle=grad;g.fillRect(0,0,w,h);
+ const gx=w*.7,gy=h*.23,rad=g.createRadialGradient(gx,gy,0,gx,gy,w*.5);rad.addColorStop(0,rgba(world.accent,.26));rad.addColorStop(1,'transparent');g.fillStyle=rad;g.fillRect(0,0,w,h);
+}
+function drawScenery(g,w,h,world,t){
+ const horizon=h*.46;
+ if(['city','cyber','rain'].includes(world.type))drawCity(g,w,h,world,t,horizon);
+ else if(world.type==='desert'||world.type==='mars')drawDesert(g,w,h,world,t,horizon);
+ else if(world.type==='alpine'||world.type==='blossom')drawMountains(g,w,h,world,t,horizon,world.type==='blossom');
+ else if(world.type==='ice')drawIce(g,w,h,world,t,horizon);
+ else if(world.type==='coast'||world.type==='sunset')drawCoast(g,w,h,world,t,horizon,world.type==='sunset');
+ else if(world.type==='volcano')drawVolcano(g,w,h,world,t,horizon);
+ else if(world.type==='port')drawPort(g,w,h,world,t,horizon);
+ else if(world.type==='jungle')drawJungle(g,w,h,world,t,horizon);
+ else if(world.type==='moon')drawMoon(g,w,h,world,t,horizon);
+ else if(world.type==='candy')drawCandy(g,w,h,world,t,horizon);
+ else if(world.type==='gold')drawGold(g,w,h,world,t,horizon);
+ else if(world.type==='crystal')drawCrystal(g,w,h,world,t,horizon);
+ else if(world.type==='autumn')drawAutumn(g,w,h,world,t,horizon);
+ else if(world.type==='sky')drawClouds(g,w,h,world,t,horizon);
+ else if(world.type==='haunted')drawHaunted(g,w,h,world,t,horizon);
+ else if(world.type==='prism')drawPrism(g,w,h,world,t,horizon);
+}
+function drawCity(g,w,h,world,t,horizon){
+ for(let i=0;i<18;i++){const bw=w/14*(.55+((i*7)%5)*.11),bh=h*(.09+((i*13)%9)/9*.23),x=wrap(i*w/13-t*5,w+150)-75;g.fillStyle='rgba(3,10,18,.9)';g.fillRect(x,horizon-bh,bw,bh);g.fillStyle=rgba(world.accent,.2);for(let yy=horizon-bh+9;yy<horizon-7;yy+=13)for(let xx=x+4;xx<x+bw-4;xx+=10)if(((xx+yy+i)|0)%3)g.fillRect(xx,yy,3,4)}
+ if(world.type==='cyber'){g.strokeStyle=rgba(world.accent,.12);g.lineWidth=1;for(let x=0;x<w;x+=34){g.beginPath();g.moveTo(w*.5+(x-w*.5)*.4,horizon);g.lineTo(x,h);g.stroke()}for(let y=horizon;y<h;y+=22){g.beginPath();g.moveTo(0,y);g.lineTo(w,y);g.stroke()}g.strokeStyle=rgba(world.accent,.4);for(let i=0;i<3;i++){g.beginPath();g.ellipse(w*.5,horizon+8+i*13,w*(.1+i*.08),h*(.02+i*.014),0,0,Math.PI*2);g.stroke()}}
+ if(world.type==='rain'){g.fillStyle='rgba(180,220,255,.08)';g.fillRect(0,horizon-6,w,h)}
+}
+function drawDesert(g,w,h,world,t,horizon){
+ const sun=g.createRadialGradient(w*.78,horizon-42,2,w*.78,horizon-42,80);sun.addColorStop(0,'rgba(255,236,180,.75)');sun.addColorStop(1,'transparent');g.fillStyle=sun;g.fillRect(0,0,w,h);
+ const tones=world.type==='mars'?['#4a1c17','#67281d','#7e3323']:['#513722','#76502e','#94663a'];
+ tones.forEach((col,i)=>{g.fillStyle=col;g.beginPath();g.moveTo(0,horizon+i*8);g.quadraticCurveTo(w*(.18+i*.12),horizon-42-i*10,w*.45,horizon+i*8);g.quadraticCurveTo(w*(.7+i*.09),horizon+25-i*12,w,horizon-4+i*10);g.lineTo(w,h);g.lineTo(0,h);g.fill()});
+ g.fillStyle=world.type==='mars'?'#5b241b':'#6b4729';for(let i=0;i<4;i++){const x=w*(.08+i*.24),bw=w*.13,bh=h*.09;g.fillRect(x,horizon-bh,bw,bh);g.fillRect(x+bw*.18,horizon-bh*1.45,bw*.58,bh*.45)}
+}
+function drawMountains(g,w,h,world,t,horizon,blossom){
+ for(let i=0;i<6;i++){const x=w*(i/5-.06),peak=horizon-h*(.12+(i%3)*.06),base=horizon+4;g.fillStyle=i%2?'#243444':'#1b2a39';g.beginPath();g.moveTo(x-w*.14,base);g.lineTo(x,peak);g.lineTo(x+w*.16,base);g.fill();g.fillStyle='rgba(235,248,255,.82)';g.beginPath();g.moveTo(x-w*.035,peak+h*.035);g.lineTo(x,peak);g.lineTo(x+w*.04,peak+h*.035);g.fill()}
+ if(blossom){for(let i=0;i<9;i++)tree(g,w*(.06+i*.11),horizon+6,h*.055,'#7c4b66','#ff9ebd')}else for(let i=0;i<13;i++)pine(g,w*(.03+i*.08),horizon+5,h*(.035+(i%3)*.008),'#1a3e34')
+}
+function drawIce(g,w,h,world,t,horizon){
+ drawMountains(g,w,h,world,t,horizon,false);
+ g.fillStyle='rgba(150,220,255,.13)';g.fillRect(0,horizon,w,h-horizon);
+ for(let i=0;i<7;i++){g.strokeStyle='rgba(210,245,255,.18)';g.beginPath();g.moveTo(w*(.05+i*.15),horizon);g.lineTo(w*(.12+i*.15),h);g.stroke()}
+}
+function drawCoast(g,w,h,world,t,horizon,sunset){
+ const sea=g.createLinearGradient(0,horizon,0,h);sea.addColorStop(0,sunset?'#8a4744':'#176a76');sea.addColorStop(1,'#08222c');g.fillStyle=sea;g.fillRect(0,horizon,w,h-horizon);
+ const sun=g.createRadialGradient(w*.72,horizon-38,2,w*.72,horizon-38,72);sun.addColorStop(0,sunset?'rgba(255,220,150,.95)':'rgba(255,245,200,.7)');sun.addColorStop(1,'transparent');g.fillStyle=sun;g.fillRect(0,0,w,h);
+ for(let i=0;i<8;i++){g.strokeStyle=`rgba(255,220,170,${.08+i*.01})`;g.beginPath();g.moveTo(w*.72-30-i*8,horizon+8+i*5);g.lineTo(w*.72+30+i*8,horizon+8+i*5);g.stroke()}
+ g.fillStyle='#d8eef2';g.fillRect(w*.87,horizon-h*.14,9,h*.14);g.fillStyle='#ffce67';g.fillRect(w*.865,horizon-h*.15,18,6);
+ palm(g,w*.08,horizon+18,h*.06,'#1f5a4c');palm(g,w*.17,horizon+28,h*.05,'#246b56');
+}
+function drawVolcano(g,w,h,world,t,horizon){
+ const vg=g.createRadialGradient(w*.52,horizon,0,w*.52,horizon,w*.42);vg.addColorStop(0,'rgba(255,92,40,.45)');vg.addColorStop(1,'transparent');g.fillStyle=vg;g.fillRect(0,0,w,h);
+ g.fillStyle='#211514';g.beginPath();g.moveTo(w*.18,h);g.lineTo(w*.43,horizon-h*.18);g.lineTo(w*.57,horizon-h*.18);g.lineTo(w*.85,h);g.fill();
+ g.fillStyle='#ff6b36';g.beginPath();g.moveTo(w*.43,horizon-h*.18);g.lineTo(w*.57,horizon-h*.18);g.lineTo(w*.53,horizon-h*.135);g.lineTo(w*.47,horizon-h*.135);g.fill();
+ for(let i=0;i<4;i++){g.strokeStyle='rgba(255,110,50,.6)';g.lineWidth=2;g.beginPath();g.moveTo(w*.5,horizon-h*.17);g.quadraticCurveTo(w*(.45+i*.04),horizon-h*.05,w*(.36+i*.07),h);g.stroke()}
+ for(let i=0;i<16;i++){const x=wrap(i*67+t*18,w),y=wrap(i*37-t*55,h*.4);g.fillStyle=`rgba(255,${120+i*5},60,${.25+(i%4)*.12})`;g.beginPath();g.arc(x,y,1.2+(i%3),0,Math.PI*2);g.fill()}
+}
+function drawPort(g,w,h,world,t,horizon){
+ g.fillStyle='#0d2530';g.fillRect(0,horizon,w,h-horizon);
+ const cols=['#b45f4d','#3e7f91','#c79a52','#456b86','#8a5b6e'];
+ for(let i=0;i<15;i++){const x=wrap(i*w/10-t*4,w+120)-60,y=horizon-h*(.05+(i%4)*.045),bw=w*.075,bh=h*.06;g.fillStyle=cols[i%cols.length];g.fillRect(x,y,bw,bh);g.fillStyle='rgba(0,0,0,.16)';for(let xx=x+3;xx<x+bw-2;xx+=6)g.fillRect(xx,y+2,2,bh-4)}
+ g.strokeStyle='#394b52';g.lineWidth=3;g.beginPath();g.moveTo(w*.72,horizon-h*.2);g.lineTo(w*.72,horizon);g.moveTo(w*.72,horizon-h*.2);g.lineTo(w*.94,horizon-h*.12);g.stroke();
+}
+function drawJungle(g,w,h,world,t,horizon){
+ g.fillStyle='#0c2a1c';g.fillRect(0,horizon,w,h-horizon);
+ g.fillStyle='#223d2a';for(let i=0;i<5;i++){const x=w*(.3+i*.1),bw=w*.09;g.fillRect(x,horizon-h*(.08+i*.025),bw,h*(.08+i*.025))}
+ g.fillStyle='#526b45';for(let i=0;i<4;i++)g.fillRect(w*.32,horizon-h*.13+i*h*.035,w*.36,h*.018);
+ for(let i=0;i<9;i++)palm(g,w*(.04+i*.12),horizon+12,h*(.055+(i%3)*.012),'#1f5a3d');
+}
+function drawMoon(g,w,h,world,t,horizon){
+ g.fillStyle='rgba(210,220,255,.55)';for(let i=0;i<70;i++){const x=(i*97)%w,y=(i*53)%(horizon-10);g.fillRect(x,y,1.4,1.4)}
+ g.fillStyle='#2a2d3a';g.beginPath();g.arc(w*.78,horizon-58,26,0,Math.PI*2);g.fill();
+ g.fillStyle='rgba(160,170,200,.2)';for(let i=0;i<6;i++){g.beginPath();g.ellipse(w*(.1+i*.16),horizon+12+(i%3)*8,18+i*4,5+i,0,0,Math.PI*2);g.fill()}
+ g.fillStyle='#a9b7cc';g.beginPath();g.arc(w*.2,horizon-9,20,Math.PI,0);g.fill();g.fillStyle='#6e7d92';g.fillRect(w*.2-6,horizon-9,12,14);
+}
+function drawCandy(g,w,h,world,t,horizon){
+ g.fillStyle='#ff9fce';g.beginPath();g.moveTo(0,horizon);g.quadraticCurveTo(w*.2,horizon-55,w*.45,horizon);g.quadraticCurveTo(w*.7,horizon+35,w,horizon-20);g.lineTo(w,h);g.lineTo(0,h);g.fill();
+ g.fillStyle='#c96fa8';g.beginPath();g.moveTo(0,horizon+20);g.quadraticCurveTo(w*.3,horizon-18,w*.6,horizon+20);g.quadraticCurveTo(w*.82,horizon+42,w,horizon+14);g.lineTo(w,h);g.lineTo(0,h);g.fill();
+ for(let i=0;i<6;i++){const x=w*(.1+i*.16),y=horizon+8;g.strokeStyle='#f5d9e8';g.lineWidth=2;g.beginPath();g.moveTo(x,y);g.lineTo(x,y-28);g.stroke();g.fillStyle=i%2?'#ffec8a':'#8fe8ff';g.beginPath();g.arc(x,y-34,9,0,Math.PI*2);g.fill()}
+}
+function drawGold(g,w,h,world,t,horizon){
+ g.fillStyle='rgba(255,215,120,.16)';for(let i=0;i<4;i++){g.beginPath();g.moveTo(w*(.18+i*.2),0);g.lineTo(w*(.08+i*.2),h);g.lineTo(w*(.23+i*.2),h);g.lineTo(w*(.3+i*.2),0);g.fill()}
+ g.fillStyle='#3b3018';for(let i=0;i<6;i++){const x=w*(.05+i*.18);g.fillRect(x,horizon-h*.18,w*.035,h*.18);g.fillStyle='#6f5a28';g.fillRect(x-3,horizon-h*.2,w*.035+6,5);g.fillStyle='#3b3018'}
+}
+function drawCrystal(g,w,h,world,t,horizon){
+ g.fillStyle='#0a2029';g.fillRect(0,horizon,w,h-horizon);
+ for(let i=0;i<10;i++){const x=w*(.05+i*.1),base=horizon+12,ht=h*(.05+(i%4)*.035);g.fillStyle=i%2?'#2b7f83':'#3b5f7c';g.beginPath();g.moveTo(x,base);g.lineTo(x+7,base-ht);g.lineTo(x+15,base);g.fill();g.fillStyle='rgba(130,255,230,.35)';g.beginPath();g.moveTo(x+3,base);g.lineTo(x+7,base-ht*.8);g.lineTo(x+10,base);g.fill()}
+ const glow=g.createRadialGradient(w*.55,horizon+10,0,w*.55,horizon+10,w*.3);glow.addColorStop(0,'rgba(112,255,224,.18)');glow.addColorStop(1,'transparent');g.fillStyle=glow;g.fillRect(0,0,w,h);
+}
+function drawAutumn(g,w,h,world,t,horizon){
+ for(let i=0;i<11;i++)tree(g,w*(.03+i*.095),horizon+8,h*(.05+(i%3)*.012),'#5a3a25',i%3?'#c96b32':'#d99a3d');
+}
+function drawClouds(g,w,h,world,t,horizon){
+ for(let i=0;i<9;i++){const x=wrap(i*w/7-t*7,w+180)-90,y=h*(.12+(i%4)*.08);g.fillStyle=`rgba(235,246,255,${.1+(i%3)*.05})`;g.beginPath();g.ellipse(x,y,44+i*7,13+i*2,0,0,Math.PI*2);g.fill();g.beginPath();g.ellipse(x+25,y-8,28+i*4,12+i*2,0,0,Math.PI*2);g.fill()}
+ g.fillStyle='rgba(255,255,255,.1)';g.fillRect(0,horizon,w,h-horizon);
+}
+function drawHaunted(g,w,h,world,t,horizon){
+ g.fillStyle='rgba(220,230,255,.5)';for(let i=0;i<50;i++)g.fillRect((i*83)%w,(i*47)%(horizon-20),1.2,1.2);
+ g.fillStyle='rgba(200,210,235,.18)';g.beginPath();g.arc(w*.78,horizon-86,34,0,Math.PI*2);g.fill();
+ for(let i=0;i<8;i++){const x=w*(.05+i*.13),base=horizon+14;g.strokeStyle='#2b2532';g.lineWidth=4;g.beginPath();g.moveTo(x,base);g.lineTo(x,base-h*.11);g.moveTo(x,base-h*.09);g.lineTo(x-18,base-h*.15);g.moveTo(x,base-h*.08);g.lineTo(x+20,base-h*.14);g.stroke();g.fillStyle='#ffca6a';g.beginPath();g.arc(x+20,base-h*.14,3,0,Math.PI*2);g.fill();g.fillStyle='rgba(255,202,106,.2)';g.beginPath();g.arc(x+20,base-h*.14,10,0,Math.PI*2);g.fill()}
+ g.fillStyle='rgba(200,210,235,.08)';g.fillRect(0,horizon+10,w,h-horizon);
+}
+function drawPrism(g,w,h,world,t,horizon){
+ const cols=['#ff7a8a','#ffca6a','#8affd6','#6fd9ff','#b48cff','#ff9df5'];
+ for(let i=0;i<6;i++){g.strokeStyle=rgba(cols[i],.26);g.lineWidth=10;g.beginPath();g.arc(w*.5,horizon+30,90+i*26,Math.PI,0);g.stroke()}
+ g.fillStyle='rgba(255,255,255,.5)';for(let i=0;i<80;i++)g.fillRect((i*97)%w,(i*61)%h,1.2,1.2);
+}
+function tree(g,x,y,s,trunk,leaf){g.strokeStyle=trunk;g.lineWidth=Math.max(1,s*.16);g.beginPath();g.moveTo(x,y);g.lineTo(x,y-s*.75);g.stroke();g.fillStyle=leaf;for(let i=0;i<3;i++){g.beginPath();g.arc(x+(i-1)*s*.22,y-s*.72-(i%2)*s*.12,s*.3,0,Math.PI*2);g.fill()}}
+function pine(g,x,y,s,col){g.fillStyle=col;for(let i=0;i<3;i++){g.beginPath();g.moveTo(x,y-s*(.25+i*.25));g.lineTo(x-s*(.28-i*.06),y-s*(.05+i*.2));g.lineTo(x+s*(.28-i*.06),y-s*(.05+i*.2));g.fill()}g.fillStyle='#2a2018';g.fillRect(x-s*.04,y-s*.05,s*.08,s*.12)}
+function palm(g,x,y,s,col){g.strokeStyle=col;g.lineWidth=Math.max(1,s*.1);g.beginPath();g.moveTo(x,y);g.quadraticCurveTo(x-s*.15,y-s*.55,x+s*.04,y-s);g.stroke();g.fillStyle=col;for(let i=0;i<5;i++){g.beginPath();g.ellipse(x+s*.04+Math.cos(i*1.2)*s*.3,y-s+Math.sin(i*1.2)*s*.14,s*.35,s*.09,i*.5,0,Math.PI*2);g.fill()}}
+function drawFollow(g,w,h,world,t){
+ const horizon=h*.46,top=horizon+3,bottom=h+26,cx=w*.52,topW=w*.16,bottomW=w*(state.follow?.64:.8);
+ const ground=g.createLinearGradient(0,horizon,0,h);ground.addColorStop(0,'rgba(8,18,25,.95)');ground.addColorStop(1,'#071017');g.fillStyle=ground;g.fillRect(0,horizon,w,h-horizon);
+ g.beginPath();g.moveTo(cx-topW/2,top);g.lineTo(cx+topW/2,top);g.lineTo(cx+bottomW/2,bottom);g.lineTo(cx-bottomW/2,bottom);g.closePath();
+ const road=g.createLinearGradient(0,top,0,bottom);road.addColorStop(0,world.road);road.addColorStop(.35,shade(world.road,.08));road.addColorStop(1,'#0d161d');g.fillStyle=road;g.fill();g.strokeStyle=rgba(world.accent,.65);g.lineWidth=2;g.stroke();
+ const perspective=y=>topW/2+(bottomW-topW)/2*clamp((y-top)/(bottom-top),0,1);
+ g.save();g.beginPath();g.moveTo(cx-topW/2,top);g.lineTo(cx+topW/2,top);g.lineTo(cx+bottomW/2,bottom);g.lineTo(cx-bottomW/2,bottom);g.closePath();g.clip();
+ for(let i=0;i<13;i++){const p=wrap(i/13+t*.23*state.speedMult,1),y=top+p*(bottom-top),ww=perspective(y);g.fillStyle=i%2?'rgba(255,255,255,.045)':rgba(world.accent,.08);g.fillRect(cx-ww*.46,y,ww*.92,Math.max(1,p*2.4))}
+ for(let i=0;i<9;i++){const p=wrap(i/9+t*.17*state.speedMult,1),y=top+p*(bottom-top),ww=perspective(y);g.strokeStyle='rgba(220,245,235,.5)';g.lineWidth=Math.max(1,p*2);g.setLineDash([10*p+2,16*p+5]);g.beginPath();g.moveTo(cx,y);g.lineTo(cx,y+15*p);g.stroke()}
+ g.setLineDash([]);
+ for(let i=0;i<18;i++){const p=wrap(i*.113+t*.07,1),y=top+p*(bottom-top),ww=perspective(y),x=cx+(Math.sin(i*13.7+state.world)*.38)*ww;g.fillStyle=i%2?rgba(world.accent,.12):'rgba(255,255,255,.09)';g.beginPath();g.ellipse(x,y,2+p*11,1+p*2.2,0,0,Math.PI*2);g.fill()}
+ for(let i=0;i<7;i++){const p=wrap(i*.16+t*.05,1),y=top+p*(bottom-top),ww=perspective(y);g.fillStyle='rgba(2,8,12,.28)';g.beginPath();g.ellipse(cx+(i%2?1:-1)*ww*.18,y,ww*.09,2+p*5,0,0,Math.PI*2);g.fill()}
+ g.restore();
+ for(let side of [-1,1]){g.beginPath();g.moveTo(cx+side*topW*.43,top);g.lineTo(cx+side*bottomW*.43,bottom);g.strokeStyle=rgba(world.accent,.7);g.lineWidth=2;g.shadowColor=world.accent;g.shadowBlur=12;g.stroke();g.shadowBlur=0}
+ for(let i=0;i<8;i++){const side=i%2?1:-1,p=(i/8+.12)%1,y=horizon+p*(h-horizon),dist=perspective(y),x=cx+side*(dist*.66+14),size=4+p*15;g.fillStyle=rgba(world.accent,.7);g.shadowColor=world.accent;g.shadowBlur=9;g.beginPath();g.arc(x,y-size*.5,Math.max(1,size*.3),0,Math.PI*2);g.fill();g.shadowBlur=0;g.strokeStyle='#263a42';g.lineWidth=Math.max(1,size*.16);g.beginPath();g.moveTo(x,y);g.lineTo(x,y-size);g.stroke()}
+ drawWeather(g,w,h,world.type,t);
+ const car=CARS[state.car]||CARS[0],skin=activeSkin(),pc=skin?skin.color:car.color;
+ for(let i=0;i<3;i++){const p=wrap(t*(.055+i*.006)*state.speedMult+i*.31,1),y=top+p*(bottom-top)*.84,ww=perspective(y),x=cx+Math.sin(t*.55+i*2.2)*ww*.23,size=Math.max(3,4+p*20);drawCar(g,x,y,size,['#ffbd67','#50b9fa','#bc7cff'][i],Math.sin(t*2+i)*.07)}
+ const p=.38+Math.sin(t*.8)*.012,y=top+p*(bottom-top),ww=perspective(y),x=cx+Math.sin(t*.75)*ww*.13,size=Math.max(15,ww*.115);
+ g.save();g.globalAlpha=.25;g.fillStyle=rgba(pc,.8);g.beginPath();g.ellipse(x,y+size*.1,size*1.15,size*.45,0,0,Math.PI*2);g.fill();g.restore();
+ for(let i=0;i<5;i++){const ex=x+(i%2?1:-1)*size*(.45+i*.13),ey=y+size*(.25+i*.09);g.fillStyle=`rgba(220,235,245,${.13-i*.02})`;g.beginPath();g.arc(ex,ey,size*(.13+i*.025),0,Math.PI*2);g.fill()}
+ drawCar(g,x,y,size,pc,Math.sin(t*2.3)*.08,{player:true,skin:skin});
+}
+function drawWeather(g,w,h,type,t){
+ if(['rain','city','cyber'].includes(type)){const heavy=type==='rain';g.strokeStyle=`rgba(190,230,255,${heavy?.26:.12})`;g.lineWidth=heavy?1.3:1;for(let i=0;i<(heavy?90:40);i++){const x=wrap(i*67+t*110,w),y=wrap(i*47+t*(heavy?300:170),h);g.beginPath();g.moveTo(x,y);g.lineTo(x-(heavy?4:2),y+(heavy?15:8));g.stroke()}}
+ if(type==='alpine'||type==='ice'){g.fillStyle='rgba(245,252,255,.55)';for(let i=0;i<65;i++){const x=wrap(i*71+t*14,w),y=wrap(i*43+t*28,h);g.beginPath();g.arc(x,y,1+(i%3)*.6,0,Math.PI*2);g.fill()}}
+ if(type==='blossom'){for(let i=0;i<34;i++){const x=wrap(i*59+t*22,w),y=wrap(i*37+t*36,h);g.fillStyle=`rgba(255,${160+(i%5)*8},200,${.35+(i%4)*.12})`;g.beginPath();g.ellipse(x,y,2.5,1.2,i*.6,0,Math.PI*2);g.fill()}}
+ if(type==='volcano'||type==='mars'){for(let i=0;i<26;i++){const x=wrap(i*73-t*16,w),y=wrap(i*41-t*30,h);g.fillStyle=`rgba(255,${110+(i%5)*12},60,${.2+(i%3)*.12})`;g.beginPath();g.arc(x,y,1+(i%3),0,Math.PI*2);g.fill()}}
+ if(type==='crystal'||type==='prism'){for(let i=0;i<24;i++){const x=wrap(i*83+t*6,w),y=wrap(i*57+t*9,h);g.fillStyle=`rgba(190,255,245,${.2+(i%3)*.14})`;g.fillRect(x,y,1.5,1.5)}}
+ if(type==='haunted'){g.fillStyle='rgba(190,200,225,.06)';for(let i=0;i<5;i++){g.beginPath();g.ellipse(w*(.1+i*.22),h*(.6+i*.05),w*.13,h*.035,0,0,Math.PI*2);g.fill()}}
+}
+function drawCar(g,x,y,s,color,angle=0,opt={}){
+ s=Math.max(2,s);g.save();g.translate(x,y);g.rotate(angle);
+ g.fillStyle='rgba(0,0,0,.5)';g.beginPath();g.ellipse(0,s*.34,s*.78,s*.22,0,0,Math.PI*2);g.fill();
+ g.fillStyle='#070d12';for(let sx of [-1,1])for(let sy of [-1,1]){rr(g,sx*s*.52-s*.11,sy*s*.33-s*.09,s*.22,s*.18,s*.05);g.fill()}
+ if(opt.player){g.shadowColor=color;g.shadowBlur=s*.7}
+ const body=g.createLinearGradient(0,-s*.6,0,s*.5);body.addColorStop(0,shade(color,.55));body.addColorStop(.38,color);body.addColorStop(1,shade(color,-.42));g.fillStyle=body;rr(g,-s*.52,-s*.55,s*1.04,s*.98,s*.2);g.fill();g.shadowBlur=0;
+ g.fillStyle='rgba(255,255,255,.42)';rr(g,-s*.4,-s*.48,s*.8,s*.14,s*.07);g.fill();
+ const glass=g.createLinearGradient(0,-s*.4,0,s*.02);glass.addColorStop(0,'rgba(190,245,255,.82)');glass.addColorStop(1,'rgba(40,95,125,.75)');g.fillStyle=glass;rr(g,-s*.33,-s*.36,s*.66,s*.31,s*.09);g.fill();
+ g.fillStyle='rgba(255,255,255,.32)';rr(g,-s*.25,-s*.32,s*.5,s*.07,s*.035);g.fill();
+ g.fillStyle='#fff6c8';g.shadowColor='#fff2a8';g.shadowBlur=s*.4;rr(g,-s*.39,s*.2,s*.18,s*.1,s*.04);g.fill();rr(g,s*.21,s*.2,s*.18,s*.1,s*.04);g.fill();g.shadowBlur=0;
+ g.fillStyle='#ff5d73';rr(g,-s*.36,s*.34,s*.14,s*.06,s*.03);g.fill();rr(g,s*.22,s*.34,s*.14,s*.06,s*.03);g.fill();
+ g.fillStyle=shade(color,-.55);rr(g,-s*.47,-s*.59,s*.94,s*.07,s*.03);g.fill();
+ g.fillStyle='rgba(255,255,255,.24)';g.fillRect(-s*.03,-s*.5,s*.06,s*.9);
+ if(opt.skin){g.strokeStyle='rgba(255,255,255,.5)';g.lineWidth=Math.max(1,s*.035);rr(g,-s*.5,-s*.53,s,s*.94,s*.19);g.stroke()}
+ g.restore();
+}
+function drawTopDown(g,w,h,world,t){
+ const horizon=h*.46;g.fillStyle='rgba(4,12,18,.55)';g.fillRect(0,horizon,w,h-horizon);
+ const compact=h<370||w<540;
+ const cx=w*.5,cy=h*(compact?.44:.53),rx=w*(compact?.36:.34),ry=h*(compact?.23:.29);
+ const tw=Math.max(26,Math.min(w,h)*(compact?.1:.115));
+ g.save();g.lineCap='round';g.strokeStyle='rgba(0,0,0,.65)';g.lineWidth=tw+min(18,w*.03);g.beginPath();g.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);g.stroke();
+ g.strokeStyle=shade(world.road,.08);g.lineWidth=tw;g.beginPath();g.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);g.stroke();
+ g.strokeStyle=rgba(world.accent,.8);g.lineWidth=2;g.beginPath();g.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);g.stroke();
+ g.strokeStyle='rgba(230,245,250,.38)';g.lineWidth=1.5;g.setLineDash([10,14]);g.beginPath();g.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);g.stroke();g.setLineDash([]);
+ g.fillStyle='#e8f4f8';g.fillRect(cx-tw/2,cy+ry-3,tw,6);
+ for(let i=0;i<8;i++){g.fillStyle=i%2?'#0d1922':'#e8f4f8';g.fillRect(cx-tw/2+i*tw/8,cy+ry-6,tw/8,4);g.fillStyle=i%2?'#e8f4f8':'#0d1922';g.fillRect(cx-tw/2+i*tw/8,cy+ry+2,tw/8,4)}
+ g.restore();
+ const angleOf=(p)=>-Math.PI/2+p*Math.PI*2;
+ const point=(a,off=0)=>[cx+(rx+off)*Math.cos(a),cy+(ry+off)*Math.sin(a)];
+ for(let i=0;i<3;i++){const a=angleOf(wrap(t*.035*state.speedMult+i*.28,1)),p=point(a),size=Math.max(5,tw*.22);drawCar(g,p[0],p[1],size,['#ffbd67','#50b9fa','#bc7cff'][i],a+Math.PI/2)}
+ const car=CARS[state.car]||CARS[0],skin=activeSkin(),pc=skin?skin.color:car.color;
+ const pa=angleOf(wrap(lapClock/lapTime(),1)),pp=point(pa),ps=Math.max(6,tw*.27);
+ g.save();g.shadowColor=pc;g.shadowBlur=16;drawCar(g,pp[0],pp[1],ps,pc,pa+Math.PI/2,{player:true,skin:skin});g.restore();
+ g.fillStyle='rgba(220,245,255,.65)';g.font='800 9px Inter, sans-serif';g.textAlign='center';g.fillText('FULL TRACK VIEW',cx,h*.1);
+}
+function min(a,b){return Math.min(a,b)}
+/* __CANVAS__ */
+function topbarHTML(car){
+ return `<header class="topbar"><div class="brand"><div class="brandmark">◈</div><div>PITLANE<small>Idle Racing Club</small></div></div><div class="pills">
+ <div class="pill cash" title="Cash">◉ <span class="pill-label">Cash</span><b id="cashBalance">${cash(state.cash)}</b></div>
+ <div class="pill trophy" title="Trophies">✦ <span class="pill-label">Trophies</span><b id="trophyBalance">${fmt(state.trophies)}</b></div>
+ <div class="pill" title="Level">✧ <span class="pill-label">Level</span><b id="levelValue">${fmt(state.level)}</b></div>
+ ${state.prestige?`<div class="pill wrench" title="Golden wrenches">🔧 <span class="pill-label">Wrench</span><b id="wrenchBalance">${state.prestige}</b></div>`:''}
+ <button class="iconbtn ${state.sound?'on':''}" data-action="sound" aria-label="${state.sound?'Mute sound':'Enable sound'}" aria-pressed="${state.sound}">${state.sound?'♪':'✕'}</button>
+ <div class="profile" title="${car.name}">${car.emoji}</div>
+ </div></header>`;
+}
+function heroHTML(car,world){
+ return `<section class="hero"><canvas id="raceCanvas" aria-label="Animated ${world.name} race track"></canvas>
+ <div class="scene-top"><span class="live"><i></i> LIVE RACE</span><span class="track-chip">${world.emoji} ${world.name}</span></div>
+ <div class="scene-controls"><button data-action="camera" class="${state.follow?'on':''}" aria-pressed="${state.follow}">${state.follow?'◉ FOLLOW':'▧ FULL TRACK'}</button><button data-action="sound" class="${state.sound?'on':''}" aria-pressed="${state.sound}">${state.sound?'♫ SOUND':'♫ MUTED'}</button></div>
+ <div class="hero-champ" id="heroChamp"><span id="heroChampName"></span><b id="heroChampLap"></b></div>
+ <div class="race-bottom"><div class="race-title"><div class="eyebrow">${car.rarity} · ${car.cls}</div><h1>${car.emoji} ${car.name}</h1><p><b>${cashRate(perSecond())}</b>/sec <span>·</span> <b>${cash(cashPerLap())}</b>/lap <span>·</span> ${world.name}</p></div>
+ <div class="lapbox"><span>COMPLETED LAPS</span><b id="lapCount">${fmt(state.laps)}</b><div class="speed-row">${[1,2,4].map(v=>`<button data-speed="${v}" class="${state.speedMult===v?'on':''}" aria-pressed="${state.speedMult===v}">${v}×</button>`).join('')}</div></div></div></section>`;
+}
+function statsHTML(xpPct){
+ return `<div class="stats">
+ <div class="stat"><span class="label">Cash / lap</span><strong class="mint" id="statCashLap">${cash(cashPerLap())}</strong><small id="statPerSec">${cashRate(perSecond())}/sec</small></div>
+ <div class="stat"><span class="label">Lap time</span><strong id="statLap">${lapTime().toFixed(1)}s</strong><small>auto racing</small></div>
+ <div class="stat"><span class="label">Experience</span><strong><span id="xpValue">${fmt(state.xp)}</span> <small>/ <span id="xpNeed">${fmt(xpNeeded())}</span> XP</small></strong><div class="progress"><i id="xpFill" style="width:${xpPct}%"></i></div></div>
+ <div class="stat"><span class="label">Golden wrenches</span><strong class="gold" id="statWrench">${state.prestige} 🔧</strong><small>+${state.prestige*20}% cash · +${state.prestige*3}% pack luck</small></div>
+ </div>`;
+}
+function tabsHTML(){
+ return `<div class="tabs" role="tablist">${TABS.map(([key,label])=>`<button class="tab ${tab===key?'on':''}" data-tab="${key}" role="tab" aria-selected="${tab===key}">${label}</button>`).join('')}</div>`;
+}
+function tierStatus(i){
+ if(state.won.includes(i))return ['CLEARED','won'];
+ if(state.champ&&state.champ.tier===i)return ['RACING','live'];
+ if(i<=state.unlockedTier)return ['READY','ready'];
+ return ['LOCKED',''];
+}
+function activeChampHTML(){
+ const c=state.champ;if(!c)return '';
+ const t=TIERS[c.tier],pp=clamp(c.elapsed/c.playerTotal*100,0,100),rp=clamp(c.elapsed/c.rivalTotal*100,0,100);
+ return `<div class="champ-active"><div class="row between wrap"><div><h3>🏁 ${t.name}</h3><div class="subtle">${t.laps} laps · your pace ${lapTime().toFixed(1)}s · rival pace ${c.rivalLap.toFixed(1)}s</div></div><span class="badge live">LIVE</span></div>
+ <div class="champ-bars"><div class="champ-bar-row player"><span>YOU</span><div class="bar"><i id="champPlayerBar" style="width:${pp}%"></i></div><span id="champLapText">${Math.min(t.laps,Math.floor(c.elapsed/Math.max(.1,lapTime())))}/${t.laps}</span></div>
+ <div class="champ-bar-row rival"><span>RIVAL</span><div class="bar"><i id="champRivalBar" style="width:${rp}%"></i></div><span>${Math.min(t.laps,Math.floor(c.elapsed/Math.max(.1,c.rivalLap)))}/${t.laps}</span></div></div>
+ <div class="row between wrap" style="margin-top:11px"><span class="subtle" id="champStatus">${c.won?'You have the pace to win — hold it.':'Rival is faster. Upgrade and try again.'}</span><button class="btn small danger" data-action="abandon">ABANDON</button></div></div>`;
+}
+function ladderCard(t,i){
+ const st=tierStatus(i),active=state.champ&&state.champ.tier===i,canEnter=i<=state.unlockedTier&&!state.won.includes(i);
+ return `<div class="ladder-card ${st[1]}"><div class="ladder-num">${String(i+1).padStart(2,'0')}</div><div class="ladder-body"><div class="row between"><h3>${t.name}</h3><span class="badge ${st[1]==='ready'?'ready':st[1]==='won'?'won':st[1]==='live'?'live':''}">${st[0]}</span></div><p>${t.laps} laps · rival ${t.rivalLap.toFixed(1)}s/lap · ${cash(t.reward)} · ${fmt(t.trophies)} ✦</p><div class="ladder-actions">${canEnter&&!active?`<button class="btn small" data-champ="${i}">ENTER RACE →</button>`:''}${active?'<span class="subtle">Race in progress — live progress is above.</span>':''}${state.won.includes(i)?'<span class="subtle">Championship cleared.</span>':''}${!canEnter&&!state.won.includes(i)&&!active?`<span class="subtle">Win ${i>0?TIERS[i-1].name:'the previous cup'} to unlock.</span>`:''}</div></div></div>`;
+}
+function champPulseHTML(){
+ if(state.champ)return activeChampHTML();
+ const next=TIERS.findIndex((t,i)=>!state.won.includes(i)&&i<=state.unlockedTier);
+ if(next<0)return `<div class="panel"><div class="panel-head"><div><h2>Championship pulse</h2><p>Every ladder rung is cleared. You are the Apex champion.</p></div><span class="tag">APEX</span></div></div>`;
+ const t=TIERS[next];
+ return `<div class="panel"><div class="panel-head"><div><h2>Championship pulse</h2><p>Next up: ${t.name}. Beat a ${t.rivalLap.toFixed(1)}s rival lap over ${t.laps} laps.</p></div><span class="tag">NEXT</span></div><div class="row between wrap"><div><b style="font-size:11px">${t.name}</b><div class="subtle" style="margin-top:4px">${cash(t.reward)} and ${fmt(t.trophies)} trophies · bonus card on victory</div></div><button class="btn" data-champ="${next}">ENTER RACE →</button></div><div class="subtle" style="margin-top:9px">Your current pace is ${lapTime().toFixed(1)}s/lap. ${lapTime()<=t.rivalLap?'You are quicker than the rival.':'The rival is quicker — add upgrades first.'}</div></div>`;
+}
+function viewRace(){
+ const world=WORLDS[state.world]||WORLDS[0];
+ return `<div class="panel"><div class="panel-head"><div><h2>Track session</h2><p>Your crew keeps lapping and earning while you watch or idle.</p></div><span class="tag">AFK ON</span></div>
+ <div class="session-grid"><div class="session-world"><div class="big-emoji">${world.emoji}</div><div><b>${world.name}</b><p>${world.desc}</p></div></div><div class="session-metrics"><div><span>Payout</span><b class="mint">×${worldMult().toFixed(2)}</b></div><div><span>Per sec</span><b>${cashRate(perSecond())}</b></div><div><span>Next lap</span><b id="raceNextLap">${lapTime().toFixed(1)}s</b></div></div></div>
+ <div class="row wrap"><button class="btn secondary" data-tab="worlds">Change world →</button><button class="btn secondary" data-tab="champ">Championships →</button><button class="btn secondary" data-tab="garage">Garage →</button></div></div>
+ ${champPulseHTML()}
+ <div class="panel"><div class="panel-head"><div><h2>Pit crew prestige</h2><p>Reset the ladder and upgrades for permanent Golden Wrenches.</p></div><span class="tag">${state.prestige} 🔧</span></div><div class="row between wrap"><div><b style="font-size:11px">Permanent bonus</b><div class="subtle" style="margin-top:4px">+${state.prestige*20}% cash · +${state.prestige*3}% pack luck · cars, worlds and skins are kept</div></div><button class="btn goldbtn" data-action="prestige" ${state.unlockedTier<3?'disabled':''}>${state.unlockedTier<3?'UNLOCK ELITE TO PRESTIGE':'PRESTIGE'}</button></div></div>
+ <div class="panel"><div class="panel-head"><div><h2>How the club works</h2><p>Three simple loops, always running.</p></div></div><div class="grid-3"><div><b style="font-size:10px">🏁 Race</b><p class="subtle" style="margin-top:4px;line-height:1.5">Laps pay cash and XP automatically. Trophies arrive every 5 laps.</p></div><div><b style="font-size:10px">🏆 Championship</b><p class="subtle" style="margin-top:4px;line-height:1.5">Beat the rival pace to unlock the next tier and a bonus card.</p></div><div><b style="font-size:10px">🎴 Collect</b><p class="subtle" style="margin-top:4px;line-height:1.5">Packs add cars. Three copies merge into a permanent star.</p></div></div></div>`;
+}
+function viewChamp(){
+ return `<div class="panel"><div class="panel-head"><div><h2>Championship ladder</h2><p>Five tiers. Win each one to unlock the next, earn trophies, and claim a bonus card.</p></div><span class="tag">${state.won.length}/5 WON</span></div>${activeChampHTML()}<div class="ladder">${TIERS.map(ladderCard).join('')}</div></div>
+ <div class="panel"><div class="panel-head"><div><h2>Pit crew prestige</h2><p>Reach Elite Tour, then reset for permanent Golden Wrenches.</p></div><span class="tag">${state.prestige} 🔧</span></div><div class="row between wrap"><div><b style="font-size:11px">+${state.prestige*20}% cash & +${state.prestige*3}% pack luck</b><div class="subtle" style="margin-top:4px">Resets cash, trophies, XP, upgrades and the ladder. Collection, worlds and skins stay.</div></div><button class="btn goldbtn" data-action="prestige" ${state.unlockedTier<3?'disabled':''}>${state.unlockedTier<3?'LOCKED':'PRESTIGE'}</button></div></div>`;
+}
+function viewUpgrades(){
+ return `<div class="panel"><div class="panel-head"><div><h2>Performance upgrades</h2><p>Every level lowers lap time or raises payout. Buy in batches.</p></div><div class="row"><button class="btn small ${buyMode===1?'':'secondary'}" data-buy="1">×1</button><button class="btn small ${buyMode===10?'':'secondary'}" data-buy="10">×10</button></div></div><div class="upgrade-grid">${UPGRADES.map(u=>{const lv=state.upgrades[u.key],max=lv>=MAX_LEVEL,n=Math.min(buyMode,MAX_LEVEL-lv),cost=upgradeCost(u.key,Math.max(1,n));return `<article class="upgrade-card"><div class="row between"><div class="up-ico">${u.icon}</div><span class="badge">LV ${lv}/${MAX_LEVEL}</span></div><h3>${u.name}</h3><p>${u.desc}</p><div class="effect">${u.effect} per level</div><div class="row between" style="margin-top:10px"><span class="cost">${max?'MAXED':cash(cost)}</span><button class="btn small" data-upgrade="${u.key}" ${max?'disabled':''}>${max?'MAX':'BUY ×'+n}</button></div></article>`}).join('')}</div></div>
+ <div class="panel"><div class="panel-head"><div><h2>Tuning summary</h2><p>Current build after upgrades, equipped car and stars.</p></div></div><div class="grid-4"><div><span class="subtle">Lap time</span><b style="display:block;font-size:15px;margin-top:4px">${lapTime().toFixed(1)}s</b></div><div><span class="subtle">Cash / lap</span><b class="mint" style="display:block;font-size:15px;margin-top:4px">${cash(cashPerLap())}</b></div><div><span class="subtle">Payout mult</span><b style="display:block;font-size:15px;margin-top:4px">×${payoutMult().toFixed(2)}</b></div><div><span class="subtle">Next tier pace</span><b style="display:block;font-size:15px;margin-top:4px">${TIERS[Math.min(state.unlockedTier,4)].rivalLap.toFixed(1)}s</b></div></div></div>`;
+}
+function viewPacks(){
+ return `<div class="panel"><div class="panel-head"><div><h2>Card pack shop</h2><p>Cash or trophies. Every pull can add a new car or a merge copy.</p></div><span class="tag">${Object.keys(state.collection).length}/18 CARS</span></div><div class="pack-grid">${PACKS.map((p,i)=>{const od=packOdds(p),cols=['#55d8ac','#69bfff','#d86dff','#ffce67'];return `<article class="pack-card" style="--p1:${p.colors[0]};--p2:${p.colors[1]}"><div class="pack-top"><div class="pack-icon">${p.icon}</div><div><h3>${p.name}</h3><p>${p.blurb}</p></div></div><div class="odds">${od.map((v,k)=>`<i style="width:${v}%;background:${cols[k]}"></i>`).join('')}</div><div class="odds-legend">${['Common','Rare','Epic','Legendary'].map((r,k)=>`<span><b style="background:${cols[k]}"></b>${r} ${Math.round(od[k])}%</span>`).join('')}</div><div class="subtle">${p.cards} card${p.cards>1?'s':''} · duplicates merge</div><div class="pack-actions" style="margin-top:9px"><button class="btn small" data-pack="${i}" data-currency="cash">${cash(p.cash)}</button><button class="btn small goldbtn" data-pack="${i}" data-currency="trophy">${p.trophies} ✦</button></div></article>`}).join('')}</div></div>
+ <div class="panel"><div class="panel-head"><div><h2>Collection progress</h2><p>Three copies of a car make one star. Five stars is the maximum.</p></div><span class="tag">${state.packsOpened} PACKS</span></div><div class="progress goldbar"><i style="width:${Object.keys(state.collection).length/18*100}%"></i></div><div class="row between" style="margin-top:9px"><span class="subtle">${Object.keys(state.collection).length} of 18 cars discovered</span><span class="subtle">+${state.prestige*3}% pack luck from wrenches</span></div></div>`;
+}
+function viewGarage(){
+ const car=CARS[state.car]||CARS[0];
+ return `<div class="panel"><div class="panel-head"><div><h2>Your garage</h2><p>Equip a car, collect copies, and merge three at a time into stars.</p></div><span class="tag">${Object.keys(state.collection).length}/18</span></div><div class="row between wrap" style="background:#0a1825;border:1px solid #1b3345;border-radius:11px;padding:11px;margin-bottom:12px"><div class="row"><div class="big-emoji">${car.emoji}</div><div><b style="font-size:11px">${car.name}</b><div class="subtle">${car.cls} · ${car.rarity} · ${'★'.repeat(carStars(state.car))}${'☆'.repeat(5-carStars(state.car))}</div></div></div><div class="row"><span class="subtle">SPD</span><b>${car.speed}</b><span class="subtle">PAY</span><b>${car.payout}</b></div></div><div class="garage-grid">${CARS.map((c,i)=>{const count=state.collection[i]||0,owned=count>0,stars=carStars(i),eq=state.car===i,next=count%3;return `<article class="car-card ${owned?'':'locked'} ${eq?'equipped':''}"><div class="star-row">${'★'.repeat(stars)}${'☆'.repeat(5-stars)}</div><div class="car-art">${c.emoji}</div><h3>${c.name}</h3><p>${c.cls}</p><div class="row between"><span class="rarity r-${c.rarity}">${c.rarity}</span><span class="subtle">×${count}</span></div><div class="mini-stats"><span>SPD <b>${c.speed}</b></span><span>PAY <b>${c.payout}</b></span></div>${owned?`<button class="btn small ${eq?'secondary':''}" data-equip="${i}" ${eq?'disabled':''}>${eq?'EQUIPPED':'EQUIP'}</button><div class="merge-note">${stars>=5?'MAX STARS':`${next}/3 to ★${stars+1}`}</div>`:'<button class="btn small secondary" disabled>LOCKED</button>'}</article>`}).join('')}</div></div>
+ <div class="panel"><div class="panel-head"><div><h2>Paint & skin packs</h2><p>Each finish is rarer and more expensive. Owned paint applies to your car in every view.</p></div><span class="tag">${state.skins.length}/6</span></div><div class="skin-grid">${SKINS.map(s=>{const owned=state.skins.includes(s.id),active=state.skin===s.id;return `<article class="skin-card ${active?'active':''}"><div class="swatch" style="--sw:${s.color}"></div><div class="row between"><h4>${s.name}</h4><span class="rarity r-${s.rarity}">${s.rarity}</span></div><p>+${Math.round(s.bonus*100)}% payout</p><button class="btn small ${owned?'':'secondary'}" data-skin="${s.id}">${owned?(active?'APPLIED':'APPLY'):cash(s.price)}</button></article>`}).join('')}</div></div>`;
+}
+function viewWorlds(){
+ return `<div class="panel"><div class="panel-head"><div><h2>World select</h2><p>Twenty-one roads. Unlock them with cash and each one pays more than the last.</p></div><span class="tag">${state.worlds.length}/21</span></div><div class="world-grid">${WORLDS.map((w,i)=>{const open=state.worlds.includes(i),active=state.world===i;return `<article class="world-card ${active?'active':''} ${open?'':'locked'}" style="--acc:${w.accent}"><div class="row between"><span class="world-emoji">${w.emoji}</span><span class="world-mult">×${worldMult(i).toFixed(2)}</span></div><h4>${w.name}</h4><p>${w.desc}</p><div class="world-foot"><span class="subtle">${active?'RACING':open?'UNLOCKED':'LOCKED'}</span><button class="btn small ${active?'secondary':''}" data-world="${i}" ${active?'disabled':''}>${open?(active?'ACTIVE':'SELECT'):cash(worldCost(i))}</button></div></article>`}).join('')}</div></div>`;
+}
+function viewForTab(){
+ if(tab==='champ')return viewChamp();if(tab==='upgrades')return viewUpgrades();if(tab==='packs')return viewPacks();if(tab==='garage')return viewGarage();if(tab==='worlds')return viewWorlds();return viewRace();
+}
+function sidebarHTML(car,world){
+ return `<aside class="sidecol"><section class="panel"><div class="side-title"><h3>Championship ladder</h3><span>${state.won.length}/5 WON</span></div><div class="side-ladder">${TIERS.map((t,i)=>{const st=tierStatus(i),ready=i<=state.unlockedTier&&!state.won.includes(i)&&!(state.champ&&state.champ.tier===i);return `<div class="side-tier ${st[1]==='ready'?'ready':st[1]==='won'?'won':''}"><span>${t.emoji||'🏁'} ${t.name}</span>${ready?`<button class="btn small" data-champ="${i}">GO</button>`:`<span class="subtle">${st[0]}</span>`}</div>`}).join('')}</div></section>
+ <section class="panel"><div class="side-title"><h3>Race rewards</h3><span>LIVE</span></div><div class="side-row"><span class="muted">Cash / second</span><b class="mint" id="sidePerSec">${cashRate(perSecond())}</b></div><div class="side-row"><span class="muted">Cash / lap</span><b id="sidePerLap">${cash(cashPerLap())}</b></div><div class="side-row"><span class="muted">Next lap</span><b id="countdown">${lapTime().toFixed(1)}s</b></div><div class="progress"><i id="lapProgress" style="width:0%"></i></div></section>
+ <section class="panel"><div class="side-title"><h3>Garage snapshot</h3><span>CAR ${String(state.car+1).padStart(2,'0')}</span></div><div class="side-row"><span>${car.emoji} ${car.name}</span><button class="btn secondary small" data-tab="garage">VIEW</button></div><div class="divider"></div><div class="side-row"><span class="muted">Collection</span><b>${Object.keys(state.collection).length}/18</b></div><div class="side-row"><span class="muted">Paint finishes</span><b>${state.skins.length}/6</b></div><div class="side-row"><span class="muted">Stars on current car</span><b class="gold">${carStars(state.car)} ★</b></div></section>
+ <section class="panel"><div class="side-title"><h3>Active world</h3><span>PAYOUT ×${worldMult().toFixed(2)}</span></div><div class="side-row"><span>${world.emoji} ${world.name}</span><button class="btn secondary small" data-tab="worlds">MAP</button></div><div class="subtle" style="margin-top:8px;line-height:1.5">${world.desc}</div></section></aside>`;
+}
+function render(){
+ const car=CARS[state.car]||CARS[0],world=WORLDS[state.world]||WORLDS[0],xpPct=clamp(state.xp/xpNeeded()*100,0,100);
+ $('#app').innerHTML=`<div class="shell">${topbarHTML(car)}<div class="layout"><main class="maincol">${heroHTML(car,world)}${statsHTML(xpPct)}${tabsHTML()}<div id="tabContent">${viewForTab()}</div><div class="footer">Autosaves locally · Offline earnings accrue for up to 12 hours · ${state.totalEarned?cash(state.totalEarned)+' earned all-time':''}</div></main>${sidebarHTML(car,world)}</div></div>`;
+ updateHud();
+}
+/* __UI__ */
+function save(){state.last=Date.now();try{localStorage.setItem(SAVE_KEY,JSON.stringify(state))}catch{}}
+function showToast(msg,kind=''){const el=$('#toast');if(!el)return;el.textContent=msg;el.className='toast show '+kind;clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2600)}
+function getAudio(){try{if(!audioCtx){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;audioCtx=new AC()}if(audioCtx.state==='suspended')audioCtx.resume().catch(()=>{});return audioCtx}catch{return null}}
+function tone(freq,delay,dur,type='sine',vol=.03,endFreq){const c=getAudio();if(!c)return;try{const o=c.createOscillator(),g=c.createGain(),t=c.currentTime+delay;o.type=type;o.frequency.setValueAtTime(freq,t);if(endFreq)o.frequency.exponentialRampToValueAtTime(endFreq,t+dur);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.012);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+dur+.03)}catch{}}
+function sound(name){if(!state.sound)return;try{if(name==='tap')tone(520,0,.07,'sine',.024);else if(name==='upgrade'){[440,660,880].forEach((f,i)=>tone(f,i*.06,.1,'triangle',.028))}else if(name==='pack'){[523,659,784,1047].forEach((f,i)=>tone(f,i*.075,.16,'sine',.026))}else if(name==='lap'){tone(880,0,.08,'sine',.02);tone(1174,.06,.11,'sine',.016)}else if(name==='win'){[523,659,784,1047].forEach((f,i)=>tone(f,i*.03,.55,'triangle',.032));tone(1568,.16,.35,'sine',.022)}else if(name==='error')tone(190,0,.16,'sawtooth',.02,130);else if(name==='merge'){tone(660,0,.09,'triangle',.028);tone(990,.08,.14,'triangle',.026)}else if(name==='buy'){tone(620,0,.05,'sine',.023);tone(930,.05,.08,'sine',.02)}}catch{}}
+function addXp(n){state.xp+=Math.max(0,Number(n)||0);let gained=0;while(state.xp>=xpNeeded()&&gained<100){const need=xpNeeded();state.xp-=need;state.level++;gained++}if(gained){const bonus=gained*150;state.cash+=bonus;showToast(`LEVEL ${state.level} · +${cash(bonus)} bonus`,'gold');sound('win')}}
+function offlineEarnings(){const now=Date.now(),away=clamp((now-(state.last||now))/1000,0,12*3600);if(away<60)return null;const laps=Math.floor(away/lapTime()*.85);if(laps<=0)return null;const earned=laps*cashPerLap(),xp=laps*3,trophies=Math.floor(laps/5);state.cash=Math.min(1e15,state.cash+earned);state.laps+=laps;state.trophies+=trophies;state.totalEarned+=earned;state.last=now;addXp(xp);return {away,laps,earned,xp,trophies}}
+function openModal(html,extra=''){const m=$('#modal');if(!m)return;m.innerHTML=`<div class="modal-card ${extra}">${html}</div>`;m.classList.add('show');m.setAttribute('aria-hidden','false');const b=m.querySelector('button');if(b)setTimeout(()=>{try{b.focus()}catch{}},40)}
+function closeModal(){const m=$('#modal');if(!m)return;m.classList.remove('show');m.setAttribute('aria-hidden','true');m.innerHTML=''}
+function confetti(count=24){const host=$('#modal .modal-card');if(!host)return;const cols=['#63f0c1','#ffca6a','#ff7aa8','#68d9ff','#b48cff'];for(let i=0;i<count;i++){const s=document.createElement('span');s.className='confetti';s.style.left=(Math.random()*100)+'%';s.style.background=cols[i%cols.length];s.style.animationDelay=(Math.random()*.45)+'s';host.appendChild(s);setTimeout(()=>s.remove(),2700)}}
+function showPackReveal(pulls,title){
+ let idx=0;
+ const draw=()=>{
+  const p=pulls[idx],car=CARS[p.index],status=p.isNew?'NEW CAR':p.starUp?'STAR UP ★':'DUPLICATE +1';
+  openModal(`<div class="modal-eyebrow">${title}</div><div class="reveal-stage"><div class="reveal-glow r-${p.rarity}"></div><div class="reveal-card r-${p.rarity}"><span class="reveal-badge">${status}</span><div class="reveal-emoji">${car.emoji}</div><h2>${car.name}</h2><p>${car.cls}</p><span class="rarity r-${p.rarity}">${p.rarity}</span><div class="reveal-stars">${'★'.repeat(p.stars)}${'☆'.repeat(5-p.stars)}</div><small>${p.count} copies · ${p.stars>=5?'MAX STARS':`${p.count%3}/3 to ★${p.stars+1}`}</small></div></div><div class="modal-progress">CARD ${idx+1} OF ${pulls.length}</div><button class="btn wide" id="nextCard">${idx<pulls.length-1?'NEXT CARD →':'COLLECT'}</button>`);
+  if(p.rarity==='Epic'||p.rarity==='Legendary')confetti(p.rarity==='Legendary'?34:20);
+  if(p.starUp)sound('merge');
+  const b=$('#nextCard');if(b)b.onclick=()=>{if(idx<pulls.length-1){idx++;draw();sound('tap')}else{closeModal();render()}};
+ };
+ draw();sound('pack');
+}
+function showChampWin(tier,bonus){
+ openModal(`<div class="modal-eyebrow">Championship won</div><div class="win-trophy">🏆</div><h2>${tier.name}</h2><p>Your rival never found an answer. The ladder moves up, and the pit crew has a bonus card for you.</p><div class="reward-grid"><div><span>Cash</span><b class="mint">${cash(tier.reward*(1+state.prestige*.15))}</b></div><div><span>Trophies</span><b class="gold">${fmt(Math.round(tier.trophies*(1+state.prestige*.1)))} ✦</b></div></div><button class="btn wide" id="claimBonus">CLAIM BONUS CARD</button><button class="btn ghost wide" data-close-modal style="margin-top:7px">LATER</button>`);
+ confetti(46);sound('win');const b=$('#claimBonus');if(b)b.onclick=()=>showPackReveal([bonus],tier.name+' · bonus card');
+}
+function showOffline(data){
+ const away=data.away>=3600?`${Math.floor(data.away/3600)}h ${Math.floor(data.away%3600/60)}m`:`${Math.max(1,Math.floor(data.away/60))}m`;
+ openModal(`<div class="modal-eyebrow">Welcome back</div><div class="win-trophy">🛠️</div><h2>Your crew kept racing.</h2><p>You were away for ${away}. The pit crew banked every lap it could.</p><div class="reward-grid"><div><span>Cash</span><b class="mint">${cash(data.earned)}</b></div><div><span>Laps</span><b>${fmt(data.laps)}</b></div><div><span>XP</span><b>${fmt(data.xp)}</b></div><div><span>Trophies</span><b class="gold">${fmt(data.trophies)} ✦</b></div></div><button class="btn wide" data-close-modal>CONTINUE RACING</button>`);
+ sound('win');
+}
+function showPrestigeConfirm(){
+ openModal(`<div class="modal-eyebrow">Pit crew reset</div><div class="win-trophy">🔧</div><h2>Earn a Golden Wrench?</h2><p>This resets cash, trophies, XP, upgrades and championship unlocks. Your cars, stars, worlds, skins and wrenches stay forever.</p><div class="reward-grid"><div><span>Cash bonus</span><b class="mint">+20%</b></div><div><span>Pack luck</span><b class="gold">+3%</b></div></div><button class="btn wide goldbtn" data-modal-action="prestige-confirm">PRESTIGE NOW</button><button class="btn ghost wide" data-close-modal style="margin-top:7px">CANCEL</button>`);
+}
+function startChamp(i){
+ if(state.champ)return showToast('Finish or abandon the current championship first.','error');
+ if(i>state.unlockedTier)return showToast('Win the previous tier to unlock this championship.','error');
+ const t=TIERS[i],playerLap=lapTime(),rivalLap=t.rivalLap*(.985+Math.random()*.03),playerTotal=t.laps*playerLap,rivalTotal=t.laps*rivalLap;
+ state.champ={tier:i,elapsed:0,playerTotal,rivalTotal,won:playerTotal<=rivalTotal,rivalLap};
+ save();sound('tap');render();showToast(`🏁 ${t.name} started — ${playerTotal<=rivalTotal?'you have the pace':'the rival is quicker'}!`,'info');
+}
+function updateChamp(step){if(!state.champ)return;const c=state.champ;c.elapsed+=step;const end=c.won?c.playerTotal:c.rivalTotal;if(c.elapsed>=end)finishChamp()}
+function finishChamp(){
+ const c=state.champ;if(!c)return;state.champ=null;const t=TIERS[c.tier];
+ if(c.won){
+  const reward=t.reward*(1+state.prestige*.15),trophies=Math.round(t.trophies*(1+state.prestige*.1));
+  state.cash=Math.min(1e15,state.cash+reward);state.totalEarned+=reward;state.trophies+=trophies;
+  if(!state.won.includes(c.tier))state.won.push(c.tier);
+  state.unlockedTier=Math.max(state.unlockedTier,Math.min(TIERS.length-1,c.tier+1));
+  const rarity=bonusRarity(c.tier),bonus=grantCard(randomCarOfRarity(rarity),rarity);
+  addXp(60*(c.tier+1));save();sound('win');render();setTimeout(()=>showChampWin(t,bonus),320);
+  if(c.tier===TIERS.length-1)showToast('World Apex Champion — the ladder is yours!','gold');
+ }else{save();sound('error');render();showToast('Rival took the win — upgrade your pace and try again.','error')}
+}
+function buyUpgrade(key){
+ const u=UPGRADES.find(x=>x.key===key);if(!u)return;
+ const lv=state.upgrades[key]||0;if(lv>=MAX_LEVEL)return showToast('That stat is maxed out.','info');
+ const n=Math.min(buyMode,MAX_LEVEL-lv),cost=upgradeCost(key,n);
+ if(state.cash<cost)return showToast(`Need ${cash(cost)} for that upgrade.`,'error');
+ state.cash-=cost;state.upgrades[key]+=n;addXp(8*n);save();sound('upgrade');render();showToast(`${u.name} → LV ${state.upgrades[key]} · ${n} level${n>1?'s':''} bought.`,'info');
+}
+function openPack(i,currency){
+ const p=PACKS[i];if(!p)return;
+ const cost=currency==='trophy'?p.trophies:p.cash;
+ if(currency==='trophy'){if(state.trophies<cost)return showToast(`Need ${cost} trophies for that pack.`,'error');state.trophies-=cost}
+ else{if(state.cash<cost)return showToast(`Need ${cash(cost)} for that pack.`,'error');state.cash-=cost}
+ const pulls=[];for(let k=0;k<p.cards;k++){const rarity=rollRarity(p);pulls.push(grantCard(randomCarOfRarity(rarity),rarity))}
+ state.packsOpened=(state.packsOpened||0)+1;addXp(15*p.cards);save();sound('pack');render();showPackReveal(pulls,p.name);
+}
+function equipCar(i){if(!state.collection[i])return showToast('Collect this car from a pack first.','error');state.car=i;save();sound('tap');render();showToast(`${CARS[i].name} equipped.`,'info')}
+function selectWorld(i){
+ if(state.worlds.includes(i)){state.world=i;save();sound('tap');render();showToast(`${WORLDS[i].name} selected.`,'info');return}
+ const cost=worldCost(i);if(state.cash<cost)return showToast(`Need ${cash(cost)} to unlock ${WORLDS[i].name}.`,'error');
+ state.cash-=cost;state.worlds.push(i);state.worlds=[...new Set(state.worlds)].sort((a,b)=>a-b);state.world=i;save();sound('upgrade');render();showToast(`${WORLDS[i].name} unlocked — payout ×${worldMult(i).toFixed(2)}!`,'gold');
+}
+function buySkin(id){
+ const s=SKINS.find(x=>x.id===id);if(!s)return;
+ if(state.skins.includes(id)){state.skin=id;save();sound('tap');render();showToast(`${s.name} applied.`,'info');return}
+ if(state.cash<s.price)return showToast(`Need ${cash(s.price)} for ${s.name}.`,'error');
+ state.cash-=s.price;state.skins.push(id);state.skin=id;addXp(20);save();sound('upgrade');render();showToast(`${s.name} unlocked and applied!`,'gold');
+}
+function doPrestige(){
+ if(state.unlockedTier<3)return showToast('Unlock Elite Tour before prestiging.','error');
+ state.prestige++;state.cash=500;state.trophies=0;state.xp=0;state.level=1;state.upgrades={speed:0,accel:0,grip:0,nitro:0,payout:0};state.unlockedTier=0;state.won=[];state.champ=null;
+ save();sound('win');render();showToast(`Golden Wrench ${state.prestige} earned! +20% cash, +3% pack luck forever.`,'gold');
+}
+function setText(id,val){const el=document.getElementById(id);if(el&&el.textContent!==String(val))el.textContent=val}
+function updateHud(){
+ setText('cashBalance',cash(state.cash));setText('trophyBalance',fmt(state.trophies));setText('levelValue',fmt(state.level));setText('lapCount',fmt(state.laps));
+ setText('statCashLap',cash(cashPerLap()));setText('statPerSec',cashRate(perSecond())+'/sec');setText('statLap',lapTime().toFixed(1)+'s');setText('statWrench',state.prestige+' 🔧');
+ setText('xpValue',fmt(state.xp));setText('xpNeed',fmt(xpNeeded()));
+ const xf=document.getElementById('xpFill');if(xf)xf.style.width=clamp(state.xp/xpNeeded()*100,0,100)+'%';
+ setText('sidePerSec',cashRate(perSecond()));setText('sidePerLap',cash(cashPerLap()));setText('countdown',Math.max(0,lapTime()-lapClock).toFixed(1)+'s');
+ const lp=document.getElementById('lapProgress');if(lp)lp.style.width=clamp(lapClock/lapTime()*100,0,100)+'%';
+ setText('raceNextLap',Math.max(0,lapTime()-lapClock).toFixed(1)+'s');
+ const hc=document.getElementById('heroChamp');
+ if(state.champ){
+  const c=state.champ,t=TIERS[c.tier];
+  if(hc)hc.style.display='flex';
+  setText('heroChampName','🏁 '+t.name);setText('heroChampLap','LAP '+Math.min(t.laps,Math.floor(c.elapsed/lapTime())+1)+'/'+t.laps);
+  const pb=document.getElementById('champPlayerBar'),rb=document.getElementById('champRivalBar');
+  if(pb)pb.style.width=clamp(c.elapsed/c.playerTotal*100,0,100)+'%';
+  if(rb)rb.style.width=clamp(c.elapsed/c.rivalTotal*100,0,100)+'%';
+  setText('champLapText',Math.min(t.laps,Math.floor(c.elapsed/Math.max(.1,lapTime())))+'/'+t.laps);
+  setText('champStatus',c.won?'You have the pace to win — hold it.':'Rival is faster. Upgrade and try again.');
+ }else if(hc)hc.style.display='none';
+}
+let lastFrame=performance.now();
+function tick(now){
+ const dt=clamp((now-lastFrame)/1000,0,.25);lastFrame=now;
+ const step=dt*state.speedMult;lapClock+=step;
+ const earn=step*perSecond();state.cash=Math.min(1e15,state.cash+earn);state.totalEarned+=earn;
+ let guard=0;
+ while(lapClock>=lapTime()&&guard<5){
+  const lt=lapTime();lapClock-=lt;state.laps++;const pay=cashPerLap();state.cash=Math.min(1e15,state.cash+pay);state.totalEarned+=pay;addXp(4);
+  if(state.laps%5===0){state.trophies++;showToast('Trophy earned! +1 ✦','gold')}
+  sound('lap');guard++;
+ }
+ if(state.champ)updateChamp(step);
+ saveTimer+=dt;if(saveTimer>=5){save();saveTimer=0}
+ updateHud();
+ try{drawScene(now/1000)}catch(e){if(!drawWarned){drawWarned=true;console.warn('Scene draw failed',e)}}
+ requestAnimationFrame(tick);
+}
+document.addEventListener('click',e=>{
+ const btn=e.target.closest('button');if(!btn)return;
+ if(btn.hasAttribute('data-close-modal')){closeModal();return}
+ const ma=btn.dataset.modalAction;
+ if(ma){closeModal();if(ma==='prestige-confirm')doPrestige();return}
+ if(state.sound)getAudio();
+ const d=btn.dataset;
+ if(d.tab){tab=d.tab;render();sound('tap');return}
+ if(d.speed){state.speedMult=Number(d.speed);save();sound('tap');render();return}
+ if(d.buy){buyMode=Number(d.buy);render();return}
+ if(d.action==='camera'){state.follow=!state.follow;save();sound('tap');render();return}
+ if(d.action==='sound'){state.sound=!state.sound;save();if(state.sound)sound('tap');render();return}
+ if(d.action==='abandon'){if(state.champ){state.champ=null;save();sound('tap');render();showToast('Championship abandoned. Your upgrades are waiting.','info')}return}
+ if(d.action==='prestige'){if(state.unlockedTier<3)return showToast('Unlock Elite Tour before prestiging.','error');showPrestigeConfirm();return}
+ if(d.upgrade){buyUpgrade(d.upgrade);return}
+ if(d.champ!==undefined){startChamp(Number(d.champ));return}
+ if(d.pack!==undefined){openPack(Number(d.pack),d.currency);return}
+ if(d.equip!==undefined){equipCar(Number(d.equip));return}
+ if(d.world!==undefined){selectWorld(Number(d.world));return}
+ if(d.skin){buySkin(d.skin);return}
+});
+const modalEl=$('#modal');if(modalEl)modalEl.addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)save()});
+window.addEventListener('pagehide',save);window.addEventListener('beforeunload',save);
+const offline=offlineEarnings();
+render();
+if(offline){save();setTimeout(()=>showOffline(offline),650)}
+lastFrame=performance.now();
+requestAnimationFrame(tick);
+
+</script>
+</body>
+</html>
