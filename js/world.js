@@ -608,11 +608,17 @@ export class World {
     this.rip.reveal.done = false;
 
     const group = new THREE.Group();
+    // Spinning body is separated from the stage glow/light so the pack can turn
+    // continuously while its backdrop stays put.
+    const body = new THREE.Group();
+    group.add(body);
+    group.userData.body = body;
+
     const foil = new THREE.Mesh(G.packBody, new THREE.MeshPhysicalMaterial({
       color: new THREE.Color(pack.color2), metalness: 0.94, roughness: 0.15,
       clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 1.4,
     }));
-    group.add(foil);
+    body.add(foil);
 
     const map = makePackTexture(pack);
     const frontMat = new THREE.MeshPhysicalMaterial({
@@ -620,23 +626,23 @@ export class World {
     });
     const front = new THREE.Mesh(G.packFront, frontMat);
     front.position.z = 0.062;
-    group.add(front);
+    body.add(front);
     const back = new THREE.Mesh(G.packFront, frontMat);
     back.position.z = -0.062;
     back.rotation.y = Math.PI;
-    group.add(back);
+    body.add(back);
 
     for (const y of [1.055, -1.055]) {
       const crimp = new THREE.Mesh(G.packCrimp, M.chrome);
       crimp.position.y = y;
-      group.add(crimp);
+      body.add(crimp);
     }
 
     // foil rim edges
     const rimMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(pack.color), transparent: true, opacity: 0.85 });
     const edge = new THREE.Mesh(new THREE.BoxGeometry(1.54, 2.14, 0.02), rimMat);
     edge.position.z = -0.055;
-    group.add(edge);
+    body.add(edge);
 
     const glow = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 3.4), glowMat(pack.color, 0.5));
     glow.position.z = -0.16;
@@ -1207,7 +1213,9 @@ export class World {
     const rev = this.rip.reveal;
     if (this.rip.pack) {
       if (!rev.active || rev.t < 0.42) {
-        this.rip.pack.rotation.y = Math.sin(t * 0.55) * 0.4;
+        const body = this.rip.pack.userData.body || this.rip.pack;
+        body.rotation.y += dt * 0.6;
+        body.rotation.x = Math.sin(t * 0.9) * 0.05;
         this.rip.pack.position.y = 0.06 + Math.sin(t * 1.15) * 0.07;
         if (rev.active && rev.t < 0.42) {
           this.rip.pack.rotation.z = Math.sin(rev.t * 70) * 0.045;
