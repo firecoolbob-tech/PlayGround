@@ -2,6 +2,8 @@ import {
   CARS, CARS_BY_ID, PACKS, PACKS_BY_ID, RARITIES, RARITY_ORDER, TRACKS, TRACKS_BY_ID,
   TRAITS, WHEEL_REWARDS, WHEEL_COST, MAX_LEVEL, upgradeCost, statWithLevel,
   carDisplayStats, formatNum, formatTime, carSvg, rgba, lighten,
+  WEATHERS, WEATHERS_BY_ID, BACKGROUND_THEMES, THEMES_BY_ID,
+  COSMETICS, COSMETICS_BY_ID, COSMETIC_PACK,
 } from './data.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -31,8 +33,11 @@ export class UI {
     this._lastHUD = null;
     this._modalDismissible = false;
     this._lastPanelTab = null;
+    this.carFuseId = null;
 
     this.app = document.getElementById('app');
+    this.featureBtn = document.getElementById('feature-btn');
+    this.featureMenu = document.getElementById('feature-menu');
     this.raceHud = document.getElementById('race-hud');
     this.raceFx = document.getElementById('race-fx');
     this.revealTag = document.getElementById('reveal-tag');
@@ -49,6 +54,9 @@ export class UI {
     store.subscribe((type, payload) => this._onStore(type, payload));
     race.cbs = this.raceCallbacks();
     world.onRaceGesture = (g) => this.race.handleGesture(g);
+    world.cosmeticFor = (carId) => this.store.equippedCosmeticFor(carId);
+    world.setTheme(this.store.activeTheme());
+    world.setWeather(this.store.activeWeather());
     this.renderHUD();
     this.setTab('rip', true);
     if (this.store.state.autoRip) {
@@ -65,6 +73,25 @@ export class UI {
       this.setTab(btn.dataset.tab);
     }));
     $('#settings-btn').addEventListener('click', () => { this.audio.unlock(); this.audio.play('ui'); this.showSettings(); });
+    if (this.featureBtn) {
+      this.featureBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.audio.unlock();
+        this.audio.play('ui');
+        this.toggleFeatureMenu();
+      });
+    }
+    if (this.featureMenu) {
+      this.featureMenu.addEventListener('click', (e) => {
+        const item = e.target.closest('[data-feature]');
+        if (!item) return;
+        this.closeFeatureMenu();
+        this.openFeature(item.dataset.feature);
+      });
+    }
+    document.addEventListener('pointerdown', (e) => {
+      if (!e.target.closest('#feature-menu') && !e.target.closest('#feature-btn')) this.closeFeatureMenu();
+    });
     $('#inspect-close').addEventListener('click', () => this.closeInspect());
     $('#sheet-layer').addEventListener('click', (e) => {
       if (e.target.closest('[data-close-sheet]')) this.hideSheet();
@@ -87,6 +114,7 @@ export class UI {
       if (e.key !== 'Escape') return;
       if (!this.modalLayer.hidden && this._modalDismissible) this.hideModal();
       else if (!this.sheetLayer.hidden) this.hideSheet();
+      else if (this.featureMenu && !this.featureMenu.hidden) this.closeFeatureMenu();
       else if (!this.inspect.hidden) this.closeInspect();
     });
     document.addEventListener('visibilitychange', () => this._onVisibility());
@@ -162,6 +190,146 @@ export class UI {
     this.renderHUD();
   }
 
+  // ── Feature menu (corner glass button) ────────────────────────────────────
+  toggleFeatureMenu(force) {
+    if (!this.featureMenu) return;
+    const next = typeof force === 'boolean' ? force : this.featureMenu.hidden;
+    this.featureMenu.hidden = !next;
+    this.featureBtn?.classList.toggle('open', next);
+    this.app.classList.toggle('menu-open', next);
+  }
+
+  closeFeatureMenu() {
+    this.toggleFeatureMenu(false);
+  }
+
+  openFeature(feature) {
+    if (feature === 'weather') this.openWeatherShop();
+    else if (feature === 'themes') this.openThemeShop();
+    else if (feature === 'cosmetics') this.openCosmeticsSheet();
+    else if (feature === 'carfuse') this.openCarFuseSheet();
+    else if (feature === 'cosmetic-pack') {
+      this.store.setSelectedPack(COSMETIC_PACK.id);
+      this.world.setRipPack(COSMETIC_PACK);
+      this.lastRipPack = COSMETIC_PACK.id;
+      this.setTab('rip');
+    }
+  }
+
+  // ── Weather shop ──────────────────────────────────────────────────────────
+  _shopItem(entry, owned, active, action) {
+    const color = entry.color || '#4fe3ff';
+    const price = entry.price;
+    const state = active ? 'ACTIVE' : owned ? 'EQUIP' : `${formatNum(price)} CR`;
+    return `<div class="shop-row${active ? ' active' : ''}${owned ? '' : ' locked'}" style="--sc:${color}">
+      <i class="shop-dot"></i>
+      <div class="shop-copy"><b>${esc(entry.name)}</b><span>${esc(entry.desc || '')}</span></div>
+      <button class="shop-btn${active ? ' on' : ''}" data-sheet-action="${action}" data-id="${entry.id}" ${active ? 'disabled' : ''}>${state}</button>
+    </div>`;
+  }
+
+  openWeatherShop() {
+    const s = this.store.state;
+    const active = s.activeWeather;
+    const standard = WEATHERS.filter(w => !w.mystical).map(w => this._shopItem(w, this.store.ownsWeather(w.id), w.id === active, 'weather-buy')).join('');
+    const mystic = WEATHERS.filter(w => w.mystical).map(w => this._shopItem(w, this.store.ownsWeather(w.id), w.id === active, 'weather-buy')).join('');
+    const current = WEATHERS_BY_ID[active] || WEATHERS[0];
+    this.openSheet('WEATHER SHOP', `
+      <div class="shop-head" style="--sc:${current.color}">
+        <div><span class="eyebrow">ACTIVE WEATHER</span><b>${esc(current.name)}</b><small>${esc(current.desc)}</small></div>
+        <span class="pill">${formatNum(s.credits)} CR</span>
+      </div>
+      <div class="shop-section"><span class="eyebrow">STANDARD CONDITIONS</span><div class="shop-list">${standard}</div></div>
+      <div class="shop-section"><span class="eyebrow" style="color:var(--violet)">MYSTICAL CONDITIONS</span><div class="shop-list">${mystic}</div></div>
+      <div class="sheet-actions"><button class="btn btn-ghost" data-close-sheet>DONE</button></div>
+    `);
+  }
+
+  // ── Global themes ─────────────────────────────────────────────────────────
+  openThemeShop() {
+    const s = this.store.state;
+    const active = s.activeTheme;
+    const rows = BACKGROUND_THEMES.map(t => this._shopItem(t, this.store.ownsTheme(t.id), t.id === active, 'theme-buy')).join('');
+    const current = THEMES_BY_ID[active] || BACKGROUND_THEMES[0];
+    this.openSheet('BACKGROUND THEMES', `
+      <div class="shop-head" style="--sc:${current.color}">
+        <div><span class="eyebrow">GLOBAL THEME</span><b>${esc(current.name)}</b><small>${esc(current.desc)}</small></div>
+        <span class="pill">${formatNum(s.credits)} CR</span>
+      </div>
+      <div class="shop-list">${rows}</div>
+      <div class="small-note" style="margin-top:8px">Themes repaint the sky, fog and ambient light across menus and all 3D views.</div>
+      <div class="sheet-actions"><button class="btn btn-ghost" data-close-sheet>DONE</button></div>
+    `);
+  }
+
+  // ── Cosmetics locker ──────────────────────────────────────────────────────
+  openCosmeticsSheet() {
+    const car = this.store.selectedCar();
+    const owned = COSMETICS.filter(c => this.store.ownsCosmetic(c.id));
+    const equipped = car ? this.store.state.equippedCosmetics[car.id] : null;
+    const rows = COSMETICS.map(c => {
+      const have = this.store.ownsCosmetic(c.id);
+      const on = equipped === c.id;
+      return `<div class="shop-row${on ? ' active' : ''}${have ? '' : ' locked'}" style="--sc:${c.color}">
+        <i class="shop-dot"></i>
+        <div class="shop-copy"><b>${esc(c.name)}</b><span>${esc(c.slot)} · ${esc(c.desc)}</span></div>
+        ${have
+          ? `<button class="shop-btn${on ? ' on' : ''}" data-sheet-action="cosmetic-equip" data-id="${c.id}" ${!car || on ? 'disabled' : ''}>${on ? 'ON' : 'EQUIP'}</button>`
+          : `<span class="shop-tag">PACK DROP</span>`}
+      </div>`;
+    }).join('');
+    this.openSheet('COSMETICS LOCKER', `
+      <div class="shop-head" style="--sc:#ff7ae0">
+        <div><span class="eyebrow">STYLE LAB · ${owned.length}/${COSMETICS.length}</span><b>${car ? esc(car.name) : 'NO CAR SELECTED'}</b><small>Fuses cosmetics onto the active build. Finish drops repaint the clearcoat.</small></div>
+        <span class="pill">${this.store.state.stats.cosmeticPulls} DROPS</span>
+      </div>
+      <div class="shop-list">${rows}</div>
+      <div class="sheet-actions">
+        <button class="btn btn-primary" data-sheet-action="goto-cosmetic">GET COSMETIC PACK</button>
+        <button class="btn btn-ghost" data-close-sheet>CLOSE</button>
+      </div>
+    `);
+  }
+
+  // ── Car fuse ──────────────────────────────────────────────────────────────
+  openCarFuseSheet() {
+    const owned = CARS.filter(c => this.store.isOwned(c.id));
+    if (!this.carFuseId || !this.store.isOwned(this.carFuseId)) {
+      this.carFuseId = this.store.state.selectedCar || owned[0]?.id || null;
+    }
+    const car = this.carFuseId ? CARS_BY_ID[this.carFuseId] : null;
+    const level = car ? this.store.carFusionLevel(car.id) : 0;
+    const cost = car ? this.store.carFusionCost(car.id) : null;
+    const stats = car ? this.store.displayStats(car) : null;
+    const bp = car ? this.store.blueprintCount(car.id) : 0;
+    const can = Boolean(car && cost && bp >= cost.blueprints && this.store.state.scraps >= cost.scraps
+      && this.store.state.fusionCores >= cost.cores && this.store.state.credits >= cost.credits);
+    const rows = owned.map(c => {
+      const r = RARITIES[c.rarity];
+      return `<button class="fusion-car${c.id === this.carFuseId ? ' active' : ''}" data-sheet-action="car-fuse-select" data-id="${c.id}">
+        <i class="vr-dot" style="background:${r.color};box-shadow:0 0 6px ${r.color}"></i><b>${esc(c.name)}</b><span>RANK ${this.store.carFusionLevel(c.id)}/3</span>
+      </button>`;
+    }).join('');
+    this.openSheet('CAR FUSE', `
+      <div class="shop-head" style="--sc:${car ? RARITIES[car.rarity].color : '#4fe3ff'}">
+        <div><span class="eyebrow">RARITY FORGE</span><b>${car ? esc(car.name) : 'NO CARS'}</b><small>${car ? `Fusion rank ${level}/3 · +${Math.round(level * 5.5)}% all stats` : 'Rip a pack to add a car.'}</small></div>
+        <span class="pill">RANK ${level}/3</span>
+      </div>
+      ${stats ? `<div class="fuse-stats"><span>SPD <b>${stats.speed}</b></span><span>ACC <b>${stats.accel}</b></span><span>GRP <b>${stats.grip}</b></span></div>` : ''}
+      <div class="eyebrow" style="margin:7px 0 6px">SELECT BUILD</div>
+      <div class="fusion-cars">${rows || `<div class="empty-note"><b>NO CARS YET</b>Rip a pack first.</div>`}</div>
+      ${cost ? `<div class="fuse-cost">
+        <span class="${bp >= cost.blueprints ? 'ok' : ''}">${cost.blueprints} BP</span>
+        <span class="${this.store.state.scraps >= cost.scraps ? 'ok' : ''}">${cost.scraps} SC</span>
+        <span class="${this.store.state.fusionCores >= cost.cores ? 'ok' : ''}">${cost.cores} CORE</span>
+        <span class="${this.store.state.credits >= cost.credits ? 'ok' : ''}">${formatNum(cost.credits)} CR</span>
+      </div>` : `<div class="small-note">Rank 3 reached. This build is fully fused.</div>`}
+      <button class="btn btn-gold btn-block" data-sheet-action="car-fuse-go" ${can ? '' : 'disabled'}>${cost ? 'FUSE BUILD' : 'MAX RANK'}</button>
+      <div class="small-note" style="margin-top:8px;text-align:center">Duplicates feed blueprints. Fusion spends spare blueprints, scraps, cores and credits for permanent stats.</div>
+      <div class="sheet-actions"><button class="btn btn-ghost" data-close-sheet>CLOSE</button></div>
+    `);
+  }
+
   // ── Store events ──────────────────────────────────────────────────────────
   _onStore(type, payload) {
     this.renderHUD();
@@ -176,8 +344,16 @@ export class UI {
           this.renderWorkshop();
         }
       }
-    } else if (type === 'upgrade' || type === 'fusion' || type === 'vault') {
+    } else if (type === 'upgrade' || type === 'fusion' || type === 'vault' || type === 'carFusion') {
       if (this.tab === 'workshop') this.renderWorkshop();
+      if (this.tab === 'garage') this.renderGarage();
+    } else if (type === 'weather') {
+      this.world.setWeather(this.store.activeWeather());
+    } else if (type === 'theme') {
+      this.world.setTheme(this.store.activeTheme());
+    } else if (type === 'cosmetic') {
+      this.world.setLineup(this.store.lineup());
+      this.world.setWorkshopCar(this.store.selectedCar());
       if (this.tab === 'garage') this.renderGarage();
     } else if (type === 'selected') {
       if (this.tab === 'workshop') {
@@ -209,8 +385,11 @@ export class UI {
       const r = RARITIES[RARITY_ORDER[i]];
       return `<span class="odds-chip"><i class="rar-dot" style="color:${r.color}"></i>${r.short} <b>${o}%</b></span>`;
     }).join('');
-    const featured = (pack.focus || []).map(id => CARS_BY_ID[id]?.name).filter(Boolean).join(' · ');
-    const packCards = PACKS.map(p => {
+    const featured = pack.kind === 'cosmetic'
+      ? `${COSMETICS.length} COSMETICS · MYSTIC 30%`
+      : (pack.focus || []).map(id => CARS_BY_ID[id]?.name).filter(Boolean).join(' · ');
+    const packList = [COSMETIC_PACK, ...PACKS];
+    const packCards = packList.map(p => {
       const sel = p.id === pack.id;
       const dots = RARITY_ORDER.map((r, i) => `<i style="background:${RARITIES[r].color};opacity:${Math.min(1, 0.2 + p.odds[i] / 22)}"></i>`).join('');
       const initials = p.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
@@ -225,11 +404,11 @@ export class UI {
     const el = $('#panel-rip');
     el.innerHTML = `
       <div class="rip-top">
-        <div class="rip-title"><h2>PACK DROP</h2><span>18 SEALED SERIES · 5 RARITIES · 3 TRAITS</span></div>
+        <div class="rip-title"><h2>PACK DROP</h2><span>${packList.length} SERIES · 5 RARITIES · ${COSMETICS.length} COSMETICS</span></div>
         <div class="rip-price"><b>${formatNum(price)}<small>CR</small></b><span>${pack.tier} SERIES</span></div>
       </div>
       <div class="scroll-x pack-strip">${packCards}</div>
-      <div class="odds-line"><span class="odds-title">ODDS</span><div class="odds-chips">${odds}</div></div>
+      <div class="odds-line">${pack.kind === 'cosmetic' ? `<span class="odds-title">DROP</span><div class="odds-chips"><span class="odds-chip">FINISH · GLOW · AERO · MYSTIC <b>30%</b></span></div>` : `<span class="odds-title">ODDS</span><div class="odds-chips">${odds}</div>`}</div>
       <div class="rip-actions">
         <button class="btn btn-primary btn-lg" data-action="rip" ${disabled ? 'disabled' : ''}>
           ${this.revealing ? 'RIPPING…' : 'RIP PACK'} <span class="sub">${formatNum(price)} CR</span>

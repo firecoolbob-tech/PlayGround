@@ -14,6 +14,26 @@ const easeOut = t => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
 const easeInOut = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const rand = (a, b) => a + Math.random() * (b - a);
 
+// Per-element pack motion: every series gets a distinct spin, tilt, wind-up and
+// burst feel without building separate scenes or extra draw calls.
+const ELEMENT_STYLE = {
+  neon:     { spin: 1.15, tilt: 0.055, tiltSpeed: 0.90, bob: 0.075, bobSpeed: 1.20, jitter: 0.050, jitterFreq: 62, sway: 0.040, swayFreq: 52, swell: 0.24, burst: 1.00 },
+  ember:    { spin: 0.78, tilt: 0.075, tiltSpeed: 1.35, bob: 0.105, bobSpeed: 1.75, jitter: 0.070, jitterFreq: 48, sway: 0.030, swayFreq: 42, swell: 0.30, burst: 1.25 },
+  ice:      { spin: 0.52, tilt: 0.035, tiltSpeed: 0.62, bob: 0.060, bobSpeed: 0.85, jitter: 0.035, jitterFreq: 36, sway: 0.030, swayFreq: 28, swell: 0.18, burst: 0.80 },
+  electric: { spin: 1.55, tilt: 0.040, tiltSpeed: 2.10, bob: 0.055, bobSpeed: 2.40, jitter: 0.085, jitterFreq: 88, sway: 0.060, swayFreq: 76, swell: 0.22, burst: 1.35 },
+  cosmic:   { spin: 0.62, tilt: 0.095, tiltSpeed: 0.55, bob: 0.090, bobSpeed: 0.72, jitter: 0.030, jitterFreq: 30, sway: 0.055, swayFreq: 24, swell: 0.28, burst: 1.10 },
+  dust:     { spin: 0.68, tilt: 0.090, tiltSpeed: 0.72, bob: 0.085, bobSpeed: 0.95, jitter: 0.045, jitterFreq: 34, sway: 0.080, swayFreq: 26, swell: 0.20, burst: 0.90 },
+  solar:    { spin: 0.90, tilt: 0.050, tiltSpeed: 0.80, bob: 0.080, bobSpeed: 1.05, jitter: 0.035, jitterFreq: 40, sway: 0.035, swayFreq: 34, swell: 0.32, burst: 1.20 },
+  rain:     { spin: 0.72, tilt: 0.045, tiltSpeed: 1.50, bob: 0.060, bobSpeed: 1.90, jitter: 0.060, jitterFreq: 58, sway: 0.045, swayFreq: 62, swell: 0.22, burst: 1.00 },
+  glitch:   { spin: 1.85, tilt: 0.030, tiltSpeed: 3.20, bob: 0.040, bobSpeed: 3.10, jitter: 0.115, jitterFreq: 104, sway: 0.090, swayFreq: 96, swell: 0.34, burst: 1.45 },
+  prism:    { spin: 1.05, tilt: 0.065, tiltSpeed: 1.10, bob: 0.085, bobSpeed: 1.35, jitter: 0.055, jitterFreq: 54, sway: 0.050, swayFreq: 46, swell: 0.26, burst: 1.15 },
+  sparks:   { spin: 0.95, tilt: 0.060, tiltSpeed: 1.00, bob: 0.075, bobSpeed: 1.25, jitter: 0.055, jitterFreq: 52, sway: 0.045, swayFreq: 44, swell: 0.24, burst: 1.10 },
+};
+const elementStyle = (id) => ELEMENT_STYLE[id] || ELEMENT_STYLE.neon;
+const asColor = (value, fallback = 0xffffff) => {
+  try { return new THREE.Color(value || fallback); } catch { return new THREE.Color(fallback); }
+};
+
 // ── Shared geometry & materials (reused by every stage) ─────────────────────
 const G = {};
 const M = {};
@@ -88,6 +108,21 @@ function initShared() {
   G.ico = new THREE.IcosahedronGeometry(0.42, 0);
   G.holoShard = new THREE.OctahedronGeometry(0.11, 0);
   G.lightBar = new THREE.BoxGeometry(0.10, 3.2, 0.10);
+  G.mirror = new THREE.BoxGeometry(0.16, 0.045, 0.10);
+  G.arch = new THREE.TorusGeometry(0.355, 0.05, 5, 16, Math.PI);
+  G.rimSpoke = new THREE.BoxGeometry(0.045, 0.028, 0.26);
+  G.caliper = new THREE.BoxGeometry(0.045, 0.10, 0.14);
+  G.scoop = new THREE.BoxGeometry(0.26, 0.065, 0.30);
+  G.canard = new THREE.BoxGeometry(0.24, 0.022, 0.11);
+  G.diffuserFin = new THREE.BoxGeometry(0.30, 0.09, 0.025);
+  G.blade = new THREE.BoxGeometry(0.035, 0.05, 0.26);
+  G.tailBar = new THREE.BoxGeometry(0.035, 0.055, 1.02);
+  G.orbitRing = new THREE.TorusGeometry(0.92, 0.012, 5, 48);
+  G.orbitRing2 = new THREE.TorusGeometry(1.06, 0.008, 5, 56);
+  G.winglet = new THREE.BoxGeometry(0.20, 0.018, 0.26);
+  G.shard = new THREE.TetrahedronGeometry(0.11, 0);
+  G.weatherRing = new THREE.TorusGeometry(8.2, 0.018, 4, 64);
+  G.flame = new THREE.ConeGeometry(0.10, 0.55, 8);
 
   M.wheel = new THREE.MeshStandardMaterial({ color: 0x070a10, roughness: 0.78, metalness: 0.2 });
   M.tire = new THREE.MeshStandardMaterial({ color: 0x141922, roughness: 0.62, metalness: 0.35 });
@@ -119,14 +154,19 @@ function initShared() {
 }
 
 const bodyMats = new Map();
-function bodyMat(color) {
-  if (!bodyMats.has(color)) {
-    bodyMats.set(color, new THREE.MeshPhysicalMaterial({
-      color: new THREE.Color(color), metalness: 0.72, roughness: 0.2,
-      clearcoat: 0.9, clearcoatRoughness: 0.12, envMapIntensity: 1.5,
+function bodyMat(color, cosmetic = null) {
+  const key = `${color}:${cosmetic ? cosmetic.id : 'base'}`;
+  if (!bodyMats.has(key)) {
+    const finish = cosmetic && (cosmetic.slot === 'FINISH' || ['prism', 'runes', 'chrono'].includes(cosmetic.kind));
+    bodyMats.set(key, new THREE.MeshPhysicalMaterial({
+      color: new THREE.Color(cosmetic?.bodyColor || color),
+      metalness: finish ? 0.94 : 0.86,
+      roughness: finish ? 0.06 : 0.15,
+      clearcoat: 1, clearcoatRoughness: 0.08,
+      envMapIntensity: cosmetic?.mystical ? 2.0 : 1.7,
     }));
   }
-  return bodyMats.get(color);
+  return bodyMats.get(key);
 }
 const rimMats = new Map();
 function rimMat(color) {
@@ -169,6 +209,15 @@ function glowMat(color, opacity = 0.55) {
   }
   return glowMats.get(key);
 }
+const wireMats = new Map();
+function wireMat(color) {
+  if (!wireMats.has(color)) {
+    wireMats.set(color, new THREE.MeshBasicMaterial({
+      color: new THREE.Color(color), wireframe: true, transparent: true, opacity: 0.3, depthWrite: false,
+    }));
+  }
+  return wireMats.get(color);
+}
 
 export function animateAccents(car, t, dt) {
   if (!car || !car.userData.accents) return;
@@ -177,14 +226,16 @@ export function animateAccents(car, t, dt) {
       if (a.spin) a.mesh.rotation.z += dt * a.spin;
       if (a.spinY) a.mesh.rotation.y += dt * a.spinY;
       if (a.bob) a.mesh.position.y = a.baseY + Math.sin(t * 1.6 + a.phase) * a.bob;
+      if (a.scalePulse) a.mesh.scale.setScalar(a.baseScale * (0.82 + Math.sin(t * 34 + a.phase) * 0.18));
     }
   }
 }
 
-export function makeCarVisual(car, scale = 1) {
+export function makeCarVisual(car, scale = 1, cosmetic = null) {
   initShared();
   const rar = RARITIES[car.rarity] || RARITIES.street;
   const trait = car.trait ? TRAITS[car.trait] : null;
+  const look = cosmetic || null;
   const root = new THREE.Group();
   const accents = [];
 
@@ -199,8 +250,9 @@ export function makeCarVisual(car, scale = 1) {
   under.position.y = 0.012;
   root.add(under);
 
-  const body = new THREE.Mesh(G.body, bodyMat(car.color));
+  const body = new THREE.Mesh(G.body, bodyMat(car.color, look));
   body.position.y = 0.10;
+  if (look && look.kind === 'widebody') body.scale.set(1.01, 1.02, 1.10);
   root.add(body);
 
   const cabin = new THREE.Mesh(G.cabin, M.glass);
@@ -208,17 +260,26 @@ export function makeCarVisual(car, scale = 1) {
   root.add(cabin);
 
   // satin roof spine gives the cabin a finished, glossy edge
-  const roof = new THREE.Mesh(G.trim, bodyMat(car.color));
+  const roof = new THREE.Mesh(G.trim, bodyMat(car.color, look));
   roof.scale.set(0.52, 1, 5.8);
   roof.position.set(-0.03, 1.108, 0);
   root.add(roof);
 
   const splitter = new THREE.Mesh(G.splitter, M.darkChrome);
   splitter.position.set(0.02, 0.115, 0);
+  if (look && look.kind === 'aero') {
+    splitter.scale.set(1.04, 1.35, 1.02);
+    for (const z of [0.66, -0.66]) {
+      const canard = new THREE.Mesh(G.canard, M.darkChrome);
+      canard.position.set(0.94, 0.24, z);
+      canard.rotation.z = -0.16;
+      root.add(canard);
+    }
+  }
   transient(splitter);
   root.add(splitter);
 
-  // wheels + rarity rims
+  // wheels + rarity rims, sculpted arches and brake hardware
   for (const x of [0.69, -0.69]) {
     for (const z of [0.505, -0.505]) {
       const tire = new THREE.Mesh(G.wheel, M.wheel);
@@ -229,6 +290,27 @@ export function makeCarVisual(car, scale = 1) {
       rim.rotation.x = Math.PI / 2;
       rim.position.set(x, 0.285, z * 1.015);
       root.add(rim);
+
+      const spokeCount = look && look.kind === 'wheels' ? 6 : 4;
+      for (let s = 0; s < spokeCount; s++) {
+        const spoke = new THREE.Mesh(G.rimSpoke, look && look.kind === 'wheels' ? trimMat(look.color) : rimMat(rar.color));
+        spoke.position.set(x, 0.285, z * 1.035);
+        spoke.rotation.z = (s / spokeCount) * TAU;
+        spoke.scale.set(0.62, 6.4, 0.42);
+        root.add(spoke);
+      }
+
+      if (look && (look.kind === 'widebody' || car.rarity !== 'stock')) {
+        const arch = new THREE.Mesh(G.arch, bodyMat(car.color, look));
+        arch.position.set(x, 0.285, z * 1.025);
+        arch.scale.setScalar(look && look.kind === 'widebody' ? 1.14 : 1.02);
+        root.add(arch);
+      }
+      if (look && look.kind === 'calipers') {
+        const caliper = new THREE.Mesh(G.caliper, trimMat(look.color));
+        caliper.position.set(x + 0.08, 0.285, z * 1.05);
+        root.add(caliper);
+      }
     }
   }
 
@@ -244,14 +326,49 @@ export function makeCarVisual(car, scale = 1) {
   root.add(tail);
 
   // spoiler
-  if (car.rarity !== 'stock') {
-    const spoiler = new THREE.Mesh(G.spoiler, bodyMat(car.color));
+  if (car.rarity !== 'stock' || (look && look.kind === 'wing')) {
+    const spoiler = new THREE.Mesh(G.spoiler, bodyMat(car.color, look));
     spoiler.position.set(-0.96, 0.80, 0);
-    root.add(spoiler);
-    for (const z of [0.27, -0.27]) {
-      const post = new THREE.Mesh(G.spoilerPost, M.darkChrome);
-      post.position.set(-0.95, 0.70, z);
-      root.add(post);
+    if (look && look.kind === 'wing') {
+      spoiler.scale.set(1.2, 1.35, 1.06);
+      spoiler.position.y = 0.90;
+      for (const z of [0.27, -0.27]) {
+        const post = new THREE.Mesh(G.spoilerPost, M.darkChrome);
+        post.position.set(-0.95, 0.79, z);
+        post.scale.set(1.1, 1.45, 1);
+        post.rotation.z = -0.24;
+        root.add(post);
+      }
+      for (const z of [0.49, -0.49]) {
+        const winglet = new THREE.Mesh(G.winglet, M.darkChrome);
+        winglet.position.set(-0.98, 0.93, z);
+        root.add(winglet);
+      }
+    } else {
+      root.add(spoiler);
+      for (const z of [0.27, -0.27]) {
+        const post = new THREE.Mesh(G.spoilerPost, M.darkChrome);
+        post.position.set(-0.95, 0.70, z);
+        root.add(post);
+      }
+    }
+  }
+
+  if (look && look.kind === 'roof') {
+    const scoop = new THREE.Mesh(G.scoop, bodyMat(car.color, look));
+    scoop.position.set(-0.16, 1.08, 0);
+    root.add(scoop);
+    for (const z of [0.30, -0.30]) {
+      const rail = new THREE.Mesh(G.trim, M.darkChrome);
+      rail.position.set(-0.04, 1.08, z);
+      root.add(rail);
+    }
+  }
+  if (look && look.kind === 'diffuser') {
+    for (const z of [-0.32, -0.16, 0, 0.16, 0.32]) {
+      const fin = new THREE.Mesh(G.diffuserFin, M.darkChrome);
+      fin.position.set(-1.08, 0.13, z);
+      root.add(fin);
     }
   }
 
@@ -301,6 +418,129 @@ export function makeCarVisual(car, scale = 1) {
         gem.scale.setScalar(0.75);
         root.add(gem);
         accents.push({ mesh: gem, spinY: 1.2, bob: 0.08, baseY: 1.32, phase: i * 2 });
+      }
+    }
+  }
+
+  // cosmetic hardware: each drop adds real geometry, not just a recolour
+  if (look) {
+    const ccolor = look.color || rar.color;
+    const add = (mesh, extra = null) => {
+      root.add(mesh);
+      if (extra) accents.push(extra);
+      return mesh;
+    };
+    switch (look.kind) {
+      case 'underglow':
+      case 'spirit': {
+        const glow = new THREE.Mesh(G.underglow, glowMat(ccolor, look.kind === 'spirit' ? 0.7 : 0.52));
+        glow.rotation.x = -Math.PI / 2;
+        glow.position.y = 0.022;
+        glow.scale.set(1.04, 1.04, 1);
+        add(glow);
+        break;
+      }
+      case 'headlights': {
+        for (const z of [0.30, -0.30]) {
+          const blade = new THREE.Mesh(G.blade, trimMat(ccolor));
+          blade.position.set(1.075, 0.395, z);
+          blade.scale.set(1, 1.2, 1.1);
+          add(blade);
+        }
+        break;
+      }
+      case 'taillight': {
+        const bar = new THREE.Mesh(G.tailBar, trimMat(ccolor));
+        bar.position.set(-1.118, 0.405, 0);
+        add(bar);
+        break;
+      }
+      case 'exhaust': {
+        for (const z of [0.24, -0.24]) {
+          const flame = new THREE.Mesh(G.flame, glowMat(ccolor, 0.8));
+          flame.rotation.z = Math.PI / 2;
+          flame.position.set(-1.42, 0.30, z);
+          flame.scale.setScalar(0.001);
+          add(flame, { mesh: flame, scalePulse: true, baseScale: 0.42, phase: z * 10 });
+        }
+        break;
+      }
+      case 'matrix': {
+        const shell = new THREE.Mesh(G.body, wireMat(ccolor));
+        shell.position.y = 0.10;
+        shell.scale.setScalar(1.018);
+        add(shell);
+        break;
+      }
+      case 'orbit': {
+        const ring = new THREE.Mesh(G.orbitRing, traitMat(ccolor));
+        ring.rotation.set(1.14, 0.35, 0.2);
+        ring.position.y = 0.62;
+        add(ring, { mesh: ring, spin: 0.5 });
+        const ring2 = new THREE.Mesh(G.orbitRing2, traitMat(ccolor));
+        ring2.rotation.set(0.62, -0.45, -0.28);
+        ring2.position.y = 0.70;
+        add(ring2, { mesh: ring2, spin: -0.72 });
+        break;
+      }
+      case 'halo': {
+        const halo = new THREE.Mesh(G.torusHalo, glowMat(ccolor, 0.85));
+        halo.rotation.x = Math.PI / 2;
+        halo.position.y = 1.24;
+        add(halo, { mesh: halo, spin: 1.2, bob: 0.03, baseY: 1.24, phase: 0.5 });
+        for (const z of [0.78, -0.78]) {
+          const tip = new THREE.Mesh(G.winglet, trimMat(ccolor));
+          tip.position.set(-0.22, 0.76, z);
+          add(tip);
+        }
+        break;
+      }
+      case 'trail': {
+        for (let i = 0; i < 3; i++) {
+          const trail = new THREE.Mesh(G.underglow, glowMat(ccolor, 0.34 - i * 0.08));
+          trail.rotation.y = Math.PI / 2;
+          trail.position.set(-1.46 - i * 0.42, 0.36, 0);
+          trail.scale.set(0.20 + i * 0.06, 0.76, 1);
+          add(trail);
+        }
+        break;
+      }
+      case 'runes':
+      case 'prism':
+      case 'chrono': {
+        const count = look.kind === 'runes' ? 6 : 8;
+        for (let i = 0; i < count; i++) {
+          const shard = new THREE.Mesh(G.shard, traitMat(ccolor));
+          const a = (i / count) * TAU;
+          shard.position.set(Math.cos(a) * 0.86, 0.48 + (i % 3) * 0.17, Math.sin(a) * 0.52);
+          shard.scale.setScalar(0.45 + (i % 2) * 0.18);
+          add(shard, { mesh: shard, spinY: 1.5 + (i % 3) * 0.4, bob: 0.045, baseY: shard.position.y, phase: i });
+        }
+        break;
+      }
+      case 'celestial': {
+        const halo = new THREE.Mesh(G.torusHalo, M.gold);
+        halo.rotation.x = Math.PI / 2;
+        halo.position.y = 1.26;
+        add(halo, { mesh: halo, spin: 1.35, bob: 0.024, baseY: 1.26, phase: 1.4 });
+        for (let i = 0; i < 3; i++) {
+          const gem = new THREE.Mesh(G.diamond, traitMat(ccolor));
+          const a = (i / 3) * TAU;
+          gem.position.set(Math.cos(a) * 0.76, 1.34, Math.sin(a) * 0.44);
+          gem.scale.setScalar(0.8);
+          add(gem, { mesh: gem, spinY: 1.4, bob: 0.06, baseY: 1.34, phase: i * 2 });
+        }
+        break;
+      }
+      case 'phantom': {
+        const glow = new THREE.Mesh(G.underglow, glowMat(ccolor, 0.62));
+        glow.rotation.x = -Math.PI / 2;
+        glow.position.y = 0.024;
+        add(glow);
+        const tail = new THREE.Mesh(G.tailBar, trimMat(ccolor));
+        tail.position.set(-1.12, 0.42, 0);
+        add(tail);
+        break;
       }
     }
   }
@@ -373,6 +613,12 @@ export class World {
     this._confetti = null;
     this._wheelSpin = null;
     this._pointerPulse = 0;
+    this.cosmeticFor = null;
+    this.weather = null;
+    this.theme = null;
+    this._raceEnv = null;
+    this._flash = 0;
+    this._weatherT = 0;
     this._setupRenderer();
     this._setupScene();
     this._buildRip();
@@ -467,6 +713,78 @@ export class World {
 
     this.defaultBg = new THREE.Color(0x05060b);
     this.defaultFog = new THREE.Color(0x05060b);
+
+    // Global weather layer. One reusable point cloud does rain, snow, dust,
+    // embers, orbital motes and prism static; kinds only change motion + tint.
+    const wCount = 220;
+    const wPos = new Float32Array(wCount * 3);
+    const wSeed = new Float32Array(wCount);
+    for (let i = 0; i < wCount; i++) {
+      wPos[i * 3] = rand(-13, 13);
+      wPos[i * 3 + 1] = rand(0.2, 12);
+      wPos[i * 3 + 2] = rand(-12, 8);
+      wSeed[i] = rand(0, TAU);
+    }
+    const wGeo = new THREE.BufferGeometry();
+    wGeo.setAttribute('position', new THREE.BufferAttribute(wPos, 3));
+    const wMat = new THREE.PointsMaterial({
+      color: 0x9bd8ff, size: 0.07, transparent: true, opacity: 0.55,
+      depthWrite: false, blending: THREE.AdditiveBlending, map: makeSparkTexture(),
+    });
+    this.weatherFx = { mesh: new THREE.Points(wGeo, wMat), count: wCount, seed: wSeed };
+    this.weatherFx.mesh.visible = false;
+    this.scene.add(this.weatherFx.mesh);
+  }
+
+  // ── Atmosphere: global theme + weather ────────────────────────────────────
+  setTheme(theme) {
+    this.theme = theme || null;
+    this._applyAtmosphere();
+  }
+
+  setWeather(weather) {
+    this.weather = weather || null;
+    const kind = weather?.kind || 'clear';
+    if (this.weatherFx) {
+      this.weatherFx.mesh.visible = kind !== 'clear';
+      this.weatherFx.mesh.material.color.copy(asColor(weather?.color, 0x9bd8ff));
+      this.weatherFx.mesh.material.size = ['rain', 'monsoon', 'acid', 'storm'].includes(kind) ? 0.06 : 0.085;
+      this.weatherFx.mesh.material.opacity = weather?.mystical ? 0.7 : 0.55;
+    }
+    this._flash = 0;
+    this._applyAtmosphere();
+  }
+
+  _applyAtmosphere() {
+    if (!this.scene) return;
+    const theme = this.theme || {
+      bg: '#05060b', fog: '#090c15', hemiSky: '#5b83b8', hemiGround: '#05060a',
+      key: '#ffffff', dust: '#9bd8ff',
+    };
+    const weather = this.weather;
+    const race = this.stage === 'race' && this._raceEnv;
+    const bg = asColor(race ? this._raceEnv.bg : theme.bg, 0x05060b);
+    const fog = asColor(race ? this._raceEnv.fog : theme.fog, 0x090c15);
+    if (weather?.tint) {
+      bg.lerp(asColor(weather.tint, 0x05060b), 0.34);
+      fog.lerp(asColor(weather.tint, 0x05060b), 0.5);
+    }
+    this.defaultBg.copy(bg);
+    this.defaultFog.copy(fog);
+    this.scene.background = bg;
+    const clear = !weather || weather.kind === 'clear';
+    const near = clear ? (race ? this._raceEnv.near : 22) : weather.fogNear;
+    const far = clear ? (race ? this._raceEnv.far : 60) : weather.fogFar;
+    this.scene.fog = new THREE.Fog(fog, Math.max(4, near), Math.max(near + 8, far));
+    if (this.hemi) {
+      this.hemi.color.copy(asColor(theme.hemiSky, 0x5b83b8));
+      this.hemi.groundColor.copy(asColor(theme.hemiGround, 0x05060a));
+    }
+    if (this.key) this.key.color.copy(asColor(theme.key, 0xffffff));
+    if (this.dust) {
+      this.dust.material.color.copy(asColor(theme.dust, 0x9bd8ff));
+      this.dust.visible = this.stage !== 'race';
+    }
   }
 
   _makeBackdrop(radius, height, y, color = 0x070a12) {
@@ -588,8 +906,38 @@ export class World {
     this._confetti.mesh.visible = false;
     g.add(this._confetti.mesh);
 
+    // Elemental backdrop floating behind the rotating pack.
+    const fxCount = 120;
+    const fxPos = new Float32Array(fxCount * 3);
+    const fxSeed = new Float32Array(fxCount);
+    for (let i = 0; i < fxCount; i++) {
+      fxPos[i * 3] = rand(-2.5, 2.5);
+      fxPos[i * 3 + 1] = rand(0.25, 3.5);
+      fxPos[i * 3 + 2] = rand(-2.2, -0.25);
+      fxSeed[i] = rand(0, TAU);
+    }
+    const fxGeo = new THREE.BufferGeometry();
+    fxGeo.setAttribute('position', new THREE.BufferAttribute(fxPos, 3));
+    const fxMat = new THREE.PointsMaterial({
+      color: 0xff3d86, size: 0.075, transparent: true, opacity: 0.7,
+      depthWrite: false, blending: THREE.AdditiveBlending, map: makeSparkTexture(),
+    });
+    this._packFx = { mesh: new THREE.Points(fxGeo, fxMat), count: fxCount, seed: fxSeed };
+    g.add(this._packFx.mesh);
+
+    this._ripFlash = new THREE.Mesh(G.flare, new THREE.MeshBasicMaterial({
+      map: makeGlowTexture(), color: 0xffffff, transparent: true, opacity: 0,
+      depthWrite: false, blending: THREE.AdditiveBlending,
+    }));
+    this._ripFlash.position.set(0, 1.7, -0.4);
+    g.add(this._ripFlash);
+    this._ripFlashT = 1;
+
     this.rip = {
       pack: null,
+      element: 'neon',
+      style: elementStyle('neon'),
+      burstDone: false,
       reveal: { active: false, t: 0, done: false, card: null, cb: null },
       defaultRing: 0xff3d86,
     };
@@ -658,12 +1006,21 @@ export class World {
 
     // recolor stage accents
     const col = new THREE.Color(pack.color);
+    this.rip.color = col.clone();
     this.ripRingMat.color.copy(col);
     this.ripRing2.material.color.copy(col);
     this.ripGlow.material.color.copy(col);
     this.ripArch.material.color.copy(col);
     this.packLight.color.copy(col);
     this.rip.defaultRing = pack.color;
+    this.rip.element = pack.element || 'neon';
+    this.rip.style = elementStyle(this.rip.element);
+    this.rip.burstDone = false;
+    if (this._packFx) {
+      this._packFx.mesh.material.color.copy(asColor(pack.color, 0xff3d86));
+      this._packFx.mesh.material.size = this.rip.element === 'ice' ? 0.09 : 0.075;
+    }
+    if (this._ripFlash) this._ripFlash.material.color.copy(asColor(pack.color, 0xffffff));
     if (this.dust) this.dust.material.color.copy(col);
   }
 
@@ -682,22 +1039,44 @@ export class World {
     rev.t = 0;
     rev.done = false;
     rev.cb = cb || null;
-    if (this.rip.pack) { this.rip.pack.visible = true; this.rip.pack.rotation.set(0, 0, 0); }
-    this._burstConfetti();
+    this.rip.burstDone = false;
+    this._ripFlashT = 1;
+    this._tintConfetti(this.rip.color || this.rip.defaultRing);
+    if (this._ripFlash) this._ripFlash.material.opacity = 0;
+    if (this.rip.pack) {
+      this.rip.pack.visible = true;
+      this.rip.pack.rotation.set(0, 0, 0);
+      this.rip.pack.position.x = 0;
+      this.rip.pack.scale.setScalar(1);
+    }
+  }
+
+  _tintConfetti(color) {
+    if (!this._confetti) return;
+    const c = asColor(color, 0xff3d86);
+    const colors = this._confetti.mesh.geometry.attributes.color.array;
+    for (let i = 0; i < this._confetti.count; i++) {
+      const v = 0.55 + Math.random() * 0.45;
+      colors[i * 3] = Math.min(1, c.r * v + 0.08);
+      colors[i * 3 + 1] = Math.min(1, c.g * v + 0.08);
+      colors[i * 3 + 2] = Math.min(1, c.b * v + 0.08);
+    }
+    this._confetti.mesh.geometry.attributes.color.needsUpdate = true;
   }
 
   _burstConfetti() {
     if (!this._confetti) return;
     const { mesh, vel, count } = this._confetti;
+    const style = this.rip.style || elementStyle('neon');
     const pos = mesh.geometry.attributes.position.array;
     for (let i = 0; i < count; i++) {
       pos[i * 3] = rand(-0.2, 0.2);
       pos[i * 3 + 1] = 1.9 + rand(-0.2, 0.2);
       pos[i * 3 + 2] = rand(-0.2, 0.2);
       const a = rand(0, TAU);
-      const speed = rand(0.8, 3.1);
+      const speed = rand(0.8, 3.1) * style.burst;
       vel[i * 3] = Math.cos(a) * speed * 0.55;
-      vel[i * 3 + 1] = rand(1.3, 4.2);
+      vel[i * 3 + 1] = rand(1.3, 4.2) * (0.8 + style.burst * 0.2);
       vel[i * 3 + 2] = Math.sin(a) * speed * 0.55;
     }
     mesh.geometry.attributes.position.needsUpdate = true;
@@ -789,7 +1168,7 @@ export class World {
       pad.userData.rim.material.color.set(rar.color);
       pad.userData.flare.material.color.set(rar.color);
       pad.userData.flare.material.opacity = 0.26;
-      const visual = makeCarVisual(car, 0.82);
+      const visual = makeCarVisual(car, 0.82, this.cosmeticFor ? this.cosmeticFor(car.id) : null);
       visual.position.y = 0.15;
       visual.rotation.y = rand(0, TAU);
       visual.userData.baseRotY = visual.rotation.y;
@@ -879,7 +1258,7 @@ export class World {
     while (anchor.children.length) anchor.remove(anchor.children[0]);
     this.workshopCar = null;
     if (!car) return;
-    const visual = makeCarVisual(car, 0.96);
+    const visual = makeCarVisual(car, 0.96, this.cosmeticFor ? this.cosmeticFor(car.id) : null);
     visual.rotation.y = 2.32;
     visual.position.y = 0;
     anchor.add(visual);
@@ -888,7 +1267,6 @@ export class World {
     this.workshopRing.material.color.set(rar.color);
     this.workshopRing2.material.color.set(car.trait ? TRAITS[car.trait].color : rar.color);
     this.upgradePulse.material.color.set(rar.color);
-    if (this.dust) this.dust.material.color.set(rar.color);
   }
 
   pulseWorkshop() {
@@ -1075,10 +1453,8 @@ export class World {
     if (this.dust) this.dust.visible = name !== 'race';
     this.orbit.az = 0;
     this.orbit.el = 0;
-    if (name !== 'race') {
-      this.scene.background = this.defaultBg;
-      this.scene.fog = new THREE.Fog(this.defaultFog, 22, 60);
-    }
+    if (name !== 'race') this._raceEnv = null;
+    this._applyAtmosphere();
     if (instant) {
       const cfg = STAGE_CAMS[name];
       const pos = new THREE.Vector3(...cfg.pos);
@@ -1189,6 +1565,7 @@ export class World {
     const t = this.time;
     this._updateCamera(dt);
     if (this.dust && this.dust.visible) this.dust.rotation.y += dt * 0.012;
+    this._updateWeather(dt, t);
 
     if (this.groups.rip.visible) this._updateRip(dt, t);
     if (this.groups.garage.visible) this._updateGarage(dt, t);
@@ -1211,25 +1588,74 @@ export class World {
     }
 
     const rev = this.rip.reveal;
+    const style = this.rip.style || elementStyle('neon');
     if (this.rip.pack) {
       if (!rev.active || rev.t < 0.42) {
         const body = this.rip.pack.userData.body || this.rip.pack;
-        body.rotation.y += dt * 0.6;
-        body.rotation.x = Math.sin(t * 0.9) * 0.05;
-        this.rip.pack.position.y = 0.06 + Math.sin(t * 1.15) * 0.07;
+        body.rotation.y += dt * (0.6 * style.spin);
+        body.rotation.x = Math.sin(t * style.tiltSpeed) * style.tilt;
+        this.rip.pack.position.y = 0.06 + Math.sin(t * style.bobSpeed) * style.bob;
         if (rev.active && rev.t < 0.42) {
-          this.rip.pack.rotation.z = Math.sin(rev.t * 70) * 0.045;
-          this.rip.pack.position.x = Math.sin(rev.t * 55) * 0.035;
-          this.rip.pack.scale.setScalar(1 + rev.t * 0.2);
+          const wind = rev.t;
+          const glitch = this.rip.element === 'glitch';
+          this.rip.pack.rotation.z = Math.sin(wind * style.jitterFreq) * style.jitter + (glitch ? rand(-0.06, 0.06) : 0);
+          this.rip.pack.position.x = Math.sin(wind * style.swayFreq) * style.sway;
+          this.rip.pack.scale.setScalar(1 + wind * style.swell + (glitch ? rand(-0.03, 0.03) : 0));
+        } else {
+          this.rip.pack.position.x *= (1 - Math.min(1, dt * 8));
+          this.rip.pack.scale.setScalar(lerp(this.rip.pack.scale.x, 1, 1 - Math.exp(-6 * dt)));
         }
       }
+    }
+
+    // elemental backdrop behind the pack
+    if (this._packFx) {
+      const fx = this._packFx;
+      const pos = fx.mesh.geometry.attributes.position.array;
+      const seed = fx.seed;
+      const element = this.rip.element;
+      for (let i = 0; i < fx.count; i++) {
+        const ix = i * 3;
+        if (element === 'ice' || element === 'rain') {
+          pos[ix + 1] -= dt * (element === 'ice' ? 0.32 : 0.85);
+          pos[ix] += Math.sin(t * 0.9 + seed[i]) * dt * 0.22;
+          if (pos[ix + 1] < 0.12) pos[ix + 1] = 3.6;
+        } else if (element === 'ember' || element === 'solar' || element === 'sparks') {
+          pos[ix + 1] += dt * (0.45 + (i % 4) * 0.08);
+          pos[ix] += Math.sin(t * 0.75 + seed[i]) * dt * 0.2;
+          if (pos[ix + 1] > 3.7) pos[ix + 1] = 0.18;
+        } else if (element === 'cosmic' || element === 'glitch' || element === 'prism') {
+          const radius = 1.15 + (i % 8) * 0.18;
+          const angle = seed[i] + t * (element === 'glitch' ? 0.9 : 0.32);
+          pos[ix] = Math.cos(angle) * radius;
+          pos[ix + 1] = 1.65 + Math.sin(t * 0.5 + seed[i]) * 1.25;
+          pos[ix + 2] = -1.05 + Math.sin(angle) * radius * 0.6;
+        } else if (element === 'dust') {
+          pos[ix] += dt * 0.34;
+          pos[ix + 1] += Math.sin(t + seed[i]) * dt * 0.12;
+          if (pos[ix] > 2.6) pos[ix] = -2.6;
+        } else {
+          pos[ix + 1] += Math.sin(t * style.bobSpeed + seed[i]) * dt * 0.14;
+          pos[ix] += Math.sin(t * 0.5 + seed[i]) * dt * 0.12;
+        }
+      }
+      fx.mesh.geometry.attributes.position.needsUpdate = true;
     }
 
     if (rev.active) {
       rev.t += dt;
       if (rev.t < 0.44) {
-        // pack shakes and winds up
+        // element-specific wind-up handled by the pack transform above
       } else {
+        if (!this.rip.burstDone) {
+          this.rip.burstDone = true;
+          this._ripFlashT = 0;
+          if (this._ripFlash) {
+            this._ripFlash.scale.setScalar(0.45);
+            this._ripFlash.material.opacity = 0.85;
+          }
+          this._burstConfetti();
+        }
         if (this.rip.pack) this.rip.pack.visible = false;
         if (rev.card) {
           rev.card.visible = true;
@@ -1252,6 +1678,13 @@ export class World {
       }
     }
 
+    if (this._ripFlash && this._ripFlash.material.opacity > 0.002) {
+      this._ripFlashT += dt;
+      const p = clamp(this._ripFlashT / 0.55, 0, 1);
+      this._ripFlash.scale.setScalar(0.45 + p * 2.7);
+      this._ripFlash.material.opacity = (1 - p) * 0.85;
+    }
+
     if (this._confetti && this._confetti.mesh.visible) {
       const c = this._confetti;
       c.life += dt;
@@ -1265,6 +1698,69 @@ export class World {
       c.mesh.geometry.attributes.position.needsUpdate = true;
       c.mesh.material.opacity = Math.max(0, 1 - c.life / 2.4);
       if (c.life > 2.5) c.mesh.visible = false;
+    }
+  }
+
+  _updateWeather(dt, t) {
+    const w = this.weather;
+    const fx = this.weatherFx;
+    if (!fx || !w || w.kind === 'clear') {
+      if (this.key) this.key.intensity += (2.4 - this.key.intensity) * (1 - Math.exp(-3 * dt));
+      if (this.hemi) this.hemi.intensity += (1.35 - this.hemi.intensity) * (1 - Math.exp(-3 * dt));
+      return;
+    }
+    const kind = w.kind;
+    const pos = fx.mesh.geometry.attributes.position.array;
+    const seed = fx.seed;
+    const falling = ['rain', 'monsoon', 'acid', 'storm', 'snow', 'ice', 'mist', 'overcast', 'clouds', 'fog'].includes(kind);
+    const rising = ['ash', 'solar', 'heat'].includes(kind);
+    const orbital = ['cosmic', 'aurora', 'meteor', 'eclipse', 'arcane', 'starfall', 'phantom', 'chrono'].includes(kind);
+    const fallSpeed = kind === 'monsoon' ? 8.5 : kind === 'storm' ? 7.2 : kind === 'acid' ? 6.2 : kind === 'snow' ? 0.95 : kind === 'ice' ? 0.8 : 2.4;
+    for (let i = 0; i < fx.count; i++) {
+      const ix = i * 3;
+      if (falling) {
+        pos[ix + 1] -= fallSpeed * dt;
+        pos[ix] += Math.sin(t * 0.7 + seed[i]) * dt * 0.4;
+        if (pos[ix + 1] < 0.08) {
+          pos[ix] = rand(-13, 13);
+          pos[ix + 1] = rand(9, 12.5);
+          pos[ix + 2] = rand(-12, 8);
+        }
+      } else if (rising) {
+        pos[ix + 1] += (kind === 'solar' ? 0.9 : 1.5) * dt;
+        pos[ix] += Math.sin(t * 0.55 + seed[i]) * dt * 0.35;
+        if (pos[ix + 1] > 12) {
+          pos[ix] = rand(-13, 13);
+          pos[ix + 1] = 0.15;
+          pos[ix + 2] = rand(-12, 8);
+        }
+      } else if (orbital) {
+        const radius = 3.4 + (i % 9) * 0.95;
+        const angle = seed[i] + t * (0.10 + (i % 5) * 0.025);
+        pos[ix] = Math.cos(angle) * radius;
+        pos[ix + 1] = 1.1 + (i % 7) * 0.55 + Math.sin(t * 0.32 + seed[i] * 2.2) * 1.5;
+        pos[ix + 2] = -2.5 + Math.sin(angle) * radius * 0.62;
+      } else {
+        pos[ix] += dt * (kind === 'sand' ? 2.3 : kind === 'sunset' ? 0.35 : 0.75);
+        pos[ix + 1] += Math.sin(t + seed[i]) * dt * 0.18;
+        if (pos[ix] > 14) {
+          pos[ix] = -14;
+          pos[ix + 1] = rand(0.2, 12);
+          pos[ix + 2] = rand(-12, 8);
+        }
+      }
+    }
+    fx.mesh.geometry.attributes.position.needsUpdate = true;
+
+    const stormy = ['storm', 'arcane', 'overcast', 'eclipse'].includes(kind);
+    if (stormy) {
+      this._flash = Math.max(0, this._flash - dt * 2.8);
+      if (Math.random() < dt * (kind === 'storm' ? 0.75 : 0.3)) this._flash = 1;
+      if (this.key) this.key.intensity = 2.4 + this._flash * 4.2;
+      if (this.hemi) this.hemi.intensity = 1.35 + this._flash * 1.6;
+    } else {
+      if (this.key) this.key.intensity += (2.4 - this.key.intensity) * (1 - Math.exp(-3 * dt));
+      if (this.hemi) this.hemi.intensity += (1.35 - this.hemi.intensity) * (1 - Math.exp(-3 * dt));
     }
   }
 
@@ -1337,8 +1833,8 @@ export class World {
   }
 
   setEnvironment(bg, fogColor, near = 28, far = 115) {
-    this.scene.background = new THREE.Color(bg);
-    this.scene.fog = new THREE.Fog(fogColor, near, far);
+    this._raceEnv = { bg, fog: fogColor, near, far };
+    this._applyAtmosphere();
   }
 
   render() {

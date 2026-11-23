@@ -125,6 +125,8 @@ export class RaceGame {
     this._startResources = null;
     this._idleTime = 0;
     this._lastResult = null;
+    this._autoTimer = 0;
+    this._autoNitro = 0;
   }
 
   // ── Track build ───────────────────────────────────────────────────────────
@@ -541,7 +543,7 @@ export class RaceGame {
     this._accelRate = 1.05 + stats.accel * 0.012;
     this._grip = stats.grip;
 
-    const player = makeCarVisual(car, 0.95);
+    const player = makeCarVisual(car, 0.95, this.store.equippedCosmeticFor ? this.store.equippedCosmeticFor(car.id) : null);
     player.rotation.y = Math.PI / 2;
     player.position.set(0, 0.02, 3.4);
     this.carGroup.add(player);
@@ -570,7 +572,7 @@ export class RaceGame {
       if (p && !picks.some(x => x.id === p.id)) picks.push(p);
     }
     picks.forEach((aiCar, i) => {
-      const visual = makeCarVisual(aiCar, 0.92);
+      const visual = makeCarVisual(aiCar, 0.92, this.store.equippedCosmeticFor ? this.store.equippedCosmeticFor(aiCar.id) : null);
       visual.rotation.y = Math.PI / 2;
       visual.position.set(LANES[i === 0 ? 0 : 2], 0.02, 3.4 + rand(-1.5, -0.4));
       this.carGroup.add(visual);
@@ -767,6 +769,8 @@ export class RaceGame {
     const laneSpeed = 5.5 + grip * 0.055;
     this.laneX = lerp(this.laneX, LANES[this.lane], 1 - Math.exp(-laneSpeed * dt));
 
+    if (this.store.state.autoRace) this._autoDrive(dt);
+
     if (this.boostT > 0) {
       this.boostT = Math.max(0, this.boostT - dt);
       this.nitro = Math.max(0, this.nitro - dt * this._nitroDrain);
@@ -826,6 +830,42 @@ export class RaceGame {
 
     this.shake = Math.max(0, this.shake - dt * 1.8);
     this._updateGates();
+  }
+
+  _autoDrive(dt) {
+    this._autoTimer -= dt;
+    this._autoNitro -= dt;
+    if (this._autoTimer > 0) return;
+    this._autoTimer = 0.24;
+
+    const ahead = (h) => h.dist - this.dist;
+    const current = this._hazards.filter(h => !h.hit && h.lane === this.lane && ahead(h) > -1 && ahead(h) < 27);
+    if (current.length) {
+      const candidates = [0, 1, 2]
+        .filter(l => l !== this.lane)
+        .map(l => {
+          const nearest = this._hazards.reduce((best, h) => {
+            if (h.hit || h.lane !== l) return best;
+            const d = ahead(h);
+            return d > -1 && d < 34 ? Math.min(best, d) : best;
+          }, Infinity);
+          return { lane: l, distance: nearest === Infinity ? 999 : nearest };
+        })
+        .sort((a, b) => (b.distance - a.distance) || (Math.abs(a.lane - this.lane) - Math.abs(b.lane - this.lane)));
+      const pick = candidates[0];
+      if (pick && pick.lane !== this.lane) {
+        this.lane = pick.lane;
+        this.cbs.onEvent?.('lane');
+      }
+    }
+
+    if (this._autoNitro <= 0 && this.nitro >= 0.3 && this.boostT <= 0.25) {
+      const clear = !this._hazards.some(h => !h.hit && ahead(h) > -1 && ahead(h) < 20);
+      if (clear) {
+        this._activateNitro();
+        this._autoNitro = 1.1;
+      }
+    }
   }
 
   _finishRace() {
