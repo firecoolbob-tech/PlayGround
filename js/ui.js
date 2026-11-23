@@ -108,6 +108,7 @@ export class UI {
     });
     $('#lane-left').addEventListener('click', () => { this.audio.play('lane'); this.race.moveLane(-1); });
     $('#lane-right').addEventListener('click', () => { this.audio.play('lane'); this.race.moveLane(1); });
+    $('#auto-race-toggle')?.addEventListener('click', () => { this.audio.unlock(); this._toggleAutoRace(); });
     $('#inspect-body').addEventListener('click', (e) => this._onInspectClick(e));
     this.sheetBody.addEventListener('click', (e) => this._onSheetClick(e));
     document.addEventListener('keydown', (e) => {
@@ -156,6 +157,7 @@ export class UI {
   applyTab(tab) {
     if (this.inspectCar) this.closeInspect(true);
     this.hideSheet();
+    this.closeFeatureMenu();
     if (tab !== 'rip') this.hideRevealTag();
     this.tab = tab;
     $$('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
@@ -196,6 +198,7 @@ export class UI {
     const next = typeof force === 'boolean' ? force : this.featureMenu.hidden;
     this.featureMenu.hidden = !next;
     this.featureBtn?.classList.toggle('open', next);
+    this.featureBtn?.setAttribute('aria-expanded', String(next));
     this.app.classList.toggle('menu-open', next);
   }
 
@@ -214,6 +217,31 @@ export class UI {
       this.lastRipPack = COSMETIC_PACK.id;
       this.setTab('rip');
     }
+  }
+
+  // ── Auto race ─────────────────────────────────────────────────────────────
+  _toggleAutoRace() {
+    const on = this.store.toggleAutoRace();
+    this.audio.play('ui');
+    this._syncAutoRaceUI();
+    this.toast(on ? 'Auto Race engaged · steering + nitro automated' : 'Auto Race off · manual control', on ? 'good' : '');
+  }
+
+  _syncAutoRaceUI() {
+    const on = Boolean(this.store.state.autoRace);
+    const hud = $('#auto-race-toggle');
+    if (hud) {
+      hud.classList.toggle('on', on);
+      hud.setAttribute('aria-pressed', String(on));
+      const state = hud.querySelector('b');
+      if (state) state.textContent = on ? 'ON' : 'OFF';
+    }
+    $$('[data-action="toggle-auto-race"]').forEach(btn => {
+      btn.classList.toggle('on', on);
+      btn.setAttribute('aria-pressed', String(on));
+      const state = btn.querySelector('b');
+      if (state) state.textContent = on ? 'ON' : 'OFF';
+    });
   }
 
   // ── Weather shop ──────────────────────────────────────────────────────────
@@ -436,25 +464,49 @@ export class UI {
       this.toast(result.reason || 'Could not rip that pack.', 'warn');
       return;
     }
+    const cosmetic = result.kind === 'cosmetic';
+    const revealCar = cosmetic ? this._cosmeticCardCar(result.cosmetic) : result.car;
     this.revealing = true;
     this.hideRevealTag();
     this.audio.play('rip');
     this.renderRip();
     this.renderHUD();
-    this.world.playRipReveal(result.car, () => {
+    this.world.playRipReveal(revealCar, () => {
       this.revealing = false;
       this.audio.play(result.isNew ? 'new' : 'reveal');
-      this.showRevealTag(result);
+      if (cosmetic) this.showCosmeticRevealTag(result);
+      else this.showRevealTag(result);
       this.renderRip();
       this.renderHUD();
       if (this.tab === 'garage') {
         this.world.setLineup(this.store.lineup());
         this.renderGarage();
+      } else if (this.tab === 'workshop') {
+        this.world.setWorkshopCar(this.store.selectedCar());
+        this.renderWorkshop();
       }
-      if (result.isNew) this.toast(`NEW ${RARITIES[result.car.rarity].name.toUpperCase()} · ${result.car.name}`, 'good');
+      if (cosmetic) {
+        this.world.setLineup(this.store.lineup());
+        this.world.setWorkshopCar(this.store.selectedCar());
+        if (result.isNew) this.toast(`NEW COSMETIC · ${result.cosmetic.name}`, 'good');
+        else this.toast(`Cosmetic duplicate · +${result.scraps} scraps`, 'good');
+      } else if (result.isNew) this.toast(`NEW ${RARITIES[result.car.rarity].name.toUpperCase()} · ${result.car.name}`, 'good');
       else this.toast(`Duplicate · +${result.blueprints} blueprint${result.blueprints > 1 ? 's' : ''}, +${result.scraps} scrap`, 'good');
       if (this.store.state.autoRip) this._scheduleAutoRip();
     });
+  }
+
+  _cosmeticCardCar(cosmetic) {
+    const c = cosmetic || COSMETICS[0];
+    return {
+      id: `cos-${c.id}`,
+      name: c.name,
+      color: c.color || '#dff4ff',
+      rarity: c.mystical ? 'prototype' : 'pro',
+      trait: null,
+      speed: 55, accel: 55, grip: 55,
+      cosmetic: c,
+    };
   }
 
   _scheduleAutoRip() {
@@ -471,6 +523,19 @@ export class UI {
       }
       this.rip();
     }, 1050);
+  }
+
+  showCosmeticRevealTag(result) {
+    clearTimeout(this.revealTimer);
+    const c = result.cosmetic;
+    const color = c.color || '#ff7ae0';
+    const tier = c.mystical ? 'MYSTICAL' : 'STANDARD';
+    this.revealTag.innerHTML = `
+      <div class="rt-badge" style="color:${color};border-color:${rgba(color, 0.55)};background:${rgba(color, 0.1)}">STYLE<br>${c.slot.slice(0, 3)}</div>
+      <div class="rt-copy"><b>${esc(c.name)}</b><span style="color:${color}">${tier} COSMETIC · ${esc(c.slot)}</span></div>
+      <span class="${result.isNew ? 'rt-new' : 'rt-dup'}">${result.isNew ? 'NEW' : '+' + result.scraps + ' SC'}</span>`;
+    this.revealTag.hidden = false;
+    this.revealTimer = setTimeout(() => this.hideRevealTag(), 6500);
   }
 
   showRevealTag(result) {
@@ -789,6 +854,57 @@ export class UI {
       this.openVaultSheet();
       this.renderWorkshop();
       this.renderHUD();
+    } else if (action === 'weather-buy') {
+      const res = this.store.buyWeather(btn.dataset.id);
+      if (!res.ok) { this.audio.play('error'); this.toast(res.reason, 'warn'); return; }
+      this.audio.play('upgrade');
+      this.world.setWeather(this.store.activeWeather());
+      this.toast(`${res.equipped ? 'Equipped' : 'Unlocked'} weather · ${res.weather.name}`, 'good');
+      this.openWeatherShop();
+      this.renderHUD();
+    } else if (action === 'theme-buy') {
+      const res = this.store.buyTheme(btn.dataset.id);
+      if (!res.ok) { this.audio.play('error'); this.toast(res.reason, 'warn'); return; }
+      this.audio.play('upgrade');
+      this.world.setTheme(this.store.activeTheme());
+      this.toast(`${res.equipped ? 'Equipped' : 'Unlocked'} theme · ${res.theme.name}`, 'good');
+      this.openThemeShop();
+      this.renderHUD();
+    } else if (action === 'cosmetic-equip') {
+      const car = this.store.selectedCar();
+      if (!car) { this.audio.play('error'); this.toast('Select a car first.', 'warn'); return; }
+      if (!this.store.equipCosmetic(car.id, btn.dataset.id)) {
+        this.audio.play('error');
+        return;
+      }
+      this.audio.play('ui');
+      this.world.setLineup(this.store.lineup());
+      this.world.setWorkshopCar(this.store.selectedCar());
+      this.toast(`Equipped ${COSMETICS_BY_ID[btn.dataset.id]?.name || 'cosmetic'}`, 'good');
+      this.openCosmeticsSheet();
+    } else if (action === 'goto-cosmetic') {
+      this.hideSheet();
+      this.store.setSelectedPack(COSMETIC_PACK.id);
+      this.world.setRipPack(COSMETIC_PACK);
+      this.lastRipPack = COSMETIC_PACK.id;
+      this.setTab('rip');
+      this.audio.play('ui');
+    } else if (action === 'car-fuse-select') {
+      this.carFuseId = btn.dataset.id;
+      this.audio.play('ui');
+      this.openCarFuseSheet();
+    } else if (action === 'car-fuse-go') {
+      if (!this.carFuseId) return;
+      const res = this.store.fuseCar(this.carFuseId);
+      if (!res.ok) { this.audio.play('error'); this.toast(res.reason, 'warn'); return; }
+      this.audio.play('upgrade');
+      this.world.setWorkshopCar(this.store.selectedCar());
+      this.world.setLineup(this.store.lineup());
+      this.world.pulseWorkshop();
+      this.toast(`Fusion rank ${res.level} · ${res.car.name} upgraded`, 'good');
+      this.openCarFuseSheet();
+      this.renderWorkshop();
+      this.renderHUD();
     } else if (action === 'reset-open') {
       this.openResetConfirm();
     }
@@ -830,7 +946,7 @@ export class UI {
     el.innerHTML = `
       <div class="section-head">
         <div class="section-title"><i class="tick"></i>SPRINT SELECT</div>
-        <span class="section-sub">12 LOCATIONS · 3 LANES</span>
+        <span class="section-sub">${TRACKS.length} LOCATIONS · 3 LANES</span>
       </div>
       <div class="scroll-x">${cards}</div>
       <div class="race-info">
@@ -839,9 +955,11 @@ export class UI {
       </div>
       <div class="race-launch">
         <button class="btn btn-primary btn-lg" data-action="start-race">START SPRINT <span class="sub">TAP NITRO TO WIN</span></button>
+        <button class="auto-race-chip${this.store.state.autoRace ? ' on' : ''}" data-action="toggle-auto-race" aria-pressed="${this.store.state.autoRace}" aria-label="Toggle auto race"><span>AUTO</span><b>${this.store.state.autoRace ? 'ON' : 'OFF'}</b></button>
       </div>
       <div class="race-empty-tip"><span>SWIPE OR USE ‹ › TO CHANGE LANE · AVOID HAZARDS</span><b>${selectedCar ? esc(selectedCar.name) : 'LOANER'}</b></div>`;
     this._centerSelected('.scroll-x');
+    this._syncAutoRaceUI();
     $('#race-hud') && (this.raceHud.hidden = true);
   }
 
@@ -871,6 +989,7 @@ export class UI {
       if (nameEl) nameEl.textContent = track.name.toUpperCase();
     }
     this._setNitroUI({ nitro: 1, boost: false });
+    this._syncAutoRaceUI();
     const hint = $('#race-hint');
     if (hint) {
       hint.style.opacity = '1';
@@ -1280,6 +1399,8 @@ export class UI {
       this.renderRace();
     } else if (action === 'start-race') {
       this.startRace();
+    } else if (action === 'toggle-auto-race') {
+      this._toggleAutoRace();
     } else if (action === 'collect-offline') {
       this.collectOffline();
     } else if (action === 'spin') {
