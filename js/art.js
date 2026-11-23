@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.js';
 import { RARITIES, TRAITS, carSvg, parseHex, rgba, lighten, darken } from './data.js';
 
 const FONT = '"SF Pro Display",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif';
