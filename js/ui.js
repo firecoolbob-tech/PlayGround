@@ -3,7 +3,7 @@ import {
   TRAITS, WHEEL_REWARDS, WHEEL_COST, MAX_LEVEL, upgradeCost, statWithLevel,
   carDisplayStats, formatNum, formatTime, carSvg, rgba, lighten,
   WEATHERS, WEATHERS_BY_ID, BACKGROUND_THEMES, THEMES_BY_ID,
-  COSMETICS, COSMETICS_BY_ID, COSMETIC_PACK,
+  COSMETICS, COSMETICS_BY_ID, COSMETIC_PACK, STAR_MAX,
 } from './data.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -34,6 +34,7 @@ export class UI {
     this._modalDismissible = false;
     this._lastPanelTab = null;
     this.carFuseId = null;
+    this.salvageCarId = null;
 
     this.app = document.getElementById('app');
     this.featureBtn = document.getElementById('feature-btn');
@@ -297,12 +298,17 @@ export class UI {
     const equipped = car ? this.store.state.equippedCosmetics[car.id] : null;
     const rows = COSMETICS.map(c => {
       const have = this.store.ownsCosmetic(c.id);
+      const count = this.store.cosmeticCount(c.id);
       const on = equipped === c.id;
+      const sell = this.store.cosmeticSalvageValue(c.id);
       return `<div class="shop-row${on ? ' active' : ''}${have ? '' : ' locked'}" style="--sc:${c.color}">
         <i class="shop-dot"></i>
-        <div class="shop-copy"><b>${esc(c.name)}</b><span>${esc(c.slot)} · ${esc(c.desc)}</span></div>
+        <div class="shop-copy"><b>${esc(c.name)}</b><span>${esc(c.slot)} · ${esc(c.desc)}${have ? ` · ×${count}` : ''}</span></div>
         ${have
-          ? `<button class="shop-btn${on ? ' on' : ''}" data-sheet-action="cosmetic-equip" data-id="${c.id}" ${!car || on ? 'disabled' : ''}>${on ? 'ON' : 'EQUIP'}</button>`
+          ? `<div class="shop-actions">
+              <button class="shop-btn${on ? ' on' : ''}" data-sheet-action="cosmetic-equip" data-id="${c.id}" ${!car || on ? 'disabled' : ''}>${on ? 'ON' : 'EQUIP'}</button>
+              <button class="shop-btn sell" data-sheet-action="cosmetic-sell" data-id="${c.id}" ${count <= 1 ? 'disabled' : ''}>SELL +${sell.scraps}SC</button>
+            </div>`
           : `<span class="shop-tag">PACK DROP</span>`}
       </div>`;
     }).join('');
@@ -330,6 +336,9 @@ export class UI {
     const cost = car ? this.store.carFusionCost(car.id) : null;
     const stats = car ? this.store.displayStats(car) : null;
     const bp = car ? this.store.blueprintCount(car.id) : 0;
+    const stars = car ? this.store.starRank(car.id) : 0;
+    const progress = car ? this.store.blueprintProgress(car.id) : null;
+    const salvage = car ? this.store.carSalvageValue(car.id) : null;
     const can = Boolean(car && cost && bp >= cost.blueprints && this.store.state.scraps >= cost.scraps
       && this.store.state.fusionCores >= cost.cores && this.store.state.credits >= cost.credits);
     const rows = owned.map(c => {
@@ -340,10 +349,11 @@ export class UI {
     }).join('');
     this.openSheet('CAR FUSE', `
       <div class="shop-head" style="--sc:${car ? RARITIES[car.rarity].color : '#4fe3ff'}">
-        <div><span class="eyebrow">RARITY FORGE</span><b>${car ? esc(car.name) : 'NO CARS'}</b><small>${car ? `Fusion rank ${level}/3 · +${Math.round(level * 5.5)}% all stats` : 'Rip a pack to add a car.'}</small></div>
-        <span class="pill">RANK ${level}/3</span>
+        <div><span class="eyebrow">RARITY FORGE</span><b>${car ? esc(car.name) : 'NO CARS'}</b><small>${car ? `★${stars}/${STAR_MAX} · Fusion rank ${level}/3 · +${Math.round(level * 5.5)}% all stats` : 'Rip a pack to add a car.'}</small></div>
+        <span class="pill">★${stars}/${STAR_MAX}</span>
       </div>
       ${stats ? `<div class="fuse-stats"><span>SPD <b>${stats.speed}</b></span><span>ACC <b>${stats.accel}</b></span><span>GRP <b>${stats.grip}</b></span></div>` : ''}
+      ${progress ? `<div class="fuse-bp"><div class="ib-copy"><span>${progress.mode === 'max' ? 'MAX STAR · SPARE BP → APEX' : `${progress.label} · ${progress.count}/${progress.need} BP`}</span><b>${Math.round(progress.pct)}%</b></div><span class="bp-bar"><i style="width:${progress.pct}%"></i></span></div>` : ''}
       <div class="eyebrow" style="margin:7px 0 6px">SELECT BUILD</div>
       <div class="fusion-cars">${rows || `<div class="empty-note"><b>NO CARS YET</b>Rip a pack first.</div>`}</div>
       ${cost ? `<div class="fuse-cost">
@@ -354,8 +364,32 @@ export class UI {
       </div>` : `<div class="small-note">Rank 3 reached. This build is fully fused.</div>`}
       <button class="btn btn-gold btn-block" data-sheet-action="car-fuse-go" ${can ? '' : 'disabled'}>${cost ? 'FUSE BUILD' : 'MAX RANK'}</button>
       <div class="small-note" style="margin-top:8px;text-align:center">Duplicates feed blueprints. Fusion spends spare blueprints, scraps, cores and credits for permanent stats.</div>
-      <div class="sheet-actions"><button class="btn btn-ghost" data-close-sheet>CLOSE</button></div>
+      <div class="sheet-actions">
+        ${salvage ? `<button class="btn btn-ghost danger-btn" data-sheet-action="car-salvage" data-id="${car.id}" ${this.store.ownedCount() <= 1 ? 'disabled' : ''}>SALVAGE +${formatNum(salvage.credits)} CR</button>` : ''}
+        <button class="btn btn-ghost" data-close-sheet>CLOSE</button>
+      </div>
+      ${salvage ? `<div class="small-note" style="margin-top:7px;text-align:center">Salvage refunds ${formatNum(salvage.credits)} CR, ${formatNum(salvage.scraps)} scraps and ${formatNum(salvage.apexTokens)} spare BP → APEX. ${this.store.ownedCount() <= 1 ? 'Keep at least one car in the garage.' : ''}</div>` : ''}
     `);
+  }
+
+  openSalvageConfirm(carId) {
+    const car = CARS_BY_ID[carId];
+    const value = this.store.carSalvageValue(carId);
+    if (!car || !value) return;
+    this.salvageCarId = carId;
+    const locked = this.store.ownedCount() <= 1;
+    this.showModal(`
+      <div class="result-kicker">SALVAGE BUILD</div>
+      <div class="wheel-result" style="margin-top:8px">
+        <div class="wr-ico" style="color:#ffc247;background:rgba(255,194,71,.12);border-color:rgba(255,194,71,.3)">★</div>
+        <h2>${esc(car.name)}</h2>
+        <p>${locked ? 'Your last car cannot be salvaged.' : `Refund ${formatNum(value.credits)} CR · ${formatNum(value.scraps)} SC · ${formatNum(value.apexTokens)} spare BP → APEX.`}</p>
+      </div>
+      <div class="result-actions" style="margin-top:14px">
+        <button class="btn btn-ghost" data-modal-action="close-modal">KEEP BUILD</button>
+        <button class="btn btn-primary" style="background:linear-gradient(135deg,#ff9a3d,#c23d0a)" data-modal-action="salvage-car-confirm" ${locked ? 'disabled' : ''}>SALVAGE</button>
+      </div>
+    `, { dismissible: true });
   }
 
   // ── Store events ──────────────────────────────────────────────────────────
@@ -372,9 +406,18 @@ export class UI {
           this.renderWorkshop();
         }
       }
-    } else if (type === 'upgrade' || type === 'fusion' || type === 'vault' || type === 'carFusion') {
+    } else if (type === 'upgrade' || type === 'fusion' || type === 'vault' || type === 'carFusion'
+      || type === 'unlock' || type === 'starUp' || type === 'salvage' || type === 'cosmeticSell') {
       if (this.tab === 'workshop') this.renderWorkshop();
       if (this.tab === 'garage') this.renderGarage();
+      if (this.inspectCar) this.renderInspect();
+    } else if (type === 'pin') {
+      if (this.tab === 'garage') this.renderGarage();
+      if (this.inspectCar) this.renderInspect();
+    } else if (type === 'daily' || type === 'safety') {
+      if (this.tab === 'wheel') this.renderWheel();
+      if (this.tab === 'rip') this.renderRip();
+      if (this.inspectCar) this.renderInspect();
     } else if (type === 'weather') {
       this.world.setWeather(this.store.activeWeather());
     } else if (type === 'theme') {
@@ -416,6 +459,15 @@ export class UI {
     const featured = pack.kind === 'cosmetic'
       ? `${COSMETICS.length} COSMETICS · MYSTIC 30%`
       : (pack.focus || []).map(id => CARS_BY_ID[id]?.name).filter(Boolean).join(' · ');
+    const cheapest = this.store.cheapestPackPrice();
+    const safetyReady = this.store.safetyCrateReady();
+    const safetyRemain = this.store.safetyCrateRemaining();
+    const safetyBar = this.store.state.credits < cheapest
+      ? `<div class="safety-bar${safetyReady ? ' ready' : ''}">
+          <span class="safety-copy"><b>SAFETY CRATE</b><em>${formatNum(cheapest)} CR + 12 SC${safetyReady ? ' · READY' : ` · ${this._timerText(safetyRemain)}`}</em></span>
+          <button class="btn btn-mini btn-cyan" data-action="claim-safety" ${safetyReady ? '' : 'disabled'}>${safetyReady ? 'OPEN' : 'COOLDOWN'}</button>
+        </div>`
+      : '';
     const packList = [COSMETIC_PACK, ...PACKS];
     const packCards = packList.map(p => {
       const sel = p.id === pack.id;
@@ -437,6 +489,7 @@ export class UI {
       </div>
       <div class="scroll-x pack-strip">${packCards}</div>
       <div class="odds-line">${pack.kind === 'cosmetic' ? `<span class="odds-title">DROP</span><div class="odds-chips"><span class="odds-chip">FINISH · GLOW · AERO · MYSTIC <b>30%</b></span></div>` : `<span class="odds-title">ODDS</span><div class="odds-chips">${odds}</div>`}</div>
+      ${safetyBar}
       <div class="rip-actions">
         <button class="btn btn-primary btn-lg" data-action="rip" ${disabled ? 'disabled' : ''}>
           ${this.revealing ? 'RIPPING…' : 'RIP PACK'} <span class="sub">${formatNum(price)} CR</span>
@@ -449,7 +502,7 @@ export class UI {
       <div class="rip-meta">
         <span>PULLS <b>${formatNum(this.store.state.stats.pulls)}</b></span>
         <span class="pack-feature">FEATURED <b>${esc(featured)}</b></span>
-        <span>DUPLICATES <b>→ BP</b></span>
+        <span>BLUEPRINTS <b>→ 1★</b></span>
       </div>`;
     this._centerSelected('.pack-strip');
   }
@@ -490,8 +543,12 @@ export class UI {
         this.world.setWorkshopCar(this.store.selectedCar());
         if (result.isNew) this.toast(`NEW COSMETIC · ${result.cosmetic.name}`, 'good');
         else this.toast(`Cosmetic duplicate · +${result.scraps} scraps`, 'good');
-      } else if (result.isNew) this.toast(`NEW ${RARITIES[result.car.rarity].name.toUpperCase()} · ${result.car.name}`, 'good');
-      else this.toast(`Duplicate · +${result.blueprints} blueprint${result.blueprints > 1 ? 's' : ''}, +${result.scraps} scrap`, 'good');
+      } else if (result.isNew) this.toast(`1★ UNLOCK · ${result.car.name}`, 'good');
+      else if (result.apexTokens) this.toast(`${result.car.name} maxed · +${result.apexTokens} APEX TOKENS`, 'good');
+      else if (!this.store.isOwned(result.car.id)) {
+        const progress = result.progress || this.store.blueprintProgress(result.car.id);
+        this.toast(`Blueprint drop · ${progress.count}/${progress.need} BP toward ${result.car.name}`, 'good');
+      } else this.toast(`Duplicate · +${result.blueprints} blueprint${result.blueprints > 1 ? 's' : ''}, +${result.scraps} scrap`, 'good');
       if (this.store.state.autoRip) this._scheduleAutoRip();
     });
   }
@@ -542,10 +599,27 @@ export class UI {
     clearTimeout(this.revealTimer);
     const rar = RARITIES[result.car.rarity];
     const trait = result.car.trait ? TRAITS[result.car.trait] : null;
+    const owned = this.store.isOwned(result.car.id);
+    const progress = result.progress || this.store.blueprintProgress(result.car.id);
+    const stars = this.store.starRank(result.car.id);
+    let tag = 'NEW';
+    let tagCls = 'rt-new';
+    let sub = `${esc(rar.name)}${trait ? ' · ' + esc(trait.name) : ''}`;
+    if (!result.isNew) {
+      tagCls = 'rt-dup';
+      if (result.apexTokens) tag = `+${result.apexTokens} APX`;
+      else if (!owned && progress) {
+        tag = `+${result.blueprints} BP`;
+        sub = `${esc(rar.name)} · ${progress.count}/${progress.need} TO 1★`;
+      } else {
+        tag = `+${result.blueprints} BP`;
+        if (stars < STAR_MAX && progress) sub = `${esc(rar.name)} · ${progress.count}/${progress.need} TO ${progress.star}★`;
+      }
+    }
     this.revealTag.innerHTML = `
       <div class="rt-badge" style="color:${rar.color};border-color:${rgba(rar.color, 0.55)};background:${rgba(rar.color, 0.1)}">${rar.short}<br>${trait ? trait.mark : '—'}</div>
-      <div class="rt-copy"><b>${esc(result.car.name)}</b><span style="color:${rar.color}">${esc(rar.name)}${trait ? ' · ' + esc(trait.name) : ''}</span></div>
-      <span class="${result.isNew ? 'rt-new' : 'rt-dup'}">${result.isNew ? 'NEW' : '+' + result.blueprints + ' BP'}</span>`;
+      <div class="rt-copy"><b>${esc(result.car.name)}</b><span style="color:${rar.color}">${sub}</span></div>
+      <span class="${tagCls}">${tag}</span>`;
     this.revealTag.hidden = false;
     this.revealTimer = setTimeout(() => this.hideRevealTag(), 6500);
   }
@@ -576,16 +650,26 @@ export class UI {
     const cards = list.length ? list.map(car => this._carCard(car)).join('') : `<div class="empty-note"><b>NO CARS HERE</b>Change the filter or rip another pack.</div>`;
     const bpTotal = Object.values(this.store.state.blueprints).reduce((a, b) => a + b, 0);
     const best = this.store.bestCar();
+    const pinned = this.store.state.pinnedCar ? CARS_BY_ID[this.store.state.pinnedCar] : null;
+    const pinnedProgress = pinned ? this.store.blueprintProgress(pinned.id) : null;
+    const pinnedStars = pinned ? this.store.starRank(pinned.id) : 0;
+    const pinTracker = pinned && pinnedProgress
+      ? `<div class="bp-track" style="--rar:${RARITIES[pinned.rarity].color}">
+          <i class="rar-dot" style="color:${RARITIES[pinned.rarity].color}"></i>
+          <div class="bp-copy"><b>${esc(pinned.name)}</b><span>${pinnedStars ? `★${pinnedStars}/${STAR_MAX}` : 'LOCKED'} · ${pinnedProgress.mode === 'max' ? 'MAX STAR' : `${pinnedProgress.count}/${pinnedProgress.need} BP → ${pinnedProgress.label}`}</span><span class="bp-bar"><i style="width:${pinnedProgress.pct}%"></i></span></div>
+          <button class="bp-pin on" data-pin="${pinned.id}" aria-label="Unpin target car">★</button>
+        </div>`
+      : `<div class="bp-track empty"><div class="bp-copy"><b>PIN A TARGET BUILD</b><span>Tap the star on a garage card to track its blueprint progress.</span></div></div>`;
     const el = $('#panel-garage');
     el.innerHTML = `
       <div class="section-head">
         <div class="section-title"><i class="tick"></i>SHOWROOM</div>
         <span class="section-sub">${lineup.length}/6 SLOTS FILLED</span>
       </div>
-      <div class="garage-note"><span>${lineup.length ? 'TOP RARITY LINEUP ON STAGE' : 'RIP A PACK TO FILL THE STAGE'}</span><span>TAP A CARD TO INSPECT IN 3D</span></div>
+      ${pinTracker}
       <div class="filter-row">${filters}</div>
       <div class="roster">${cards}</div>
-      <div class="garage-note"><span>BLUEPRINTS <b>${formatNum(bpTotal)}</b></span><span>BEST <b>${esc(best ? best.name : '—')}</b></span><span>OWNED <b>${this.store.ownedCount()}</b></span></div>`;
+      <div class="garage-note"><span>BP <b>${formatNum(bpTotal)}</b> · APX <b>${formatNum(this.store.state.apexTokens)}</b></span><span>BEST <b>${esc(best ? best.name : '—')}</b></span><span>OWNED <b>${this.store.ownedCount()}</b></span></div>`;
     this._centerSelected('.roster');
   }
 
@@ -596,17 +680,23 @@ export class UI {
     const trait = car.trait ? TRAITS[car.trait] : null;
     const stats = carDisplayStats(car, this.store.levels(car.id));
     const bp = this.store.blueprintCount(car.id);
+    const progress = this.store.blueprintProgress(car.id);
+    const stars = this.store.starRank(car.id);
+    const pinned = this.store.state.pinnedCar === car.id;
     const bar = (v, cls) => `<span class="cc-stat"><i class="${cls}" style="width:${Math.min(100, (v / 120) * 100)}%"></i></span>`;
-    return `<button type="button" class="car-card${owned ? '' : ' locked'}${selected ? ' selected' : ''}" style="--rar:${rar.color};--rar-soft:${rar.soft}" data-action="inspect" data-id="${car.id}">
+    const starText = owned ? '★'.repeat(stars) + '☆'.repeat(Math.max(0, STAR_MAX - stars)) : 'LOCKED';
+    return `<button type="button" class="car-card${owned ? '' : ' locked'}${selected ? ' selected' : ''}${pinned ? ' pinned' : ''}" style="--rar:${rar.color};--rar-soft:${rar.soft}" data-action="inspect" data-id="${car.id}">
       <div class="cc-top">
         <span class="cc-rar"><i class="rar-dot" style="color:${rar.color}"></i>${rar.short}</span>
         ${trait ? `<span class="cc-trait" style="color:${trait.color};background:${rgba(trait.color, 0.12)};border:1px solid ${rgba(trait.color, 0.35)}">${trait.mark}</span>` : ''}
+        <span class="cc-pin${pinned ? ' on' : ''}" data-pin="${car.id}" role="button" aria-label="${pinned ? 'Unpin' : 'Pin'} ${esc(car.name)}">★</span>
         ${carSvg(car, 86, 34)}
       </div>
       <div class="cc-body">
         <div class="cc-name">${esc(car.name)}</div>
         <div class="cc-stats">${bar(stats.speed, 'sp')}${bar(stats.accel, 'ac')}${bar(stats.grip, 'gr')}</div>
-        <div class="cc-foot"><span>${owned ? 'OWNED' : 'LOCKED'}</span><span class="bp-chip">${bp ? bp + ' BP' : ''}</span></div>
+        ${progress && progress.mode !== 'max' ? `<span class="cc-bp"><i style="width:${progress.pct}%"></i></span>` : ''}
+        <div class="cc-foot"><span>${starText}</span><span class="bp-chip">${progress && progress.mode !== 'max' ? `${progress.count}/${progress.need}` : bp ? 'MAX · ' + bp + ' BP' : ''}</span></div>
       </div>
     </button>`;
   }
@@ -631,6 +721,9 @@ export class UI {
     const levels = this.store.levels(car.id);
     const trait = car.trait ? TRAITS[car.trait] : null;
     const bp = this.store.blueprintCount(car.id);
+    const progress = this.store.blueprintProgress(car.id);
+    const stars = this.store.starRank(car.id);
+    const pinned = this.store.state.pinnedCar === car.id;
     const traitBadge = trait
       ? `<span class="badge trait-${trait.id}"><i class="bdot"></i>${trait.name}</span>`
       : `<span class="pill">NO TRAIT</span>`;
@@ -644,12 +737,21 @@ export class UI {
           <h2>${esc(car.name)}</h2>
           <div class="trait-line">${traitBadge}${trait ? `<span class="pill" style="color:${trait.color};border-color:${rgba(trait.color, 0.3)}">${esc(trait.perk)}</span>` : ''}</div>
         </div>
-        <div class="inspect-badge">${owned ? 'BLUEPRINTS' : 'RARITY'}<b>${owned ? bp : rar.short}</b></div>
+        <div class="inspect-badge">${owned ? 'STARS' : 'UNLOCK'}<b>${owned ? `★${stars}/${STAR_MAX}` : `${progress.count}/${progress.need} BP`}</b></div>
       </div>
       <div class="inspect-stats">
         ${statRow('SPEED', stats.speed, 120, '', levels.speed)}
         ${statRow('ACCEL', stats.accel, 120, 'accel', levels.accel)}
         ${statRow('GRIP', stats.grip, 120, 'grip', levels.grip)}
+      </div>
+      <div class="inspect-bp">
+        <div class="ib-copy"><span>${progress.mode === 'max' ? 'MAX STAR · SPARE BP → APEX TOKENS' : `${progress.label} · ${progress.count}/${progress.need} BP`}</span><b>${Math.round(progress.pct)}%</b></div>
+        <span class="bp-bar"><i style="width:${progress.pct}%"></i></span>
+        <div class="ib-actions">
+          ${!owned && progress.count >= progress.need ? `<button class="btn btn-mini btn-cyan" data-inspect="unlock">UNLOCK 1★</button>` : ''}
+          ${owned && progress.mode === 'star' && progress.count >= progress.need ? `<button class="btn btn-mini btn-gold" data-inspect="starup">STAR UP ${progress.star}★</button>` : ''}
+          <button class="btn btn-mini btn-ghost" data-inspect="pin">${pinned ? '★ UNPIN' : '☆ PIN TARGET'}</button>
+        </div>
       </div>
       <div class="inspect-actions">
         ${owned ? `<button class="btn btn-primary" data-inspect="workshop">WORKSHOP</button>
@@ -663,7 +765,32 @@ export class UI {
     const btn = e.target.closest('[data-inspect]');
     if (!btn) return;
     const action = btn.dataset.inspect;
+    const car = this.inspectCar;
     if (action === 'close') return this.closeInspect();
+    if (action === 'pin' && car) {
+      const pinned = this.store.togglePinnedCar(car.id);
+      this.audio.play('ui');
+      this.toast(pinned ? `Tracking ${car.name} blueprints` : `Stopped tracking ${car.name}`, pinned ? 'good' : '');
+      this.renderInspect();
+      if (this.tab === 'garage') this.renderGarage();
+      return;
+    }
+    if (action === 'unlock' && car) {
+      const res = this.store.unlockCar(car.id);
+      if (!res.ok) { this.audio.play('error'); this.toast(res.reason, 'warn'); return; }
+      this.audio.play('new');
+      this.toast(`1★ UNLOCK · ${car.name}`, 'good');
+      this.renderInspect();
+      return;
+    }
+    if (action === 'starup' && car) {
+      const res = this.store.starUp(car.id);
+      if (!res.ok) { this.audio.play('error'); this.toast(res.reason, 'warn'); return; }
+      this.audio.play('upgrade');
+      this.toast(`${car.name} reached ${res.star}★${res.apexTokens ? ` · +${res.apexTokens} APEX TOKENS` : ''}`, 'good');
+      this.renderInspect();
+      return;
+    }
     if (action === 'feature' && this.inspectCar) {
       this.store.setSelectedCar(this.inspectCar.id);
       this.audio.play('ui');
@@ -715,6 +842,8 @@ export class UI {
     const stats = carDisplayStats(car, levels);
     const totalLv = levels.speed + levels.accel + levels.grip;
     const bp = this.store.blueprintCount(car.id);
+    const stars = this.store.starRank(car.id);
+    const bpProgress = this.store.blueprintProgress(car.id);
     const cores = this.store.state.fusionCores;
     const row = (stat, label, cls) => {
       const lv = levels[stat];
@@ -741,7 +870,7 @@ export class UI {
       </div>
       <div class="ws-head">
         <div class="ws-thumb" style="--rar-soft:${rar.soft}">${carSvg(car, 40, 20)}</div>
-        <div class="ws-copy"><b>${esc(car.name)}</b><span style="color:${rar.color}"><i class="rar-dot" style="color:${rar.color}"></i>${rar.name.toUpperCase()}${trait ? ' · ' + trait.name.toUpperCase() : ''}</span><span>${bp} BP · ${cores} CORE${cores === 1 ? '' : 'S'} · ${formatNum(this.store.state.scraps)} SC</span></div>
+        <div class="ws-copy"><b>${esc(car.name)}</b><span style="color:${rar.color}"><i class="rar-dot" style="color:${rar.color}"></i>${rar.name.toUpperCase()} · ★${stars}/${STAR_MAX}${trait ? ' · ' + trait.name.toUpperCase() : ''}</span><span>${bpProgress.mode === 'max' ? 'MAX STAR' : `${bpProgress.count}/${bpProgress.need} BP`} · ${bp} SPARE · ${cores} CORE${cores === 1 ? '' : 'S'}</span></div>
         <div class="ws-level">TUNE<b>${totalLv}/${MAX_LEVEL * 3}</b></div>
       </div>
       <div class="upgrade-list">
@@ -809,10 +938,12 @@ export class UI {
       const r = RARITIES[c.rarity];
       const n = this.store.blueprintCount(c.id);
       const owned = this.store.isOwned(c.id);
+      const progress = this.store.blueprintProgress(c.id);
+      const goal = progress && progress.mode !== 'max' ? ` / ${progress.need}` : '';
       return `<div class="vault-row${owned ? '' : ' unowned'}">
         <i class="vr-dot" style="background:${r.color};box-shadow:0 0 6px ${r.color}"></i>
-        <div><div class="vr-name">${esc(c.name)}</div><div class="vr-rar" style="color:${r.color}">${r.name}</div></div>
-        <span class="vr-count">${n} BP</span>
+        <div><div class="vr-name">${esc(c.name)}</div><div class="vr-rar" style="color:${r.color}">${owned ? `★${this.store.starRank(c.id)}` : 'LOCKED'} · ${r.name}</div></div>
+        <span class="vr-count">${n}${goal} BP</span>
         <button class="btn btn-ghost" data-sheet-action="vault-scrap" data-id="${c.id}">+${Math.max(2, Math.ceil(r.scrap / 3))} SC</button>
       </div>`;
     }).join('');
@@ -820,10 +951,11 @@ export class UI {
     this.openSheet('BLUEPRINT VAULT', `
       <div class="vault-summary">
         <div class="vs-box"><b>${formatNum(totalBp)}</b><span>Blueprints</span></div>
+        <div class="vs-box"><b>${formatNum(this.store.state.apexTokens)}</b><span>Apex tokens</span></div>
         <div class="vs-box"><b>${formatNum(this.store.state.fusionCores)}</b><span>Fusion cores</span></div>
         <div class="vs-box"><b>${formatNum(this.store.state.scraps)}</b><span>Scraps</span></div>
       </div>
-      <div class="small-note" style="margin-bottom:9px">Every duplicate pull adds blueprints for that car. Keep them for upgrades, fuse 3 into a universal core, or convert a spare into scraps.</div>
+      <div class="small-note" style="margin-bottom:9px">Every pack/race blueprint feeds a car's 1★ unlock and 2★–3★ upgrades. Maxed builds convert spare BP into Apex Tokens. You can also fuse 3 BP into a universal core or scrap a spare.</div>
       <div class="vault-list">${rows || `<div class="empty-note"><b>VAULT EMPTY</b>Duplicate pulls land here automatically.</div>`}</div>
       <div class="sheet-actions"><button class="btn btn-ghost" data-close-sheet>DONE</button></div>
     `);
@@ -882,6 +1014,13 @@ export class UI {
       this.world.setWorkshopCar(this.store.selectedCar());
       this.toast(`Equipped ${COSMETICS_BY_ID[btn.dataset.id]?.name || 'cosmetic'}`, 'good');
       this.openCosmeticsSheet();
+    } else if (action === 'cosmetic-sell') {
+      const res = this.store.salvageCosmetic(btn.dataset.id);
+      if (!res.ok) { this.audio.play('error'); this.toast(res.reason, 'warn'); return; }
+      this.audio.play('ui');
+      this.toast(`Sold spare ${res.cosmetic.name} · +${res.credits} CR, +${res.scraps} SC`, 'good');
+      this.openCosmeticsSheet();
+      this.renderHUD();
     } else if (action === 'goto-cosmetic') {
       this.hideSheet();
       this.store.setSelectedPack(COSMETIC_PACK.id);
@@ -905,6 +1044,9 @@ export class UI {
       this.openCarFuseSheet();
       this.renderWorkshop();
       this.renderHUD();
+    } else if (action === 'car-salvage') {
+      this.hideSheet();
+      this.openSalvageConfirm(btn.dataset.id);
     } else if (action === 'reset-open') {
       this.openResetConfirm();
     }
@@ -1107,6 +1249,8 @@ export class UI {
     const medal = place === 1 ? '' : place === 2 ? ' silver' : ' bronze';
     const best = this.store.state.races[res.track.id];
     const bpRow = res.blueprintCar ? `<div class="result-reward-row bp"><span>BLUEPRINT</span><b>${esc(res.blueprintCar.name)} +1</b></div>` : '';
+    const apexRow = res.apexTokens ? `<div class="result-reward-row bp"><span>MAX-STAR OVERFLOW</span><b>+${formatNum(res.apexTokens)} APEX TOKENS</b></div>` : '';
+    const offlineRow = res.offlineCredits ? `<div class="result-reward-row offline"><span>OFFLINE BANK</span><b>+${formatNum(res.offlineCredits)} CR</b></div>` : '';
     const bonusRow = res.firstWinBonus ? `<div class="result-reward-row bp"><span>FIRST WIN BONUS</span><b>+${formatNum(res.firstWinBonus)} CR</b></div>` : '';
     this.showModal(`
       <div class="result-kicker">${esc(res.track.name.toUpperCase())} · SPRINT COMPLETE</div>
@@ -1121,7 +1265,7 @@ export class UI {
       <div class="result-rewards">
         <div class="result-reward-row"><span>RACE CREDITS</span><b>+${formatNum(res.credits)} CR</b></div>
         <div class="result-reward-row"><span>SCRAPS</span><b>+${formatNum(res.scraps)} SC</b></div>
-        ${bonusRow}${bpRow}
+        ${offlineRow}${bonusRow}${bpRow}${apexRow}
       </div>
       <div class="result-actions">
         <button class="btn btn-primary" data-modal-action="race-again">RACE AGAIN</button>
@@ -1135,6 +1279,13 @@ export class UI {
     const free = this.store.freeSpinReady();
     const pending = this.store.offlinePending();
     const canSpin = !this.spinning && (free || this.store.state.credits >= WHEEL_COST);
+    const dailyReady = this.store.dailyReady();
+    const dailyAmount = this.store.dailyAmount();
+    const dailyRemain = this.store.dailyRemaining();
+    const cheapest = this.store.cheapestPackPrice();
+    const broke = this.store.state.credits < cheapest;
+    const safetyReady = this.store.safetyCrateReady();
+    const safetyRemain = this.store.safetyCrateRemaining();
     const rewards = WHEEL_REWARDS.map(r => {
       const cls = r.kind === 'credits' ? '' : r.kind === 'blueprint' ? ' bp' : r.kind === 'core' ? ' core' : ' scrap';
       return `<div class="reward-tile${cls}"><b>${esc(r.label)}</b><span>${esc(r.short)}</span></div>`;
@@ -1146,6 +1297,14 @@ export class UI {
         <div class="offline-icon"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 3v7l4 4M12 5v2M12 19v-2M5 12h2M17 12h2"/></svg></div>
         <div class="offline-copy"><b>OFFLINE EARNINGS</b><span><em>${formatNum(pending)} CR</em> ready · ${this.store.passiveRate().toFixed(2)} CR/min · cap ${formatNum(this.store.offlineCap())} CR</span></div>
         <button class="btn btn-cyan" data-action="collect-offline" ${pending < 1 ? 'disabled' : ''}>COLLECT</button>
+      </div>
+      <div class="perk-row">
+        <button class="perk-btn${dailyReady ? ' ready' : ''}" id="daily-perk" data-action="claim-daily" ${dailyReady ? '' : 'disabled'}>
+          <span>DAILY IDLE BONUS</span><b id="daily-perk-val">${dailyReady ? `+${formatNum(dailyAmount)} CR` : this._timerText(dailyRemain)}</b>
+        </button>
+        <button class="perk-btn${safetyReady ? ' ready' : ''}" id="safety-perk" data-action="claim-safety" ${safetyReady ? '' : 'disabled'}>
+          <span>SAFETY CRATE</span><b id="safety-perk-val">${safetyReady ? `+${formatNum(cheapest)} CR` : broke ? this._timerText(safetyRemain) : 'ABOVE LINE'}</b>
+        </button>
       </div>
       <div class="section-head" style="margin-bottom:4px">
         <div class="section-title"><i class="tick"></i>PRIZE WHEEL</div>
@@ -1166,6 +1325,14 @@ export class UI {
     return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
   }
 
+  _timerText(ms) {
+    if (!Number.isFinite(ms) || ms <= 0) return 'READY';
+    const s = Math.ceil(ms / 1000);
+    const h = Math.floor(s / 3600);
+    if (h > 0) return `${h}h ${Math.floor((s % 3600) / 60)}m`;
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  }
+
   _tickWheelUI() {
     if (this.tab !== 'wheel' || this.spinning) return;
     const free = this.store.freeSpinReady();
@@ -1182,6 +1349,17 @@ export class UI {
       cost.textContent = free ? 'FREE' : `${formatNum(WHEEL_COST)} CR`;
       cost.classList.toggle('free', free);
     }
+    const daily = this.store.dailyReady();
+    const dailyBtn = $('#daily-perk');
+    const dailyVal = $('#daily-perk-val');
+    if (dailyBtn) dailyBtn.disabled = !daily;
+    if (dailyVal) dailyVal.textContent = daily ? `+${formatNum(this.store.dailyAmount())} CR` : this._timerText(this.store.dailyRemaining());
+    const safety = this.store.safetyCrateReady();
+    const safetyBtn = $('#safety-perk');
+    const safetyVal = $('#safety-perk-val');
+    const broke = this.store.state.credits < this.store.cheapestPackPrice();
+    if (safetyBtn) safetyBtn.disabled = !safety;
+    if (safetyVal) safetyVal.textContent = safety ? `+${formatNum(this.store.cheapestPackPrice())} CR` : broke ? this._timerText(this.store.safetyCrateRemaining()) : 'ABOVE LINE';
   }
 
   collectOffline() {
@@ -1191,6 +1369,27 @@ export class UI {
     this.toast(`Collected ${formatNum(res.amount)} CR from the garage`, 'good');
     this.renderHUD();
     this.renderWheel();
+  }
+
+  claimDaily() {
+    const res = this.store.claimDaily();
+    if (!res.ok) { this.audio.play('error'); this.toast(res.reason, 'warn'); return; }
+    this.audio.play('collect');
+    this.toast(`Daily idle bonus · +${formatNum(res.amount)} CR`, 'good');
+    this.renderHUD();
+    if (this.tab === 'wheel') this.renderWheel();
+    if (this.tab === 'rip') this.renderRip();
+  }
+
+  claimSafety() {
+    const res = this.store.claimSafetyCrate();
+    if (!res.ok) { this.audio.play('error'); this.toast(res.reason, 'warn'); return; }
+    this.audio.play('collect');
+    this.toast(`Safety crate · +${formatNum(res.credits)} CR, +${res.scraps} SC${res.blueprints ? `, +${res.blueprints} BP` : ''}`, 'good');
+    this.renderHUD();
+    if (this.tab === 'wheel') this.renderWheel();
+    if (this.tab === 'rip') this.renderRip();
+    if (this.tab === 'garage') this.renderGarage();
   }
 
   spinWheel() {
@@ -1227,7 +1426,9 @@ export class UI {
     if (grant.credits) extra.push(`+${formatNum(grant.credits)} CR`);
     if (grant.scraps) extra.push(`+${formatNum(grant.scraps)} SC`);
     if (grant.core) extra.push(`+${formatNum(grant.core)} fusion core`);
-    if (grant.blueprint) extra.push(`+1 blueprint · ${esc(grant.blueprint.name)}`);
+    if (grant.blueprint) extra.push(grant.apexTokens
+      ? `+${formatNum(grant.apexTokens)} apex tokens · ${esc(grant.blueprint.name)}`
+      : `+1 blueprint · ${esc(grant.blueprint.name)}`);
     const icon = reward.kind === 'credits' ? '$' : reward.kind === 'blueprint' ? '▤' : reward.kind === 'core' ? '⚛' : '◈';
     this.showModal(`
       <div class="wheel-result">
@@ -1280,6 +1481,20 @@ export class UI {
     } else if (action === 'race-tracks') {
       this.audio.play('ui');
       this.endRaceView();
+    } else if (action === 'salvage-car-confirm') {
+      const id = this.salvageCarId;
+      this.salvageCarId = null;
+      this.hideModal();
+      if (!id) return;
+      const res = this.store.salvageCar(id);
+      if (!res.ok) { this.audio.play('error'); this.toast(res.reason, 'warn'); return; }
+      this.audio.play('upgrade');
+      this.world.setLineup(this.store.lineup());
+      this.world.setWorkshopCar(this.store.selectedCar());
+      this.toast(`Salvaged ${res.car.name} · +${formatNum(res.credits)} CR, +${formatNum(res.scraps)} SC`, 'good');
+      this.renderHUD();
+      if (this.tab === 'garage') this.renderGarage();
+      if (this.tab === 'workshop') this.renderWorkshop();
     } else if (action === 'reset-confirm') {
       this.hideModal();
       this._doReset();
@@ -1357,6 +1572,16 @@ export class UI {
 
   // ── panel event routing ───────────────────────────────────────────────────
   _onPanelClick(e) {
+    const pin = e.target.closest('[data-pin]');
+    if (pin) {
+      e.preventDefault();
+      e.stopPropagation();
+      const car = CARS_BY_ID[pin.dataset.pin];
+      const pinned = this.store.togglePinnedCar(pin.dataset.pin);
+      this.audio.play('ui');
+      this.toast(pinned && car ? `Tracking ${car.name} blueprints` : car ? `Stopped tracking ${car.name}` : 'Pin updated', pinned ? 'good' : '');
+      return;
+    }
     const target = e.target.closest('[data-action]');
     if (!target) return;
     const action = target.dataset.action;
@@ -1403,6 +1628,10 @@ export class UI {
       this._toggleAutoRace();
     } else if (action === 'collect-offline') {
       this.collectOffline();
+    } else if (action === 'claim-daily') {
+      this.claimDaily();
+    } else if (action === 'claim-safety') {
+      this.claimSafety();
     } else if (action === 'spin') {
       this.spinWheel();
     }

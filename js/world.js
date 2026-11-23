@@ -589,6 +589,10 @@ function makeWheelGeometry(index, segments) {
 }
 
 // ── World ───────────────────────────────────────────────────────────────────
+// The pack body is shrunk directly so the camera can stay close while the
+// showroom floor, fog, rim light and particles still read behind it.
+const PACK_MESH_SCALE = 0.6;
+
 const STAGE_CAMS = {
   rip:      { pos: [0.0, 2.30, 9.3], look: [0, 1.02, 0], fov: 45 },
   garage:   { pos: [0.0, 5.15, 13.6], look: [0, -1.15, 0.1], fov: 47 },
@@ -647,7 +651,7 @@ export class World {
   _setupScene() {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x05060b);
-    this.scene.fog = new THREE.Fog(0x05060b, 22, 60);
+    this.scene.fog = new THREE.FogExp2(0x05060b, 1.2 / 60);
     this.camera = new THREE.PerspectiveCamera(45, 1, 0.1, 150);
     this.camera.position.set(0, 2.2, 8);
 
@@ -773,9 +777,10 @@ export class World {
     this.defaultFog.copy(fog);
     this.scene.background = bg;
     const clear = !weather || weather.kind === 'clear';
-    const near = clear ? (race ? this._raceEnv.near : 22) : weather.fogNear;
     const far = clear ? (race ? this._raceEnv.far : 60) : weather.fogFar;
-    this.scene.fog = new THREE.Fog(fog, Math.max(4, near), Math.max(near + 8, far));
+    // Exponential fog keeps the studio depth soft without walling off the
+    // showroom; density follows the weather/theme far plane.
+    this.scene.fog = new THREE.FogExp2(fog, 1.2 / Math.max(12, far));
     if (this.hemi) {
       this.hemi.color.copy(asColor(theme.hemiSky, 0x5b83b8));
       this.hemi.groundColor.copy(asColor(theme.hemiGround, 0x05060a));
@@ -960,6 +965,7 @@ export class World {
     // Spinning body is separated from the stage glow/light so the pack can turn
     // continuously while its backdrop stays put.
     const body = new THREE.Group();
+    body.scale.setScalar(PACK_MESH_SCALE);
     group.add(body);
     group.userData.body = body;
 
@@ -981,8 +987,12 @@ export class World {
     back.rotation.y = Math.PI;
     body.add(back);
 
+    const crimpMat = new THREE.MeshPhysicalMaterial({
+      color: new THREE.Color(pack.color2), metalness: 1, roughness: 0.16,
+      clearcoat: 1, clearcoatRoughness: 0.06, envMapIntensity: 1.6,
+    });
     for (const y of [1.055, -1.055]) {
-      const crimp = new THREE.Mesh(G.packCrimp, M.chrome);
+      const crimp = new THREE.Mesh(G.packCrimp, crimpMat);
       crimp.position.y = y;
       body.add(crimp);
     }

@@ -428,7 +428,17 @@ export function makePackTexture(pack) {
   ctx.fillStyle = 'rgba(225,238,255,.6)';
   ctx.textAlign = 'right';
   ctx.fillText('SEALED DROP', W - 36, 44);
-  ctx.fillText(pack.tier, W - 36, 60);
+  ctx.textAlign = 'left';
+  // rarity / series badge
+  const badgeW = 116, badgeH = 22, badgeX = W - 36 - badgeW, badgeY = 50;
+  ctx.fillStyle = rgba(pack.color, 0.18);
+  roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 6); ctx.fill();
+  ctx.strokeStyle = rgba(pack.color, 0.75); ctx.lineWidth = 1.4;
+  roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 6); ctx.stroke();
+  ctx.fillStyle = pack.color;
+  ctx.font = `900 9px ${FONT}`;
+  ctx.textAlign = 'center';
+  ctx.fillText(`${pack.tier} · GLOSS`, badgeX + badgeW / 2, badgeY + 14);
   ctx.textAlign = 'left';
   ctx.strokeStyle = rgba(pack.color, 0.6);
   ctx.beginPath(); ctx.moveTo(36, 82); ctx.lineTo(W - 36, 82); ctx.stroke();
@@ -489,12 +499,54 @@ export function makePackTexture(pack) {
   ctx.fillText('5 RARITIES', 38, 660);
   ctx.font = `800 10px ${FONT}`;
   ctx.fillStyle = 'rgba(220,235,255,.5)';
-  ctx.fillText('SIGNATURE TRAITS · GLOSS SERIES', 38, 680);
+  ctx.fillText('APEX:RIPS · GLOSS SERIES', 38, 680);
   ctx.textAlign = 'right';
   ctx.fillStyle = pack.color;
   ctx.font = `900 13px ${FONT}`;
   ctx.fillText('DO NOT BEND', W - 38, 660);
   ctx.textAlign = 'left';
+
+  // holographic foil diffraction
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  const holo = ctx.createLinearGradient(0, 0, W, H);
+  holo.addColorStop(0.00, 'rgba(255,95,210,0)');
+  holo.addColorStop(0.16, 'rgba(255,216,107,.34)');
+  holo.addColorStop(0.34, 'rgba(92,255,208,.28)');
+  holo.addColorStop(0.52, 'rgba(90,168,255,.32)');
+  holo.addColorStop(0.70, 'rgba(196,139,255,.30)');
+  holo.addColorStop(0.86, 'rgba(255,107,157,.26)');
+  holo.addColorStop(1.00, 'rgba(255,95,210,0)');
+  ctx.globalAlpha = 0.5;
+  ctx.fillStyle = holo;
+  ctx.fillRect(0, 0, W, H);
+
+  // diagonal diffraction bands so the foil shifts as the pack turns
+  ctx.translate(W / 2, H / 2);
+  ctx.rotate(-0.62);
+  const bands = [
+    [-260, 46, 0.20], [60, 26, 0.13], [190, 74, 0.18],
+    [330, 34, 0.12], [430, 58, 0.16], [560, 22, 0.10],
+  ];
+  for (const [off, width, alpha] of bands) {
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = holo;
+    ctx.fillRect(off, -H, width, H * 2);
+  }
+  ctx.restore();
+
+  // micro-foil sparkle grain
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 320; i++) {
+    const sx = Math.random() * W;
+    const sy = Math.random() * H;
+    const a = 0.05 + Math.random() * 0.16;
+    const hue = ['255,255,255', '255,214,120', '130,255,220', '160,190,255', '255,150,220'][i % 5];
+    ctx.fillStyle = `rgba(${hue},${a.toFixed(3)})`;
+    ctx.fillRect(sx, sy, Math.random() < 0.22 ? 2 : 1, Math.random() < 0.22 ? 2 : 1);
+  }
+  ctx.restore();
 
   // gloss
   ctx.save();
