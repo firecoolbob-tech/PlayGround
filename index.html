@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+<meta name="theme-color" content="#05060b" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>APEX//RIP — Glossy Pack Racing</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2305060b'/%3E%3Cpath d='M16 6 27 26H5L16 6Z' fill='%234fe3ff'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="./css/style.css" />
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="app">
+  <canvas id="gl" aria-label="3D game view"></canvas>
+  <div class="scene-tint" aria-hidden="true"></div>
+  <div class="vignette" aria-hidden="true"></div>
+
+  <div id="boot" class="boot">
+    <div class="boot-mark"><span></span><span></span><span></span></div>
+    <div class="boot-title">APEX<span>//</span>RIP</div>
+    <div class="boot-sub">polishing the chrome…</div>
+  </div>
+
+  <div id="fatal" class="fatal" hidden>
+    <div class="fatal-card">
+      <div class="fatal-kicker">GARAGE FAULT</div>
+      <h2>That was a rough start.</h2>
+      <p id="fatal-msg">The 3D renderer could not start. Reset the save or reload the page.</p>
+      <div class="fatal-actions">
+        <button class="btn btn-ghost" id="fatal-reload">RELOAD</button>
+        <button class="btn btn-primary" id="fatal-reset">RESET SAVE</button>
+      </div>
+    </div>
+  </div>
+
+  <header class="hud">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M12 2 22 21H2L12 2Zm0 5.4L5.8 18.4h12.4L12 7.4Z"/></svg>
+      </div>
+      <div class="brand-copy"><b>APEX</b><span>//RIP</span><em>PACK RACING</em></div>
+    </div>
+    <div class="hud-right">
+      <div class="wallet" title="Credits">
+        <span class="cur-dot cr"></span>
+        <b id="hud-credits">1,500</b>
+        <em>CR</em>
+      </div>
+      <div class="wallet wallet-scrap" title="Scraps">
+        <span class="cur-dot sc"></span>
+        <b id="hud-scraps">0</b>
+        <em>SC</em>
+      </div>
+      <button class="icon-btn" id="settings-btn" aria-label="Settings">
+        <svg viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm9 4c0-.6-.06-1.2-.18-1.77l2.1-1.55-2-3.46-2.5 1a9 9 0 0 0-3.05-1.77L15 2h-4l-.38 2.45A9 9 0 0 0 7.58 6.2l-2.5-1-2 3.46 2.1 1.55a9.1 9.1 0 0 0 0 3.54l-2.1 1.55 2 3.46 2.5-1a9 9 0 0 0 3.04 1.77L11 22h4l.37-2.45a9 9 0 0 0 3.05-1.77l2.5 1 2-3.46-2.1-1.55c.12-.57.18-1.17.18-1.77Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div id="reveal-tag" class="reveal-tag" hidden></div>
+  <div id="race-fx" class="race-fx" hidden></div>
+  <div id="race-hud" class="race-hud" hidden>
+    <div class="race-hud-top">
+      <div class="race-pill"><span>POS</span><b id="race-pos">1/3</b></div>
+      <div class="race-pill"><span>SPD</span><b id="race-speed">0</b><em>KM/H</em></div>
+      <div class="race-pill"><span>TIME</span><b id="race-time">0.00</b></div>
+    </div>
+    <div class="race-progress"><div class="race-track-line"><span id="race-progress-fill"></span><i id="race-progress-dot"></i><i class="rail-start"></i><i class="rail-end"></i></div><div class="race-progress-labels"><span id="race-track-name">MIDNIGHT TOUGE</span><span id="race-dist">0 / 480 M</span></div></div>
+    <div class="race-lane-controls">
+      <button class="lane-btn" id="lane-left" aria-label="Move left">‹</button>
+      <button class="nitro-btn" id="nitro-btn">
+        <span class="nitro-ice"></span>
+        <span class="nitro-content"><b>NITRO</b><em>TAP TO BOOST</em></span>
+        <i class="nitro-gauge"><span id="nitro-fill"></span></i>
+      </button>
+      <button class="lane-btn" id="lane-right" aria-label="Move right">›</button>
+    </div>
+    <div class="race-hint" id="race-hint">SWIPE TO CHANGE LANE · TAP NITRO</div>
+  </div>
+
+  <div class="panel-wrap">
+    <section class="panel active" data-panel="rip" aria-label="Rip packs">
+      <div class="panel-grip"></div>
+      <div class="panel-scroll" id="panel-rip"></div>
+    </section>
+    <section class="panel" data-panel="garage" aria-label="Garage">
+      <div class="panel-grip"></div>
+      <div class="panel-scroll" id="panel-garage"></div>
+    </section>
+    <section class="panel" data-panel="workshop" aria-label="Workshop">
+      <div class="panel-grip"></div>
+      <div class="panel-scroll" id="panel-workshop"></div>
+    </section>
+    <section class="panel" data-panel="race" aria-label="Race">
+      <div class="panel-grip"></div>
+      <div class="panel-scroll" id="panel-race"></div>
+    </section>
+    <section class="panel" data-panel="wheel" aria-label="Prize wheel">
+      <div class="panel-grip"></div>
+      <div class="panel-scroll" id="panel-wheel"></div>
+    </section>
+  </div>
+
+  <nav class="tabs" aria-label="Main navigation">
+    <button class="tab active" data-tab="rip">
+      <span class="tab-ico"><svg viewBox="0 0 24 24"><path d="M5 3h14l-2 5 2 3-2 3 2 3-2 5H5l2-5-2-3 2-3-2-3 2-5Z"/></svg></span>
+      <span class="tab-lbl">RIP</span><i class="tab-glow"></i>
+    </button>
+    <button class="tab" data-tab="garage">
+      <span class="tab-ico"><svg viewBox="0 0 24 24"><path d="M4 20V9l8-5 8 5v11H4Zm3-2h10M6 12h12M9 12v-3h6v3M8 17h8"/></svg></span>
+      <span class="tab-lbl">GARAGE</span><i class="tab-glow"></i>
+    </button>
+    <button class="tab" data-tab="workshop">
+      <span class="tab-ico"><svg viewBox="0 0 24 24"><path d="m14.7 6.3 3-3a5 5 0 0 1-6.6 6.6L5 16a2.4 2.4 0 0 0 3.4 3.4l6.2-6.2a5 5 0 0 1 6.6-6.6l-3 3-3.5-3.5ZM4 4l4 4"/></svg></span>
+      <span class="tab-lbl">WORKSHOP</span><i class="tab-glow"></i>
+    </button>
+    <button class="tab" data-tab="race">
+      <span class="tab-ico"><svg viewBox="0 0 24 24"><path d="M5 21 9 3h6l4 18h-3l-1-5H9l-1 5H5Zm4.6-8h4.8L13 5.5h-2L8.6 13ZM3 17l2-6M21 17l-2-6"/></svg></span>
+      <span class="tab-lbl">RACE</span><i class="tab-glow"></i>
+    </button>
+    <button class="tab" data-tab="wheel">
+      <span class="tab-ico"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 3v7l4.2 4.2M12 5v2M12 19v-2M5 12h2M17 12h2"/></svg></span>
+      <span class="tab-lbl">WHEEL</span><i class="tab-glow"></i>
+    </button>
+  </nav>
+
+  <div id="sheet-layer" class="sheet-layer" hidden>
+    <div class="sheet-backdrop" data-close-sheet></div>
+    <div class="sheet" id="sheet" role="dialog" aria-modal="true">
+      <div class="sheet-grip"></div>
+      <div class="sheet-head"><h3 id="sheet-title">DETAILS</h3><button class="icon-btn small" data-close-sheet aria-label="Close">✕</button></div>
+      <div class="sheet-body" id="sheet-body"></div>
+    </div>
+  </div>
+
+  <div id="inspect" class="inspect" hidden>
+    <div class="inspect-top">
+      <button class="icon-btn inspect-close" id="inspect-close" aria-label="Close inspection">✕</button>
+      <div class="inspect-hint">DRAG TO ORBIT</div>
+      <div class="inspect-rarity" id="inspect-rarity"></div>
+    </div>
+    <div class="inspect-bottom" id="inspect-body"></div>
+  </div>
+
+  <div id="modal" class="modal-layer" hidden>
+    <div class="modal-backdrop"></div>
+    <div class="modal" id="modal-card" role="dialog" aria-modal="true"></div>
+  </div>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+</div>
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>
