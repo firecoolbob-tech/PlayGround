@@ -1,6 +1,7 @@
 import {
   CARS, CARS_BY_ID, CARS_BY_RARITY, PACKS_BY_ID, RARITIES, RARITY_ORDER, TRACKS_BY_ID,
-  TRAITS, WHEEL_REWARDS, WHEEL_COST, FREE_SPIN_MS, MAX_LEVEL, upgradeCost, carDisplayStats,
+  TRAITS, WHEEL_REWARDS, WHEEL_COST, FREE_SPIN_MS, MAX_LEVEL, upgradeCost, carDisplayStats, statWithLevel,
+  COSMETIC_PACK, COSMETICS_BY_ID, WEATHERS_BY_ID, THEMES_BY_ID,
 } from './data.js';
 
 const SAVE_KEY = 'apexrip_save_v2';
@@ -30,11 +31,19 @@ function freshState() {
     selectedPack: 'midnight-circuit',
     selectedTrack: 'midnight-touge',
     autoRip: false,
+    autoRace: false,
     lastSeen: now,
     pendingOffline: 0,
     wheel: { lastFree: 0, lastSpin: 0 },
     races: {},
-    stats: { pulls: 0, races: 0, wins: 0, spins: 0, fusions: 0 },
+    carFusion: {},
+    cosmetics: {},
+    equippedCosmetics: {},
+    weatherOwned: { 'midnight-clear': true },
+    activeWeather: 'midnight-clear',
+    themeOwned: { 'midnight-void': true },
+    activeTheme: 'midnight-void',
+    stats: { pulls: 0, races: 0, wins: 0, spins: 0, fusions: 0, carFusions: 0, cosmeticPulls: 0 },
     settings: { sound: true },
   };
 }
@@ -82,6 +91,49 @@ function sanitize(raw) {
     }
   }
 
+  const cosmetics = {};
+  if (raw.cosmetics && typeof raw.cosmetics === 'object' && !Array.isArray(raw.cosmetics)) {
+    for (const [id, n] of Object.entries(raw.cosmetics)) {
+      if (COSMETICS_BY_ID[id]) {
+        const count = int(n, 0, 0, 999);
+        if (count > 0) cosmetics[id] = count;
+      }
+    }
+  }
+
+  const equippedCosmetics = {};
+  if (raw.equippedCosmetics && typeof raw.equippedCosmetics === 'object' && !Array.isArray(raw.equippedCosmetics)) {
+    for (const [carId, cosmeticId] of Object.entries(raw.equippedCosmetics)) {
+      if (owned[carId] && cosmetics[cosmeticId]) equippedCosmetics[carId] = cosmeticId;
+    }
+  }
+
+  const carFusion = {};
+  if (raw.carFusion && typeof raw.carFusion === 'object' && !Array.isArray(raw.carFusion)) {
+    for (const [id, n] of Object.entries(raw.carFusion)) {
+      if (owned[id]) {
+        const level = int(n, 0, 0, 3);
+        if (level > 0) carFusion[id] = level;
+      }
+    }
+  }
+
+  const weatherOwned = { 'midnight-clear': true };
+  if (raw.weatherOwned && typeof raw.weatherOwned === 'object' && !Array.isArray(raw.weatherOwned)) {
+    for (const id of Object.keys(raw.weatherOwned)) {
+      if (WEATHERS_BY_ID[id]) weatherOwned[id] = true;
+    }
+  }
+  const activeWeather = weatherOwned[raw.activeWeather] ? raw.activeWeather : 'midnight-clear';
+
+  const themeOwned = { 'midnight-void': true };
+  if (raw.themeOwned && typeof raw.themeOwned === 'object' && !Array.isArray(raw.themeOwned)) {
+    for (const id of Object.keys(raw.themeOwned)) {
+      if (THEMES_BY_ID[id]) themeOwned[id] = true;
+    }
+  }
+  const activeTheme = themeOwned[raw.activeTheme] ? raw.activeTheme : 'midnight-void';
+
   const ownedIds = Object.keys(owned);
   const selectedCar = ownedIds.includes(raw.selectedCar) ? raw.selectedCar : (ownedIds[0] || 'civic-ghost');
 
@@ -97,9 +149,10 @@ function sanitize(raw) {
     blueprints,
     owned,
     selectedCar,
-    selectedPack: PACKS_BY_ID[raw.selectedPack] ? raw.selectedPack : base.selectedPack,
+    selectedPack: (PACKS_BY_ID[raw.selectedPack] ? raw.selectedPack : base.selectedPack),
     selectedTrack: TRACKS_BY_ID[raw.selectedTrack] ? raw.selectedTrack : base.selectedTrack,
     autoRip: raw.autoRip === true,
+    autoRace: raw.autoRace === true,
     lastSeen,
     pendingOffline: num(raw.pendingOffline, 0, 0, 5000),
     wheel: {
@@ -107,12 +160,21 @@ function sanitize(raw) {
       lastSpin: num(wheelRaw.lastSpin, 0, 0, now + 86400000),
     },
     races,
+    carFusion,
+    cosmetics,
+    equippedCosmetics,
+    weatherOwned,
+    activeWeather,
+    themeOwned,
+    activeTheme,
     stats: {
       pulls: int(raw.stats?.pulls, 0, 0, 9999999),
       races: int(raw.stats?.races, 0, 0, 9999999),
       wins: int(raw.stats?.wins, 0, 0, 9999999),
       spins: int(raw.stats?.spins, 0, 0, 9999999),
       fusions: int(raw.stats?.fusions, 0, 0, 9999999),
+      carFusions: int(raw.stats?.carFusions, 0, 0, 9999999),
+      cosmeticPulls: int(raw.stats?.cosmeticPulls, 0, 0, 9999999),
     },
     settings: {
       sound: raw.settings?.sound !== false,
@@ -177,7 +239,15 @@ export class Store {
   // ── Derived helpers ───────────────────────────────────────────────────────
   levels(carId) { return this.state.owned[carId] || blankLevels(); }
   isOwned(carId) { return Boolean(this.state.owned[carId]); }
-  displayStats(car) { return carDisplayStats(car, this.levels(car.id)); }
+  displayStats(car) {
+    const stats = carDisplayStats(car, this.levels(car.id));
+    const mult = 1 + this.carFusionLevel(car.id) * 0.055;
+    return {
+      speed: Math.round(stats.speed * mult * 10) / 10,
+      accel: Math.round(stats.accel * mult * 10) / 10,
+      grip: Math.round(stats.grip * mult * 10) / 10,
+    };
+  }
   blueprintCount(carId) { return this.state.blueprints[carId] || 0; }
   ownedCount() { return Object.keys(this.state.owned).length; }
   passiveRate() {
@@ -239,11 +309,154 @@ export class Store {
     this.emit('selected');
     return this.state.autoRip;
   }
+  toggleAutoRace() {
+    this.state.autoRace = !this.state.autoRace;
+    this.save();
+    this.emit('selected');
+    return this.state.autoRace;
+  }
   toggleSound() {
     this.state.settings.sound = !this.state.settings.sound;
     this.save();
     this.emit('settings');
     return this.state.settings.sound;
+  }
+
+  // ── Weather & themes ──────────────────────────────────────────────────────
+  weather(id) { return WEATHERS_BY_ID[id] || WEATHERS_BY_ID['midnight-clear']; }
+  activeWeather() { return this.weather(this.state.activeWeather); }
+  ownsWeather(id) { return Boolean(this.state.weatherOwned[id]); }
+  buyWeather(id) {
+    const weather = WEATHERS_BY_ID[id];
+    if (!weather) return { ok: false, reason: 'Unknown weather.' };
+    if (this.state.weatherOwned[id]) {
+      this.state.activeWeather = id;
+      this.save(true); this.emit('weather'); return { ok: true, equipped: true, weather };
+    }
+    if (this.state.credits < weather.price) return { ok: false, reason: 'Not enough credits.' };
+    this.state.credits -= weather.price;
+    this.state.weatherOwned[id] = true;
+    this.state.activeWeather = id;
+    this.save(true);
+    this.emit('weather', { weather });
+    return { ok: true, weather };
+  }
+  equipWeather(id) {
+    if (this.state.weatherOwned[id] && WEATHERS_BY_ID[id]) {
+      this.state.activeWeather = id;
+      this.save(true);
+      this.emit('weather');
+      return true;
+    }
+    return false;
+  }
+  theme(id) { return THEMES_BY_ID[id] || THEMES_BY_ID['midnight-void']; }
+  activeTheme() { return this.theme(this.state.activeTheme); }
+  ownsTheme(id) { return Boolean(this.state.themeOwned[id]); }
+  buyTheme(id) {
+    const theme = THEMES_BY_ID[id];
+    if (!theme) return { ok: false, reason: 'Unknown theme.' };
+    if (this.state.themeOwned[id]) {
+      this.state.activeTheme = id;
+      this.save(true); this.emit('theme'); return { ok: true, equipped: true, theme };
+    }
+    if (this.state.credits < theme.price) return { ok: false, reason: 'Not enough credits.' };
+    this.state.credits -= theme.price;
+    this.state.themeOwned[id] = true;
+    this.state.activeTheme = id;
+    this.save(true);
+    this.emit('theme', { theme });
+    return { ok: true, theme };
+  }
+  equipTheme(id) {
+    if (this.state.themeOwned[id] && THEMES_BY_ID[id]) {
+      this.state.activeTheme = id;
+      this.save(true);
+      this.emit('theme');
+      return true;
+    }
+    return false;
+  }
+
+  // ── Cosmetics & car fusion ────────────────────────────────────────────────
+  cosmeticCount(id) { return this.state.cosmetics[id] || 0; }
+  ownsCosmetic(id) { return this.cosmeticCount(id) > 0; }
+  equippedCosmeticFor(carId) {
+    const id = this.state.equippedCosmetics[carId];
+    return id && this.ownsCosmetic(id) ? COSMETICS_BY_ID[id] || null : null;
+  }
+  equipCosmetic(carId, cosmeticId) {
+    if (!this.state.owned[carId] || !this.ownsCosmetic(cosmeticId)) return false;
+    this.state.equippedCosmetics[carId] = cosmeticId;
+    this.save(true);
+    this.emit('cosmetic');
+    return true;
+  }
+  pullCosmetic(pack = COSMETIC_PACK) {
+    if (!pack || this.state.credits < pack.price) return { ok: false, reason: 'Not enough credits.' };
+    this.state.credits -= pack.price;
+    this.state.stats.pulls += 1;
+    this.state.stats.cosmeticPulls += 1;
+    const mysticPool = Object.values(COSMETICS_BY_ID).filter(c => c.mystical);
+    const standardPool = Object.values(COSMETICS_BY_ID).filter(c => !c.mystical);
+    const pool = Math.random() < 0.3 ? mysticPool : standardPool;
+    const cosmetic = pool[Math.floor(Math.random() * pool.length)];
+    const isNew = !this.ownsCosmetic(cosmetic.id);
+    let scraps = 0;
+    if (isNew) this.state.cosmetics[cosmetic.id] = 1;
+    else {
+      this.state.cosmetics[cosmetic.id] += 1;
+      scraps = cosmetic.mystical ? 28 : 12;
+      this.state.scraps += scraps;
+    }
+    const selected = this.state.selectedCar;
+    if (isNew && selected && !this.state.equippedCosmetics[selected]) {
+      this.state.equippedCosmetics[selected] = cosmetic.id;
+    }
+    this.save(true);
+    this.emit('cosmeticPull', { cosmetic, isNew, scraps, pack });
+    return { ok: true, cosmetic, isNew, scraps, pack, kind: 'cosmetic' };
+  }
+  carFusionLevel(carId) { return this.state.carFusion[carId] || 0; }
+  carFusionCost(carId) {
+    const level = this.carFusionLevel(carId);
+    if (level >= 3) return null;
+    return {
+      blueprints: 2 + level,
+      scraps: 30 + level * 30,
+      cores: level === 0 ? 0 : level,
+      credits: 100 + level * 150,
+    };
+  }
+  fuseCar(carId) {
+    const car = CARS_BY_ID[carId];
+    if (!car || !this.state.owned[carId]) return { ok: false, reason: 'Car not owned.' };
+    const cost = this.carFusionCost(carId);
+    if (!cost) return { ok: false, reason: 'Fusion rank is maxed.' };
+    if (this.blueprintCount(carId) < cost.blueprints) return { ok: false, reason: `Need ${cost.blueprints} blueprints.` };
+    if (this.state.scraps < cost.scraps) return { ok: false, reason: `Need ${cost.scraps} scraps.` };
+    if (this.state.fusionCores < cost.cores) return { ok: false, reason: `Need ${cost.cores} fusion core${cost.cores > 1 ? 's' : ''}.` };
+    if (this.state.credits < cost.credits) return { ok: false, reason: 'Not enough credits.' };
+    this.state.blueprints[carId] -= cost.blueprints;
+    if (this.state.blueprints[carId] <= 0) delete this.state.blueprints[carId];
+    this.state.scraps -= cost.scraps;
+    this.state.fusionCores -= cost.cores;
+    this.state.credits -= cost.credits;
+    const level = this.carFusionLevel(carId) + 1;
+    this.state.carFusion[carId] = level;
+    this.state.stats.carFusions += 1;
+    this.state.selectedCar = carId;
+    this.save(true);
+    this.emit('carFusion', { car, level });
+    return { ok: true, level, cost };
+  }
+  traitRank(carId) {
+    const fused = this.carFusionLevel(carId);
+    return fused >= 3 ? 2 : fused >= 1 ? 1 : 0;
+  }
+  statAtLevel(car, stat, level) {
+    const base = statWithLevel(car[stat], Math.max(0, Math.min(MAX_LEVEL, level)));
+    return Math.round(base * (1 + this.carFusionLevel(car.id) * 0.055) * 10) / 10;
   }
 
   // ── Pack ripping ──────────────────────────────────────────────────────────
@@ -255,6 +468,7 @@ export class Store {
   pull(packId) {
     const pack = PACKS_BY_ID[packId];
     if (!pack) return { ok: false, reason: 'Unknown pack.' };
+    if (pack.kind === 'cosmetic') return this.pullCosmetic(pack);
     if (this.state.credits < pack.price) return { ok: false, reason: 'Not enough credits.' };
 
     this.state.credits -= pack.price;
@@ -372,9 +586,11 @@ export class Store {
 
   grantWheelReward(reward) {
     const result = { credits: 0, scraps: 0, core: 0, blueprint: null };
-    const godly = this.selectedCar()?.trait === 'godly';
+    const car = this.selectedCar();
+    const godly = car?.trait === 'godly';
+    const godlyRank = car ? this.traitRank(car.id) : 0;
     if (reward.kind === 'credits') {
-      result.credits = Math.round(reward.amount * (godly ? 1.05 : 1));
+      result.credits = Math.round(reward.amount * (godly ? 1.05 + godlyRank * 0.01 : 1));
       this.state.credits += result.credits;
     } else if (reward.kind === 'scrap') {
       result.scraps = reward.amount;
@@ -422,8 +638,9 @@ export class Store {
     time = num(time, 999, 0.1, 9999);
     const car = this.selectedCar();
     const hacker = car?.trait === 'hacker';
+    const hackerRank = car ? this.traitRank(car.id) : 0;
     const placeMult = placement === 1 ? 1 : placement === 2 ? 0.62 : 0.38;
-    let credits = Math.round((track.reward * placeMult * (hacker ? 1.1 : 1)) / 5) * 5;
+    let credits = Math.round((track.reward * placeMult * (hacker ? 1.1 + hackerRank * 0.015 : 1)) / 5) * 5;
     let firstWinBonus = 0;
     const prevBest = this.state.races[trackId];
     if (placement === 1 && !prevBest) {

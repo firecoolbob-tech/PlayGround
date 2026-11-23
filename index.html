@@ -62,12 +62,41 @@
   </header>
 
   <div id="reveal-tag" class="reveal-tag" hidden></div>
+  <div class="feature-dock">
+    <button id="feature-btn" class="feature-btn" aria-label="Open feature menu" aria-expanded="false" aria-controls="feature-menu">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8M4 12h16"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/><circle cx="15" cy="12" r="2"/></svg>
+    </button>
+    <div id="feature-menu" class="feature-menu" hidden>
+      <span class="feature-kicker">GAME SYSTEMS</span>
+      <button class="feature-item" data-feature="weather">
+        <i class="fi-ico" style="--fi:#4fe3ff"><svg viewBox="0 0 24 24"><path d="M7 17a4 4 0 0 1 0-8 5.5 5.5 0 0 1 10.5 1.5A3.5 3.5 0 0 1 17 17H7Zm2 3 .8-2.4M12 20l.8-2.4M17 20l.8-2.4"/></svg></i>
+        <span class="fi-copy"><b>Weather Shop</b><em>25 conditions · live 3D atmosphere</em></span>
+      </button>
+      <button class="feature-item" data-feature="themes">
+        <i class="fi-ico" style="--fi:#9d6bff"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4v16M4 12h16"/></svg></i>
+        <span class="fi-copy"><b>Background Themes</b><em>Repaint sky, fog &amp; ambient light</em></span>
+      </button>
+      <button class="feature-item" data-feature="cosmetics">
+        <i class="fi-ico" style="--fi:#ff7ae0"><svg viewBox="0 0 24 24"><path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Zm6 10 .9 2.1L21 16l-2.1.9L18 19l-.9-2.1L15 16l2.1-.9L18 13Z"/></svg></i>
+        <span class="fi-copy"><b>Cosmetics Locker</b><em>Equip finishes, aero &amp; mystical parts</em></span>
+      </button>
+      <button class="feature-item" data-feature="carfuse">
+        <i class="fi-ico" style="--fi:#ffc247"><svg viewBox="0 0 24 24"><path d="m13 2-8 12h6l-1 8 8-12h-6l1-8Z"/></svg></i>
+        <span class="fi-copy"><b>Car Fuse</b><em>Spend duplicates to raise rarity stats</em></span>
+      </button>
+      <button class="feature-item" data-feature="cosmetic-pack">
+        <i class="fi-ico" style="--fi:#43ffa3"><svg viewBox="0 0 24 24"><path d="M4 8h16v12H4V8Zm2-4h12l2 4H4l2-4Zm4 8h4"/></svg></i>
+        <span class="fi-copy"><b>Cosmetics Drop</b><em>Open the style lab card pack</em></span>
+      </button>
+    </div>
+  </div>
   <div id="race-fx" class="race-fx" hidden></div>
   <div id="race-hud" class="race-hud" hidden>
     <div class="race-hud-top">
       <div class="race-pill"><span>POS</span><b id="race-pos">1/3</b></div>
       <div class="race-pill"><span>SPD</span><b id="race-speed">0</b><em>KM/H</em></div>
       <div class="race-pill"><span>TIME</span><b id="race-time">0.00</b></div>
+      <button class="race-pill race-auto" id="auto-race-toggle" aria-pressed="false"><span>AUTO</span><b>OFF</b></button>
     </div>
     <div class="race-progress"><div class="race-track-line"><span id="race-progress-fill"></span><i id="race-progress-dot"></i><i class="rail-start"></i><i class="rail-end"></i></div><div class="race-progress-labels"><span id="race-track-name">MIDNIGHT TOUGE</span><span id="race-dist">0 / 480 M</span></div></div>
     <div class="race-lane-controls">

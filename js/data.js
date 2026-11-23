@@ -75,27 +75,34 @@ export const CARS_BY_RARITY = RARITY_ORDER.reduce((acc, r) => {
 // ── Packs ────────────────────────────────────────────────────────────────────
 // odds are percentages aligned to RARITY_ORDER and must total 100.
 export const PACKS = [
-  { id:'midnight-circuit', name:'Midnight Circuit', tag:'NIGHT RUN', price:260, color:'#ff3b6b', color2:'#4a0c30', tier:'STARTER', odds:[58,28,10,3,1], focus:['midnight-rx','nightfall-sovereign'] },
-  { id:'tokyo-drift', name:'Tokyo Drift', tag:'TOUGE', price:320, color:'#47e0ff', color2:'#082a40', tier:'STARTER', odds:[56,29,11,3,1], focus:['tokyo-s13','neon-fuse'] },
-  { id:'desert-dunes', name:'Desert Dunes', tag:'SAND', price:300, color:'#ffb03b', color2:'#3d2208', tier:'STARTER', odds:[60,27,10,2.5,0.5], focus:['dune-runner','canyon-dart'] },
-  { id:'cyber-hacker', name:'Cyber Hacker', tag:'NETRUN', price:480, color:'#39ffc4', color2:'#052b22', tier:'STANDARD', odds:[40,34,17,7,2], focus:['cyber-vector','quantum-ray'] },
-  { id:'blackhole-void', name:'Blackhole Void', tag:'EVENT HORIZON', price:620, color:'#9a5cff', color2:'#240a45', tier:'STANDARD', odds:[32,33,21,10,4], focus:['blackhole-wraith','void-shift'] },
-  { id:'godly-celestial', name:'Godly Celestial', tag:'ASCEND', price:780, color:'#ffd76a', color2:'#3a2a08', tier:'PREMIUM', odds:[24,31,26,13,6], focus:['godly-seraph','celestial-king'] },
-  { id:'arctic-ice', name:'Arctic Ice', tag:'SUB ZERO', price:360, color:'#b8f0ff', color2:'#0a2b3a', tier:'STARTER', odds:[58,28,10,3,1], focus:['ice-drift','arctic-hauler'] },
-  { id:'volcanic-magma', name:'Volcanic Magma', tag:'MELTDOWN', price:520, color:'#ff5a2d', color2:'#3d0d05', tier:'STANDARD', odds:[44,32,16,6,2], focus:['magma-sting','solar-deity'] },
-  { id:'monaco-harbor', name:'Monaco Harbor', tag:'GRAND PRIX', price:560, color:'#ffcf5c', color2:'#2b2208', tier:'STANDARD', odds:[42,33,17,6.5,1.5], focus:['monaco-gt','harbor-sprint'] },
-  { id:'red-rock-canyon', name:'Red Rock Canyon', tag:'DUST DEVIL', price:340, color:'#ff6b3d', color2:'#3a1408', tier:'STARTER', odds:[59,28,10,2.5,0.5], focus:['canyon-dart','rust-viper'] },
-  { id:'rainforest-mud', name:'Rainforest Mud', tag:'WET LINE', price:380, color:'#7bff5c', color2:'#0d3008', tier:'STARTER', odds:[57,29,10,3,1], focus:['mud-claw','baja-mule'] },
-  { id:'cyberpunk-industrial', name:'Cyberpunk Industrial', tag:'GRID 77', price:720, color:'#00e5ff', color2:'#04252e', tier:'PREMIUM', odds:[28,32,24,11,5], focus:['glitch-r','ion-tempest'] },
-  { id:'apex-endurance', name:'Apex Endurance', tag:'24H', price:940, color:'#7cff9b', color2:'#0a2c14', tier:'ELITE', odds:[18,29,29,16,8], focus:['apex-zero','overdrive-prime'] },
-  { id:'neon-touge', name:'Neon Touge', tag:'DOWNHILL', price:860, color:'#ff2fd0', color2:'#2f0829', tier:'ELITE', odds:[22,31,27,14,6], focus:['neon-fuse','nightfall-sovereign'] },
-  { id:'gravity-sink', name:'Gravity Sink', tag:'ZERO G', price:800, color:'#5a8cff', color2:'#0a1640', tier:'PREMIUM', odds:[24,31,26,13,6], focus:['singularity','eclipse-proto'] },
-  { id:'glitch-overdrive', name:'Glitch Overdrive', tag:'SYS FAIL', price:680, color:'#b56bff', color2:'#220a3a', tier:'PREMIUM', odds:[30,33,23,10,4], focus:['glitch-r','void-shift'] },
-  { id:'baja-trophy', name:'Baja Trophy', tag:'DESERT RALLY', price:460, color:'#ff9a3d', color2:'#3a1c05', tier:'STANDARD', odds:[46,32,15,5,2], focus:['baja-mule','tundra-fang'] },
-  { id:'solar-prototype', name:'Solar Prototype', tag:'STAR CORE', price:1100, color:'#ff8a2a', color2:'#3d1c04', tier:'ELITE', odds:[12,27,32,19,10], focus:['solar-deity','solaris-9'] },
+  { id:'midnight-circuit', name:'Midnight Circuit', tag:'NIGHT RUN', price:260, color:'#ff3b6b', color2:'#4a0c30', tier:'STARTER', element:'neon', odds:[58,28,10,3,1], focus:['midnight-rx','nightfall-sovereign'] },
+  { id:'tokyo-drift', name:'Tokyo Drift', tag:'TOUGE', price:320, color:'#47e0ff', color2:'#082a40', tier:'STARTER', element:'neon', odds:[56,29,11,3,1], focus:['tokyo-s13','neon-fuse'] },
+  { id:'desert-dunes', name:'Desert Dunes', tag:'SAND', price:300, color:'#ffb03b', color2:'#3d2208', tier:'STARTER', element:'dust', odds:[60,27,10,2.5,0.5], focus:['dune-runner','canyon-dart'] },
+  { id:'cyber-hacker', name:'Cyber Hacker', tag:'NETRUN', price:480, color:'#39ffc4', color2:'#052b22', tier:'STANDARD', element:'electric', odds:[40,34,17,7,2], focus:['cyber-vector','quantum-ray'] },
+  { id:'blackhole-void', name:'Blackhole Void', tag:'EVENT HORIZON', price:620, color:'#9a5cff', color2:'#240a45', tier:'STANDARD', element:'cosmic', odds:[32,33,21,10,4], focus:['blackhole-wraith','void-shift'] },
+  { id:'godly-celestial', name:'Godly Celestial', tag:'ASCEND', price:780, color:'#ffd76a', color2:'#3a2a08', tier:'PREMIUM', element:'solar', odds:[24,31,26,13,6], focus:['godly-seraph','celestial-king'] },
+  { id:'arctic-ice', name:'Arctic Ice', tag:'SUB ZERO', price:360, color:'#b8f0ff', color2:'#0a2b3a', tier:'STARTER', element:'ice', odds:[58,28,10,3,1], focus:['ice-drift','arctic-hauler'] },
+  { id:'volcanic-magma', name:'Volcanic Magma', tag:'MELTDOWN', price:520, color:'#ff5a2d', color2:'#3d0d05', tier:'STANDARD', element:'ember', odds:[44,32,16,6,2], focus:['magma-sting','solar-deity'] },
+  { id:'monaco-harbor', name:'Monaco Harbor', tag:'GRAND PRIX', price:560, color:'#ffcf5c', color2:'#2b2208', tier:'STANDARD', element:'sparks', odds:[42,33,17,6.5,1.5], focus:['monaco-gt','harbor-sprint'] },
+  { id:'red-rock-canyon', name:'Red Rock Canyon', tag:'DUST DEVIL', price:340, color:'#ff6b3d', color2:'#3a1408', tier:'STARTER', element:'dust', odds:[59,28,10,2.5,0.5], focus:['canyon-dart','rust-viper'] },
+  { id:'rainforest-mud', name:'Rainforest Mud', tag:'WET LINE', price:380, color:'#7bff5c', color2:'#0d3008', tier:'STARTER', element:'rain', odds:[57,29,10,3,1], focus:['mud-claw','baja-mule'] },
+  { id:'cyberpunk-industrial', name:'Cyberpunk Industrial', tag:'GRID 77', price:720, color:'#00e5ff', color2:'#04252e', tier:'PREMIUM', element:'electric', odds:[28,32,24,11,5], focus:['glitch-r','ion-tempest'] },
+  { id:'apex-endurance', name:'Apex Endurance', tag:'24H', price:940, color:'#7cff9b', color2:'#0a2c14', tier:'ELITE', element:'sparks', odds:[18,29,29,16,8], focus:['apex-zero','overdrive-prime'] },
+  { id:'neon-touge', name:'Neon Touge', tag:'DOWNHILL', price:860, color:'#ff2fd0', color2:'#2f0829', tier:'ELITE', element:'neon', odds:[22,31,27,14,6], focus:['neon-fuse','nightfall-sovereign'] },
+  { id:'gravity-sink', name:'Gravity Sink', tag:'ZERO G', price:800, color:'#5a8cff', color2:'#0a1640', tier:'PREMIUM', element:'cosmic', odds:[24,31,26,13,6], focus:['singularity','eclipse-proto'] },
+  { id:'glitch-overdrive', name:'Glitch Overdrive', tag:'SYS FAIL', price:680, color:'#b56bff', color2:'#220a3a', tier:'PREMIUM', element:'glitch', odds:[30,33,23,10,4], focus:['glitch-r','void-shift'] },
+  { id:'baja-trophy', name:'Baja Trophy', tag:'DESERT RALLY', price:460, color:'#ff9a3d', color2:'#3a1c05', tier:'STANDARD', element:'dust', odds:[46,32,15,5,2], focus:['baja-mule','tundra-fang'] },
+  { id:'solar-prototype', name:'Solar Prototype', tag:'STAR CORE', price:1100, color:'#ff8a2a', color2:'#3d1c04', tier:'ELITE', element:'solar', odds:[12,27,32,19,10], focus:['solar-deity','solaris-9'] },
 ];
 
+export const COSMETIC_PACK = {
+  id: 'cosmetics-drop', name: 'Cosmetics Drop', tag: 'STYLE LAB', price: 520,
+  color: '#ff7ae0', color2: '#2a0924', tier: 'COSMETIC', element: 'prism',
+  kind: 'cosmetic', odds: [0, 0, 0, 0, 0], focus: [],
+};
+
 export const PACKS_BY_ID = Object.fromEntries(PACKS.map(p => [p.id, p]));
+PACKS_BY_ID[COSMETIC_PACK.id] = COSMETIC_PACK;
 
 // ── Tracks ───────────────────────────────────────────────────────────────────
 export const TRACKS = [
@@ -111,6 +118,10 @@ export const TRACKS = [
   { id:'blackhole-gravity-sink', name:'Blackhole Gravity Sink', theme:'void', reward:210, ai:35.0, diff:3, color:'#a05cff', color2:'#1d0738', bg:'#05020d', fog:'#130826', road:'#12101d', sky:'#180a30' },
   { id:'rainforest-mud', name:'Rainforest Mud Run', theme:'jungle', reward:140, ai:32.2, diff:2, color:'#7bff5c', color2:'#0a2607', bg:'#040b04', fog:'#0b2008', road:'#161c13', sky:'#0c2608' },
   { id:'volcanic-magma', name:'Volcanic Magma Crater', theme:'volcano', reward:200, ai:34.6, diff:3, color:'#ff5a1f', color2:'#3a0c03', bg:'#0b0302', fog:'#2a0a04', road:'#1d1412', sky:'#300c05' },
+  { id:'sunset-coast', name:'Sunset Coast Sprint', theme:'harbor', reward:160, ai:32.5, diff:2, color:'#ff9a5a', color2:'#3a1808', bg:'#0d0704', fog:'#2a160a', road:'#211912', sky:'#3a1a0a' },
+  { id:'alpine-frost', name:'Alpine Frost Pass', theme:'ice', reward:175, ai:33.0, diff:2, color:'#9fe8ff', color2:'#0b2a38', bg:'#041018', fog:'#0a2838', road:'#18262e', sky:'#0a3040' },
+  { id:'lunar-terminus', name:'Lunar Terminus', theme:'void', reward:230, ai:35.6, diff:3, color:'#b9a6ff', color2:'#1c1238', bg:'#04030a', fog:'#161028', road:'#171522', sky:'#1c1436' },
+  { id:'dockside-night', name:'Dockside Night Run', theme:'industry', reward:185, ai:33.8, diff:2, color:'#5ce0ff', color2:'#06242c', bg:'#03090c', fog:'#071c22', road:'#11181c', sky:'#08242c' },
 ];
 
 export const TRACKS_BY_ID = Object.fromEntries(TRACKS.map(t => [t.id, t]));
@@ -129,6 +140,85 @@ export const WHEEL_REWARDS = [
 
 export const WHEEL_COST = 150;
 export const FREE_SPIN_MS = 12 * 60 * 1000;
+
+// ── Weather ──────────────────────────────────────────────────────────────────
+// kind drives shared lightweight particle motion; tint/fog values are blended
+// into the live 3D atmosphere so races and menus stay in the same mood.
+export const WEATHERS = [
+  { id:'midnight-clear', name:'Midnight Clear', kind:'clear', price:0, color:'#4fe3ff', color2:'#07131f', tint:'#07111d', mystical:false, desc:'Cold stars, clean air and maximum visibility.', fogNear:30, fogFar:78 },
+  { id:'neon-rain', name:'Neon Rain & Wet Asphalt', kind:'rain', price:220, color:'#ff3dd0', color2:'#140525', tint:'#160826', mystical:false, desc:'Neon sheets and mirror-wet tarmac.', fogNear:24, fogFar:62 },
+  { id:'dense-fog', name:'Dense Fog / Night Mist', kind:'fog', price:240, color:'#9fb4cf', color2:'#0a1018', tint:'#131a24', mystical:false, desc:'Low visibility with soft silver haze.', fogNear:10, fogFar:34 },
+  { id:'desert-sandstorm', name:'Desert Sandstorm / Dust Haze', kind:'sand', price:260, color:'#ffb03b', color2:'#2a1705', tint:'#221407', mystical:false, desc:'Blowing grit and a burnt amber horizon.', fogNear:15, fogFar:48 },
+  { id:'arctic-blizzard', name:'Arctic Blizzard / Snowfall', kind:'snow', price:280, color:'#c8f6ff', color2:'#0a2230', tint:'#0b1c28', mystical:false, desc:'Drifting flakes and frozen whiteout air.', fogNear:14, fogFar:44 },
+  { id:'thunderstorm', name:'Thunderstorm & Lightning Flashes', kind:'storm', price:340, color:'#aabfff', color2:'#0a0e22', tint:'#0b1024', mystical:false, desc:'Heavy rain, rolling cloud and hard lightning.', fogNear:16, fogFar:50 },
+  { id:'aurora-borealis', name:'Aurora Borealis Night', kind:'aurora', price:420, color:'#43ffc4', color2:'#081f24', tint:'#071c22', mystical:true, desc:'A slow green-violet curtain across the sky.', fogNear:26, fogFar:72 },
+  { id:'volcanic-ash', name:'Volcanic Ash & Ember Drift', kind:'ash', price:320, color:'#ff6a2a', color2:'#2a0c04', tint:'#1f0904', mystical:false, desc:'Rising sparks under a charcoal ash veil.', fogNear:18, fogFar:54 },
+  { id:'acid-cyber-rain', name:'Acid / Cyber Grid Rain', kind:'acid', price:360, color:'#a8ff3d', color2:'#0c2205', tint:'#0c1e08', mystical:false, desc:'Corrosive drizzle over a humming data grid.', fogNear:18, fogFar:52 },
+  { id:'gravity-distortion', name:'Gravity Distortion / Cosmic Dust', kind:'cosmic', price:480, color:'#9a6bff', color2:'#160a30', tint:'#100826', mystical:true, desc:'Orbiting motes and bent-light dust lanes.', fogNear:22, fogFar:64 },
+  { id:'monsoon-downpour', name:'Monsoon Downpour', kind:'monsoon', price:300, color:'#6bc8ff', color2:'#061a2c', tint:'#071a2a', mystical:false, desc:'Warm vertical rain with a silver curtain.', fogNear:12, fogFar:40 },
+  { id:'sunset-dusk', name:'Sunset / Golden Dusk Glow', kind:'sunset', price:260, color:'#ffb15c', color2:'#2a1407', tint:'#221208', mystical:false, desc:'Golden rim light and a soft copper horizon.', fogNear:28, fogFar:76 },
+  { id:'canyon-heat', name:'Canyon Heat Shimmer', kind:'heat', price:280, color:'#ffad4f', color2:'#281305', tint:'#211006', mystical:false, desc:'Rising heat waves and floating dust.', fogNear:22, fogFar:58 },
+  { id:'industrial-smog', name:'Industrial Smog & Steam Plumes', kind:'smog', price:300, color:'#b9c4cf', color2:'#10151a', tint:'#171c22', mystical:false, desc:'Thick steam, oily haze and sodium glow.', fogNear:12, fogFar:38 },
+  { id:'rainforest-mist', name:'Rainforest Mist & Drizzling Canopy', kind:'mist', price:280, color:'#74ffb7', color2:'#062015', tint:'#071e12', mystical:false, desc:'Warm drizzle threading through wet leaves.', fogNear:14, fogFar:42 },
+  { id:'black-ice', name:'Black Ice / Glazed Frost', kind:'ice', price:380, color:'#bfefff', color2:'#081a24', tint:'#081822', mystical:false, desc:'Glass frost, pale mist and frozen sparkle.', fogNear:18, fogFar:52 },
+  { id:'solar-flare', name:'Solar Flare / Golden Rim', kind:'solar', price:520, color:'#ffd15c', color2:'#2a1c05', tint:'#261a05', mystical:true, desc:'A radiant gold rim and drifting solar sparks.', fogNear:26, fogFar:74 },
+  { id:'overcast-slate', name:'Overcast Slate Storm', kind:'overcast', price:200, color:'#9eaec2', color2:'#0d1218', tint:'#141a20', mystical:false, desc:'Flat slate light with a threat of rain.', fogNear:20, fogFar:56 },
+  { id:'meteor-shower', name:'Meteor Shower Night', kind:'meteor', price:460, color:'#ffd8a0', color2:'#120c22', tint:'#0e0a1c', mystical:true, desc:'Fast falling streaks under a deep indigo sky.', fogNear:28, fogFar:80 },
+  { id:'low-cloud-ridge', name:'Low-Cloud Mountain Ridge', kind:'clouds', price:240, color:'#a9c0d8', color2:'#0b131c', tint:'#121a22', mystical:false, desc:'Cloud banks clinging to a cold ridge line.', fogNear:16, fogFar:48 },
+  { id:'astral-eclipse', name:'Astral Eclipse & Spirit Mist', kind:'eclipse', price:620, color:'#c39bff', color2:'#170a2a', tint:'#150929', mystical:true, desc:'A dark corona and pale spirit fog.', fogNear:20, fogFar:58 },
+  { id:'arcane-rune-storm', name:'Arcane Rune Storm', kind:'arcane', price:680, color:'#ff73ff', color2:'#220826', tint:'#200826', mystical:true, desc:'Rune-lit rain and flickering violet glyphs.', fogNear:16, fogFar:48 },
+  { id:'celestial-starfall', name:'Celestial Starfall & Nebula Veil', kind:'starfall', price:760, color:'#ffd8ff', color2:'#180a24', tint:'#170a24', mystical:true, desc:'Starfall sparks inside a soft nebula veil.', fogNear:26, fogFar:76 },
+  { id:'phantom-wisp', name:'Phantom Wisp Fog', kind:'phantom', price:560, color:'#8dffe4', color2:'#061b1a', tint:'#081d1c', mystical:true, desc:'Green wisps breathing through low mist.', fogNear:10, fogFar:34 },
+  { id:'chrono-rift', name:'Chrono Rift / Prism Shards', kind:'chrono', price:880, color:'#7fe8ff', color2:'#0a1a2a', tint:'#0a1828', mystical:true, desc:'Fractured time, prism shards and blue static.', fogNear:18, fogFar:58 },
+];
+
+export const WEATHERS_BY_ID = Object.fromEntries(WEATHERS.map(w => [w.id, w]));
+
+// ── Global background themes ────────────────────────────────────────────────
+export const BACKGROUND_THEMES = [
+  { id:'midnight-void', name:'Midnight Void', price:0, color:'#4fe3ff', bg:'#05060b', fog:'#090c15', hemiSky:'#5b83b8', hemiGround:'#05060a', key:'#ffffff', dust:'#9bd8ff', desc:'The original cold chrome void.' },
+  { id:'neon-metro', name:'Neon Metro', price:300, color:'#ff3d86', bg:'#080414', fog:'#180a2c', hemiSky:'#8b63ff', hemiGround:'#08050e', key:'#ffe4ff', dust:'#ff8fe0', desc:'Magenta haze and violet city bounce.' },
+  { id:'solar-dusk', name:'Solar Dusk', price:320, color:'#ffb03b', bg:'#0c0603', fog:'#2a1508', hemiSky:'#ff9a5a', hemiGround:'#0c0704', key:'#ffe3b0', dust:'#ffcb8a', desc:'Warm amber key light and dusk bronze.' },
+  { id:'arctic-glass', name:'Arctic Glass', price:340, color:'#9fe8ff', bg:'#041018', fog:'#0a2a3a', hemiSky:'#8fe4ff', hemiGround:'#041016', key:'#ffffff', dust:'#c8f6ff', desc:'Pale ice bounce and blue-black air.' },
+  { id:'ember-core', name:'Ember Core', price:360, color:'#ff5a2d', bg:'#0c0402', fog:'#2a0a04', hemiSky:'#ff6a3a', hemiGround:'#0c0402', key:'#ffd0b0', dust:'#ff9a6a', desc:'Furnace glow with carbon shadows.' },
+  { id:'arcane-violet', name:'Arcane Violet', price:480, color:'#b47bff', bg:'#080314', fog:'#1c0a2e', hemiSky:'#a06bff', hemiGround:'#070312', key:'#f0d9ff', dust:'#cba8ff', desc:'Rune-violet ambient and soft occult glow.' },
+  { id:'verdant-signal', name:'Verdant Signal', price:380, color:'#43ffa3', bg:'#030c06', fog:'#0a2814', hemiSky:'#5cff9d', hemiGround:'#030c06', key:'#eafff2', dust:'#9dffd0', desc:'Bio-lime signals in a deep forest dark.' },
+  { id:'chrome-storm', name:'Chrome Storm', price:500, color:'#cfe4ff', bg:'#050810', fog:'#101a2a', hemiSky:'#9fb6d9', hemiGround:'#050810', key:'#ffffff', dust:'#dbe9ff', desc:'Steel overcast with electric chrome rim.' },
+];
+
+export const THEMES_BY_ID = Object.fromEntries(BACKGROUND_THEMES.map(t => [t.id, t]));
+
+// ── Car cosmetics ───────────────────────────────────────────────────────────
+export const COSMETICS = [
+  { id:'wet-mirror', name:'Wet Mirror Clearcoat', slot:'FINISH', kind:'finish', mystical:false, color:'#dff4ff', desc:'Liquid-glass clearcoat with razor reflections.' },
+  { id:'holo-prism', name:'Holographic Prismatic Foil', slot:'FINISH', kind:'prism', mystical:true, color:'#ff8df0', desc:'Shift-through-spectrum foil wrap.' },
+  { id:'forged-carbon', name:'Forged Carbon Weave', slot:'FINISH', kind:'finish', bodyColor:'#252a31', mystical:false, color:'#b9c6d7', desc:'Matte-forged carbon under a deep gloss.' },
+  { id:'candy-crimson', name:'Candy Crimson Chrome', slot:'FINISH', kind:'finish', bodyColor:'#b30d35', mystical:false, color:'#ff3d6e', desc:'Layered candy red over mirror chrome.' },
+  { id:'obsidian-void', name:'Obsidian Void Gloss', slot:'FINISH', kind:'finish', bodyColor:'#07080e', mystical:true, color:'#a779ff', desc:'Black-hole black with violet edge reflections.' },
+  { id:'neon-underglow', name:'Neon Underglow', slot:'GLOW', kind:'underglow', mystical:false, color:'#4fe3ff', desc:'Cyan floor glow that outlines the chassis.' },
+  { id:'afterburner', name:'Afterburner Exhaust Flames', slot:'EXHAUST', kind:'exhaust', mystical:true, color:'#ff8a2a', desc:'Twin jet flames on every throttle blip.' },
+  { id:'swan-wing', name:'GT Swan-Neck Wing', slot:'WING', kind:'wing', mystical:false, color:'#b9c6d7', desc:'Sculpted swan-neck rear wing.' },
+  { id:'widebody', name:'Widebody Fenders', slot:'BODY', kind:'widebody', mystical:false, color:'#d9e4f7', desc:'Flared arches over every wheel.' },
+  { id:'splitter-canards', name:'Front Splitter & Canards', slot:'AERO', kind:'aero', mystical:false, color:'#b9c6d7', desc:'Aggressive splitter and twin canards.' },
+  { id:'turbine-rims', name:'Deep-Dish / Turbine Rims', slot:'WHEELS', kind:'wheels', mystical:false, color:'#ffe0a0', desc:'Deep-dish rims with turbine spokes.' },
+  { id:'glow-calipers', name:'Glowing Brake Calipers & Rotors', slot:'BRAKES', kind:'calipers', mystical:false, color:'#ff5a2d', desc:'Incandescent calipers behind each rim.' },
+  { id:'cyber-blades', name:'Cyber Blade Headlights', slot:'LIGHTS', kind:'headlights', mystical:true, color:'#8dffff', desc:'Split blade beams with cold cyan edge.' },
+  { id:'neon-tail-bar', name:'Full-Width Neon Taillight Bar', slot:'TAIL', kind:'taillight', mystical:false, color:'#ff3d86', desc:'One continuous neon rear bar.' },
+  { id:'roof-scoop', name:'Roof Scoop / Vortex Roof Rails', slot:'ROOF', kind:'roof', mystical:false, color:'#d9e4f7', desc:'Roof scoop and vortex rails.' },
+  { id:'louver-diffuser', name:'Louvered Rear Window / Diffuser', slot:'DIFFUSER', kind:'diffuser', mystical:false, color:'#20252e', desc:'Rear louvres and a finned diffuser.' },
+  { id:'matrix-overlay', name:'Hacker Matrix Wireframe Overlay', slot:'OVERLAY', kind:'matrix', mystical:true, color:'#43ffa3', desc:'Live wireframe shell and mono glyph rings.' },
+  { id:'gravity-orbit', name:'Blackhole Gravity Orbit Ring', slot:'ORBIT', kind:'orbit', mystical:true, color:'#a779ff', desc:'Two counter-spinning gravity rings.' },
+  { id:'godly-halo', name:'Godly Radiant Halo & Wingtips', slot:'HALO', kind:'halo', mystical:true, color:'#ffd15c', desc:'Gold halo and luminous wingtips.' },
+  { id:'slipstream', name:'Speed-Line Slipstream Trail', slot:'TRAIL', kind:'trail', mystical:true, color:'#8de7ff', desc:'Frozen speed lines trailing the body.' },
+  { id:'astral-underglow', name:'Astral Spirit Underglow', slot:'SPIRIT', kind:'spirit', mystical:true, color:'#8dffe4', desc:'Ghost-green aura under the chassis.' },
+  { id:'rune-gloss', name:'Rune-Etched Gloss Clearcoat', slot:'RUNES', kind:'runes', mystical:true, color:'#c39bff', desc:'Etched runes lit under a gloss surface.' },
+  { id:'celestial-trail', name:'Celestial Halo & Star-Trail Spoils', slot:'CELESTIAL', kind:'celestial', mystical:true, color:'#ffe4a0', desc:'Halo, gems and a star-trail wake.' },
+  { id:'phantom-rim', name:'Phantom Specter Rim & Tail Glow', slot:'PHANTOM', kind:'phantom', mystical:true, color:'#b8ffef', desc:'Specter rims and a breathing tail glow.' },
+  { id:'chrono-prism', name:'Chrono Prism Foil', slot:'PRISM', kind:'chrono', mystical:true, color:'#7fe8ff', desc:'Fractured prism foil with time-slip shimmer.' },
+];
+
+export const COSMETICS_BY_ID = Object.fromEntries(COSMETICS.map(c => [c.id, c]));
+export const COSMETIC_PACK_PRICE = COSMETIC_PACK.price;
 
 export const RACE_LENGTH = 480;
 export const MAX_LEVEL = 12;
