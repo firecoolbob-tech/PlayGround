@@ -223,6 +223,23 @@ export const COSMETIC_PACK_PRICE = COSMETIC_PACK.price;
 export const RACE_LENGTH = 480;
 export const MAX_LEVEL = 12;
 
+// Blueprint progression. A car is unlocked at 1 star, then spends its own
+// blueprints to reach 2 and 3 stars. Rarer cars ask for a little more.
+export const BP_UNLOCK_1STAR = 4;
+export const BP_UPGRADE_2STAR = 9;
+export const BP_UPGRADE_3STAR = 16;
+export const STAR_MAX = 3;
+
+export function blueprintCost(car, star = 0) {
+  const tier = RARITIES[car?.rarity]?.tier || 0;
+  const base = star <= 0 ? BP_UNLOCK_1STAR : star === 1 ? BP_UPGRADE_2STAR : BP_UPGRADE_3STAR;
+  return base + tier * 2;
+}
+
+export function starMultiplier(stars) {
+  return 1 + Math.max(0, Math.min(STAR_MAX, Number(stars) || 0) - 1) * 0.04;
+}
+
 export const UPGRADE_BASE_COST = 75;
 export const UPGRADE_COST_STEP = 45;
 

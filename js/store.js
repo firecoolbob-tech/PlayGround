@@ -1,12 +1,15 @@
 import {
-  CARS, CARS_BY_ID, CARS_BY_RARITY, PACKS_BY_ID, RARITIES, RARITY_ORDER, TRACKS_BY_ID,
+  CARS, CARS_BY_ID, CARS_BY_RARITY, PACKS, PACKS_BY_ID, RARITIES, RARITY_ORDER, TRACKS_BY_ID,
   TRAITS, WHEEL_REWARDS, WHEEL_COST, FREE_SPIN_MS, MAX_LEVEL, upgradeCost, carDisplayStats, statWithLevel,
   COSMETIC_PACK, COSMETICS_BY_ID, WEATHERS_BY_ID, THEMES_BY_ID,
+  blueprintCost, starMultiplier, STAR_MAX,
 } from './data.js';
 
 const SAVE_KEY = 'apexrip_save_v2';
 const SAVE_VERSION = 2;
 const listeners = new Set();
+const DAILY_BONUS_MS = 24 * 60 * 60 * 1000;
+const SAFETY_CRATE_MS = 8 * 60 * 1000;
 
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 const num = (v, fallback, min = 0, max = Number.MAX_SAFE_INTEGER) => {
@@ -27,6 +30,9 @@ function freshState() {
     fusionCores: 0,
     blueprints: {},
     owned: { 'civic-ghost': blankLevels() },
+    stars: { 'civic-ghost': 1 },
+    apexTokens: 0,
+    pinnedCar: null,
     selectedCar: 'civic-ghost',
     selectedPack: 'midnight-circuit',
     selectedTrack: 'midnight-touge',
@@ -35,6 +41,8 @@ function freshState() {
     lastSeen: now,
     pendingOffline: 0,
     wheel: { lastFree: 0, lastSpin: 0 },
+    daily: { last: 0 },
+    safety: { last: 0 },
     races: {},
     carFusion: {},
     cosmetics: {},
@@ -43,7 +51,7 @@ function freshState() {
     activeWeather: 'midnight-clear',
     themeOwned: { 'midnight-void': true },
     activeTheme: 'midnight-void',
-    stats: { pulls: 0, races: 0, wins: 0, spins: 0, fusions: 0, carFusions: 0, cosmeticPulls: 0 },
+    stats: { pulls: 0, races: 0, wins: 0, spins: 0, fusions: 0, carFusions: 0, cosmeticPulls: 0, stars: 0, salvaged: 0 },
     settings: { sound: true },
   };
 }
@@ -70,6 +78,12 @@ function sanitize(raw) {
   // A save that has pulled before but somehow lost its cars should not brick progression.
   if (!Object.keys(owned).length && raw.owned && int(raw.stats?.pulls, 0) === 0) {
     owned['civic-ghost'] = blankLevels();
+  }
+
+  const stars = {};
+  for (const id of Object.keys(owned)) {
+    const saved = raw.stars && typeof raw.stars === 'object' ? raw.stars[id] : 1;
+    stars[id] = int(saved, 1, 1, STAR_MAX);
   }
 
   const blueprints = {};
@@ -138,6 +152,8 @@ function sanitize(raw) {
   const selectedCar = ownedIds.includes(raw.selectedCar) ? raw.selectedCar : (ownedIds[0] || 'civic-ghost');
 
   const wheelRaw = raw.wheel && typeof raw.wheel === 'object' ? raw.wheel : {};
+  const dailyRaw = raw.daily && typeof raw.daily === 'object' ? raw.daily : {};
+  const safetyRaw = raw.safety && typeof raw.safety === 'object' ? raw.safety : {};
   const now = Date.now();
   const lastSeen = num(raw.lastSeen, now, 0, now + 60000);
 
@@ -148,6 +164,9 @@ function sanitize(raw) {
     fusionCores: int(raw.fusionCores, 0, 0, 9999),
     blueprints,
     owned,
+    stars,
+    apexTokens: int(raw.apexTokens, 0, 0, 99999999),
+    pinnedCar: CARS_BY_ID[raw.pinnedCar] ? raw.pinnedCar : null,
     selectedCar,
     selectedPack: (PACKS_BY_ID[raw.selectedPack] ? raw.selectedPack : base.selectedPack),
     selectedTrack: TRACKS_BY_ID[raw.selectedTrack] ? raw.selectedTrack : base.selectedTrack,
@@ -159,6 +178,8 @@ function sanitize(raw) {
       lastFree: num(wheelRaw.lastFree, 0, 0, now + 86400000),
       lastSpin: num(wheelRaw.lastSpin, 0, 0, now + 86400000),
     },
+    daily: { last: num(dailyRaw.last, 0, 0, now + 86400000) },
+    safety: { last: num(safetyRaw.last, 0, 0, now + 86400000) },
     races,
     carFusion,
     cosmetics,
@@ -175,6 +196,8 @@ function sanitize(raw) {
       fusions: int(raw.stats?.fusions, 0, 0, 9999999),
       carFusions: int(raw.stats?.carFusions, 0, 0, 9999999),
       cosmeticPulls: int(raw.stats?.cosmeticPulls, 0, 0, 9999999),
+      stars: int(raw.stats?.stars, 0, 0, 9999999),
+      salvaged: int(raw.stats?.salvaged, 0, 0, 9999999),
     },
     settings: {
       sound: raw.settings?.sound !== false,
@@ -239,9 +262,10 @@ export class Store {
   // ── Derived helpers ───────────────────────────────────────────────────────
   levels(carId) { return this.state.owned[carId] || blankLevels(); }
   isOwned(carId) { return Boolean(this.state.owned[carId]); }
+  starRank(carId) { return this.isOwned(carId) ? (this.state.stars[carId] || 1) : 0; }
   displayStats(car) {
     const stats = carDisplayStats(car, this.levels(car.id));
-    const mult = 1 + this.carFusionLevel(car.id) * 0.055;
+    const mult = (1 + this.carFusionLevel(car.id) * 0.055) * starMultiplier(this.starRank(car.id));
     return {
       speed: Math.round(stats.speed * mult * 10) / 10,
       accel: Math.round(stats.accel * mult * 10) / 10,
@@ -249,6 +273,72 @@ export class Store {
     };
   }
   blueprintCount(carId) { return this.state.blueprints[carId] || 0; }
+  blueprintGoal(carId) {
+    const car = CARS_BY_ID[carId];
+    if (!car) return null;
+    const count = this.blueprintCount(carId);
+    if (!this.isOwned(carId)) {
+      const need = blueprintCost(car, 0);
+      return { mode: 'unlock', count, need, star: 1, label: 'UNLOCK 1★' };
+    }
+    const star = this.starRank(carId);
+    if (star >= STAR_MAX) return { mode: 'max', count, need: 0, star: STAR_MAX, label: 'MAX STAR' };
+    return { mode: 'star', count, need: blueprintCost(car, star), star: star + 1, label: `${star + 1}★ UPGRADE` };
+  }
+  blueprintProgress(carId) {
+    const goal = this.blueprintGoal(carId);
+    if (!goal) return null;
+    const pct = goal.need > 0 ? Math.min(100, (goal.count / goal.need) * 100) : 100;
+    return { ...goal, pct };
+  }
+  togglePinnedCar(carId) {
+    if (!CARS_BY_ID[carId]) return null;
+    this.state.pinnedCar = this.state.pinnedCar === carId ? null : carId;
+    this.save(true);
+    this.emit('pin', { car: CARS_BY_ID[carId] });
+    return this.state.pinnedCar;
+  }
+  unlockCar(carId) {
+    const car = CARS_BY_ID[carId];
+    if (!car) return { ok: false, reason: 'Unknown car.' };
+    if (this.isOwned(carId)) return { ok: false, reason: 'Car already unlocked.' };
+    const need = blueprintCost(car, 0);
+    if (this.blueprintCount(carId) < need) return { ok: false, reason: `Need ${need} blueprints.` };
+    this.state.blueprints[carId] -= need;
+    if (this.state.blueprints[carId] <= 0) delete this.state.blueprints[carId];
+    this.state.owned[carId] = blankLevels();
+    this.state.stars[carId] = 1;
+    this.state.selectedCar = carId;
+    this.state.stats.stars += 1;
+    this.save(true);
+    this.emit('unlock', { car, star: 1 });
+    return { ok: true, car, star: 1 };
+  }
+  starUp(carId) {
+    const car = CARS_BY_ID[carId];
+    if (!car || !this.isOwned(carId)) return { ok: false, reason: 'Car not owned.' };
+    const star = this.starRank(carId);
+    if (star >= STAR_MAX) return { ok: false, reason: 'Already at 3 stars.' };
+    const need = blueprintCost(car, star);
+    if (this.blueprintCount(carId) < need) return { ok: false, reason: `Need ${need} blueprints.` };
+    this.state.blueprints[carId] -= need;
+    if (this.state.blueprints[carId] <= 0) delete this.state.blueprints[carId];
+    this.state.stars[carId] = star + 1;
+    this.state.selectedCar = carId;
+    this.state.stats.stars += 1;
+    let apexTokens = 0;
+    if (this.state.stars[carId] >= STAR_MAX) {
+      const spare = this.blueprintCount(carId);
+      if (spare > 0) {
+        apexTokens = spare * (RARITIES[car.rarity].tier + 1);
+        this.state.apexTokens += apexTokens;
+        delete this.state.blueprints[carId];
+      }
+    }
+    this.save(true);
+    this.emit('starUp', { car, star: star + 1, apexTokens });
+    return { ok: true, car, star: star + 1, apexTokens };
+  }
   ownedCount() { return Object.keys(this.state.owned).length; }
   passiveRate() {
     const n = this.ownedCount();
@@ -456,7 +546,8 @@ export class Store {
   }
   statAtLevel(car, stat, level) {
     const base = statWithLevel(car[stat], Math.max(0, Math.min(MAX_LEVEL, level)));
-    return Math.round(base * (1 + this.carFusionLevel(car.id) * 0.055) * 10) / 10;
+    const mult = (1 + this.carFusionLevel(car.id) * 0.055) * starMultiplier(this.starRank(car.id));
+    return Math.round(base * mult * 10) / 10;
   }
 
   // ── Pack ripping ──────────────────────────────────────────────────────────
@@ -490,23 +581,45 @@ export class Store {
       : pool[Math.floor(Math.random() * pool.length)];
 
     const rarityDef = RARITIES[car.rarity];
+    const wasOwned = this.isOwned(car.id);
+    const maxed = wasOwned && this.starRank(car.id) >= STAR_MAX;
+    const drop = (wasOwned ? 1 : 2) + Math.floor(Math.random() * (2 + rarityDef.tier));
     let isNew = false;
     let blueprints = 0;
+    let apexTokens = 0;
     let scraps = 0;
-    if (!this.state.owned[car.id]) {
-      isNew = true;
-      this.state.owned[car.id] = blankLevels();
-      this.state.selectedCar = car.id;
-    } else {
-      blueprints = 1 + (Math.random() < rarityDef.tier * 0.06 ? 1 : 0);
+
+    if (maxed) {
+      // A maxed build turns every spare blueprint into Apex Tokens.
+      apexTokens = drop * (rarityDef.tier + 1);
+      this.state.apexTokens += apexTokens;
       scraps = 2 + Math.floor(Math.random() * (rarityDef.tier + 2));
-      this.state.blueprints[car.id] = this.blueprintCount(car.id) + blueprints;
       this.state.scraps += scraps;
+    } else {
+      blueprints = drop;
+      this.state.blueprints[car.id] = this.blueprintCount(car.id) + blueprints;
+      if (wasOwned) {
+        scraps = 2 + Math.floor(Math.random() * (rarityDef.tier + 2));
+        this.state.scraps += scraps;
+      } else {
+        // Blueprints, not instant cars: the final blueprint completes the 1-star unlock.
+        const need = blueprintCost(car, 0);
+        if (this.blueprintCount(car.id) >= need) {
+          this.state.blueprints[car.id] -= need;
+          if (this.state.blueprints[car.id] <= 0) delete this.state.blueprints[car.id];
+          this.state.owned[car.id] = blankLevels();
+          this.state.stars[car.id] = 1;
+          this.state.selectedCar = car.id;
+          this.state.stats.stars += 1;
+          isNew = true;
+        }
+      }
     }
 
+    const progress = this.blueprintProgress(car.id);
     this.save(true);
-    this.emit('pull', { car, isNew, blueprints, scraps, pack });
-    return { ok: true, car, isNew, blueprints, scraps, pack, rarity: car.rarity };
+    this.emit('pull', { car, isNew, blueprints, apexTokens, scraps, pack, progress });
+    return { ok: true, car, isNew, blueprints, apexTokens, scraps, pack, progress, rarity: car.rarity };
   }
 
   // ── Upgrades / fusion / vault ─────────────────────────────────────────────
@@ -562,6 +675,66 @@ export class Store {
     return { ok: true, amount };
   }
 
+  // ── Salvage / sell ───────────────────────────────────────────────────────
+  carSalvageValue(carId) {
+    const car = CARS_BY_ID[carId];
+    if (!car || !this.isOwned(carId)) return null;
+    const rar = RARITIES[car.rarity];
+    const levels = this.levels(carId);
+    const lvSum = levels.speed + levels.accel + levels.grip;
+    const fusion = this.carFusionLevel(carId);
+    const star = this.starRank(carId);
+    return {
+      credits: Math.max(50, Math.round((rar.scrap * 12 + lvSum * 16 + fusion * 50 + star * 35) / 5) * 5),
+      scraps: Math.max(4, Math.round(rar.scrap * 0.9 + lvSum * 1.5 + fusion * 8)),
+      apexTokens: this.blueprintCount(carId),
+    };
+  }
+  salvageCar(carId) {
+    const car = CARS_BY_ID[carId];
+    if (!car || !this.isOwned(carId)) return { ok: false, reason: 'Car not owned.' };
+    if (this.ownedCount() <= 1) return { ok: false, reason: 'Keep at least one car in the garage.' };
+    const value = this.carSalvageValue(carId);
+    if (!value) return { ok: false, reason: 'Nothing to salvage.' };
+    delete this.state.owned[carId];
+    delete this.state.stars[carId];
+    delete this.state.carFusion[carId];
+    delete this.state.equippedCosmetics[carId];
+    delete this.state.blueprints[carId];
+    if (this.state.pinnedCar === carId) this.state.pinnedCar = null;
+    this.state.credits += value.credits;
+    this.state.scraps += value.scraps;
+    this.state.apexTokens += value.apexTokens;
+    this.state.stats.salvaged += 1;
+    if (this.state.selectedCar === carId) {
+      const next = this.bestCar();
+      this.state.selectedCar = next ? next.id : '';
+    }
+    this.save(true);
+    this.emit('salvage', { car, ...value });
+    return { ok: true, car, ...value };
+  }
+  cosmeticSalvageValue(cosmeticId) {
+    const cosmetic = COSMETICS_BY_ID[cosmeticId];
+    if (!cosmetic) return null;
+    return {
+      credits: cosmetic.mystical ? 90 : 35,
+      scraps: cosmetic.mystical ? 18 : 7,
+    };
+  }
+  salvageCosmetic(cosmeticId) {
+    const cosmetic = COSMETICS_BY_ID[cosmeticId];
+    if (!cosmetic) return { ok: false, reason: 'Unknown cosmetic.' };
+    if (this.cosmeticCount(cosmeticId) <= 1) return { ok: false, reason: 'Keep one copy of this cosmetic.' };
+    const value = this.cosmeticSalvageValue(cosmeticId);
+    this.state.cosmetics[cosmeticId] -= 1;
+    this.state.credits += value.credits;
+    this.state.scraps += value.scraps;
+    this.save(true);
+    this.emit('cosmeticSell', { cosmetic, ...value });
+    return { ok: true, cosmetic, ...value };
+  }
+
   // ── Wheel ────────────────────────────────────────────────────────────────
   freeSpinReady() {
     return Date.now() - (this.state.wheel.lastFree || 0) >= FREE_SPIN_MS;
@@ -585,7 +758,7 @@ export class Store {
   }
 
   grantWheelReward(reward) {
-    const result = { credits: 0, scraps: 0, core: 0, blueprint: null };
+    const result = { credits: 0, scraps: 0, core: 0, blueprint: null, apexTokens: 0 };
     const car = this.selectedCar();
     const godly = car?.trait === 'godly';
     const godlyRank = car ? this.traitRank(car.id) : 0;
@@ -602,8 +775,14 @@ export class Store {
       const ids = Object.keys(this.state.owned);
       if (ids.length) {
         const id = ids[Math.floor(Math.random() * ids.length)];
-        this.state.blueprints[id] = this.blueprintCount(id) + reward.amount;
-        result.blueprint = CARS_BY_ID[id];
+        if (this.starRank(id) >= STAR_MAX) {
+          result.apexTokens = reward.amount * (RARITIES[CARS_BY_ID[id].rarity].tier + 1);
+          this.state.apexTokens += result.apexTokens;
+          result.blueprint = CARS_BY_ID[id];
+        } else {
+          this.state.blueprints[id] = this.blueprintCount(id) + reward.amount;
+          result.blueprint = CARS_BY_ID[id];
+        }
       } else {
         result.credits = 60;
         this.state.credits += 60;
@@ -630,6 +809,54 @@ export class Store {
     return { ok: true, amount };
   }
 
+  // ── Daily / safety loops ─────────────────────────────────────────────────
+  cheapestPackPrice() {
+    return Math.min(...PACKS.map(p => p.price));
+  }
+  dailyReady() {
+    return Date.now() - (this.state.daily.last || 0) >= DAILY_BONUS_MS;
+  }
+  dailyRemaining() {
+    return Math.max(0, DAILY_BONUS_MS - (Date.now() - (this.state.daily.last || 0)));
+  }
+  dailyAmount() {
+    const best = this.bestCar();
+    const tier = best ? RARITIES[best.rarity].tier : 0;
+    return 300 + this.ownedCount() * 40 + tier * 120;
+  }
+  claimDaily() {
+    if (!this.dailyReady()) return { ok: false, reason: 'Daily bonus is still cooling down.' };
+    const amount = this.dailyAmount();
+    this.state.credits += amount;
+    this.state.daily.last = Date.now();
+    this.save(true);
+    this.emit('daily', { amount });
+    return { ok: true, amount };
+  }
+  safetyCrateReady() {
+    return this.state.credits < this.cheapestPackPrice()
+      && Date.now() - (this.state.safety.last || 0) >= SAFETY_CRATE_MS;
+  }
+  safetyCrateRemaining() {
+    return Math.max(0, SAFETY_CRATE_MS - (Date.now() - (this.state.safety.last || 0)));
+  }
+  claimSafetyCrate() {
+    const cheapest = this.cheapestPackPrice();
+    if (this.state.credits >= cheapest) return { ok: false, reason: 'Safety crate unlocks below the cheapest pack price.' };
+    const remain = this.safetyCrateRemaining();
+    if (remain > 0) return { ok: false, reason: `Crate cooling down for ${Math.ceil(remain / 1000)}s.` };
+    const targetId = this.state.pinnedCar || this.selectedCar()?.id || Object.keys(this.state.owned)[0] || null;
+    const blueprints = targetId ? 1 : 0;
+    if (targetId) this.state.blueprints[targetId] = this.blueprintCount(targetId) + blueprints;
+    const scraps = 12;
+    this.state.credits += cheapest;
+    this.state.scraps += scraps;
+    this.state.safety.last = Date.now();
+    this.save(true);
+    this.emit('safety', { credits: cheapest, scraps, blueprints, car: targetId ? CARS_BY_ID[targetId] : null });
+    return { ok: true, credits: cheapest, scraps, blueprints, car: targetId ? CARS_BY_ID[targetId] : null };
+  }
+
   // ── Races ────────────────────────────────────────────────────────────────
   finishRace(trackId, placement, time) {
     const track = TRACKS_BY_ID[trackId];
@@ -654,19 +881,31 @@ export class Store {
     this.state.stats.races += 1;
     if (placement === 1) this.state.stats.wins += 1;
 
+    // Every sprint tops up the offline bank too. Harder tracks and higher
+    // ranked builds pay more, so racing keeps the idle loop self-sustaining.
+    const carRank = car ? RARITIES[car.rarity].tier + this.starRank(car.id) + this.carFusionLevel(car.id) : 0;
+    const offlineCredits = Math.max(4, Math.round(track.diff * 12 + carRank * 6 + (placement === 1 ? 16 : 6)));
+    this.state.pendingOffline = clamp(this.state.pendingOffline + offlineCredits, 0, this.offlineCap());
+
     let blueprintCar = null;
+    let apexTokens = 0;
     const bpChance = placement === 1 ? 0.55 : placement === 2 ? 0.28 : 0.1;
     if (Math.random() < bpChance) {
       const ids = Object.keys(this.state.owned);
       if (ids.length) {
         const id = ids[Math.floor(Math.random() * ids.length)];
-        this.state.blueprints[id] = this.blueprintCount(id) + 1;
-        blueprintCar = CARS_BY_ID[id];
+        if (this.starRank(id) >= STAR_MAX) {
+          apexTokens = 1;
+          this.state.apexTokens += apexTokens;
+        } else {
+          this.state.blueprints[id] = this.blueprintCount(id) + 1;
+          blueprintCar = CARS_BY_ID[id];
+        }
       }
     }
     this.save(true);
-    this.emit('raceFinish', { placement, credits, scraps, blueprintCar, track });
-    return { credits, scraps, blueprintCar, firstWinBonus, best: this.state.races[trackId] };
+    this.emit('raceFinish', { placement, credits, scraps, blueprintCar, apexTokens, offlineCredits, track });
+    return { credits, scraps, blueprintCar, apexTokens, offlineCredits, firstWinBonus, best: this.state.races[trackId] };
   }
 }
 
