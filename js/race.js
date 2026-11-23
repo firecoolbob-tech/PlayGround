@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.js';
 import { CARS, RARITIES, RACE_LENGTH, TRACKS_BY_ID } from './data.js';
 import { makeCarVisual, animateAccents } from './world.js';
 import { makeGlowTexture, makeSparkTexture } from './art.js';
