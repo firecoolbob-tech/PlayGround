@@ -590,7 +590,7 @@ function makeWheelGeometry(index, segments) {
 
 // ── World ───────────────────────────────────────────────────────────────────
 const STAGE_CAMS = {
-  rip:      { pos: [0.0, 2.15, 7.9], look: [0, 1.02, 0], fov: 45 },
+  rip:      { pos: [0.0, 2.30, 9.3], look: [0, 1.02, 0], fov: 45 },
   garage:   { pos: [0.0, 5.15, 13.6], look: [0, -1.15, 0.1], fov: 47 },
   workshop: { pos: [0.25, 2.2, 9.0], look: [0, -0.65, 0], fov: 46 },
   wheel:    { pos: [0.0, 2.55, 13.2], look: [0, 1.45, 0], fov: 45 },
@@ -856,6 +856,7 @@ export class World {
 
     const packAnchor = new THREE.Group();
     packAnchor.position.y = 1.60;
+    packAnchor.scale.setScalar(0.8);
     g.add(packAnchor);
     this.packAnchor = packAnchor;
 
